@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Benchmark - 管理面板</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav>
+    <h1>🎯 LLM Benchmark</h1>
+    <span id="userDisplay"></span>
+    <button id="logoutBtn">退出</button>
+  </nav>
+
+  <main>
+    <!-- LLM 配置管理 -->
+    <section id="configsSection">
+      <h2>LLM 配置</h2>
+      <button id="addConfigBtn">+ 新增配置</button>
+      <div id="configsList" style="margin-top: 20px;"></div>
+    </section>
+
+    <!-- 评测管理 -->
+    <section id="evalSection">
+      <h2>开始评测</h2>
+      <p style="color: #666; margin-bottom: 15px;">选择要评测的 LLM 配置:</p>
+      <div id="configSelector"></div>
+      
+      <div style="margin: 20px 0;">
+        <label><input type="checkbox" id="dialogueCheck" checked> 对话能力 (12题)</label>
+        <label><input type="checkbox" id="codingCheck" checked> 代码能力 (10题)</label>
+      </div>
+      
+      <button id="startEvalBtn">开始评测</button>
+      
+      <div id="progressSection" class="hidden">
+        <div class="progress-bar">
+          <div class="fill" id="progressFill" style="width: 0%;">0%</div>
+        </div>
+        <p id="progressText" style="color: #666; text-align: center;"></p>
+      </div>
+    </section>
+
+    <!-- 历史记录 -->
+    <section id="historySection">
+      <h2>评测历史</h2>
+      <div id="historyList"></div>
+    </section>
+
+    <!-- 结果详情 -->
+    <section id="resultSection" class="hidden">
+      <h2>评测结果</h2>
+      <button class="secondary" id="backBtn">← 返回列表</button>
+      <div id="resultContent" style="margin-top: 20px;"></div>
+    </section>
+  </main>
+
+  <!-- 新增配置模态框 -->
+  <div id="configModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">新增配置</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="configForm">
+        <input type="hidden" id="configId">
+        <div class="form-row">
+          <div class="field">
+            <label>名称</label>
+            <input type="text" id="configName" placeholder="如: GPT-4" required>
+          </div>
+          <div class="field">
+            <label>类型</label>
+            <select id="configType">
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="glm">智谱 GLM</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Endpoint</label>
+          <input type="url" id="configEndpoint" placeholder="https://api.openai.com/v1" required>
+        </div>
+        <div class="field">
+          <label>API Key</label>
+          <input type="password" id="configApiKey" placeholder="sk-..." required>
+        </div>
+        <div class="field">
+          <label>模型</label>
+          <input type="text" id="configModel" placeholder="gpt-4 (可选)">
+        </div>
+        <button type="submit" style="width: 100%; margin-top: 10px;">保存</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/websocket.js"></script>
+  <script src="/js/configs.js"></script>
+  <script src="/js/evaluation.js"></script>
+</body>
+</html>
