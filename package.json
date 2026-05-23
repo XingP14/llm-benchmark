@@ -1,0 +1,43 @@
+{
+  "name": "llm-benchmark",
+  "version": "0.1.0",
+  "description": "本地快速LLM大模型智力评测工具",
+  "main": "dist/index.js",
+  "bin": {
+    "llm-bench": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "test": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "llm",
+    "benchmark",
+    "ai",
+    "evaluation",
+    "gpt",
+    "claude",
+    "openai"
+  ],
+  "author": "XingP14",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/XingP14/llm-benchmark"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/jest": "^29.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
