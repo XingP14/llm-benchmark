@@ -3,8 +3,27 @@
 import { BenchmarkConfig, ModelConfig } from './types';
 import { Evaluator } from './core/evaluator';
 import { Reporter } from './core/reporter';
+import { LLMAdapter } from './adapters/adapter';
 import { OpenAIAdapter } from './adapters/openai-adapter';
+import { AnthropicAdapter } from './adapters/anthropic-adapter';
+import { GLMAdapter } from './adapters/glm-adapter';
 import * as fs from 'fs';
+
+/**
+ * 创建适配器
+ */
+function createAdapter(type: string): LLMAdapter {
+  switch (type.toLowerCase()) {
+    case 'anthropic':
+      return new AnthropicAdapter();
+    case 'glm':
+    case 'zhipu':
+      return new GLMAdapter();
+    case 'openai':
+    default:
+      return new OpenAIAdapter();
+  }
+}
 
 async function main() {
   const args = process.argv.slice(2);
@@ -36,7 +55,7 @@ async function runBenchmark(args: string[]) {
   console.log('🚀 LLM Benchmark 开始...\n');
 
   const config = loadConfig(configPath);
-  const adapter = new OpenAIAdapter();
+  const adapter = createAdapter(config.models[0].type);
 
   let lastProgress = 0;
   const progressCallback = (progress: number) => {
@@ -68,11 +87,25 @@ function initConfig() {
   const config: BenchmarkConfig = {
     models: [
       {
-        name: 'my-model',
+        name: 'openai-model',
         endpoint: 'https://api.openai.com/v1',
         apiKey: process.env.OPENAI_API_KEY || 'your-api-key',
         type: 'openai',
         model: 'gpt-3.5-turbo',
+      },
+      {
+        name: 'anthropic-model',
+        endpoint: 'https://api.anthropic.com',
+        apiKey: process.env.ANTHROPIC_API_KEY || 'your-api-key',
+        type: 'anthropic',
+        model: 'claude-3-haiku-20240307',
+      },
+      {
+        name: 'glm-model',
+        endpoint: 'https://open.bigmodel.cn/api/paas/v4',
+        apiKey: process.env.GLM_API_KEY || 'your-api-key',
+        type: 'glm',
+        model: 'glm-4',
       },
     ],
     benchmarks: {
@@ -86,7 +119,11 @@ function initConfig() {
 
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
   console.log(`✅ 配置文件已创建: ${configPath}`);
-  console.log('请编辑配置文件添加你的模型信息');
+  console.log('请编辑配置文件添加你的模型 API Key');
+  console.log('\n支持的适配器类型:');
+  console.log('  - openai: OpenAI 兼容接口');
+  console.log('  - anthropic: Anthropic Claude');
+  console.log('  - glm: 智谱 GLM');
 }
 
 async function compareModels(args: string[]) {
@@ -113,7 +150,7 @@ async function compareModels(args: string[]) {
     output: './results',
   };
 
-  const adapter = new OpenAIAdapter();
+  const adapter = createAdapter(models[0].type);
   const evaluator = new Evaluator(benchmarkConfig, adapter);
 
   console.log(`🔄 对比评测 ${models.length} 个模型...\n`);
@@ -209,6 +246,11 @@ function showHelp() {
   list                   列出可用评测题
   help                   显示帮助
 
+支持的模型类型:
+  openai    OpenAI 兼容接口 (GPT-4, GPT-3.5, etc.)
+  anthropic Anthropic Claude (Claude 3, etc.)
+  glm       智谱 GLM (GLM-4, etc.)
+
 示例:
   # 初始化
   llm-bench init
@@ -228,6 +270,13 @@ function showHelp() {
         "apiKey": "sk-xxx",
         "type": "openai",
         "model": "gpt-4"
+      },
+      {
+        "name": "claude-3",
+        "endpoint": "https://api.anthropic.com",
+        "apiKey": "sk-ant-xxx",
+        "type": "anthropic",
+        "model": "claude-3-haiku-20240307"
       }
     ],
     "benchmarks": {

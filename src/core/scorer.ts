@@ -2,6 +2,8 @@
 
 import { BenchmarkQuestion, QuestionScore, ModelConfig } from '../types';
 import { LLMAdapter } from '../adapters/adapter';
+import { PythonSandbox } from '../sandbox/python-sandbox';
+import { TestResult } from '../sandbox/executor';
 
 /**
  * 评分器 - 使用 LLM 对答案进行评分
@@ -9,10 +11,12 @@ import { LLMAdapter } from '../adapters/adapter';
 export class Scorer {
   private adapter: LLMAdapter;
   private model: ModelConfig;
+  private sandbox: PythonSandbox;
 
   constructor(adapter: LLMAdapter, model: ModelConfig) {
     this.adapter = adapter;
     this.model = model;
+    this.sandbox = new PythonSandbox();
   }
 
   /**
@@ -77,7 +81,7 @@ export class Scorer {
 
     // 执行测试用例
     if (testCases && testCases.length > 0) {
-      const testResults = this.executeTests(modelOutput, testCases);
+      const testResults = await this.executeTests(modelOutput, testCases);
       const passed = testResults.filter((r) => r.passed).length;
       const total = testResults.length;
       const testScore = (passed / total) * 80;
@@ -191,36 +195,38 @@ ${modelOutput}
     }
   }
 
-  private executeTests(
+  /**
+   * 使用沙盒执行测试用例
+   */
+  private async executeTests(
     code: string,
     testCases: Array<{ input: string; expectedOutput: string; description: string }>
-  ): Array<{ passed: boolean; input: string; expected: string; actual: string }> {
-    const results: Array<{ passed: boolean; input: string; expected: string; actual: string }> = [];
-
-    const funcMatch = code.match(/def\s+(\w+)\s*\(/);
-    if (!funcMatch) {
-      return testCases.map((tc) => ({
-        passed: false,
-        input: tc.input,
-        expected: tc.expectedOutput,
-        actual: '无法提取函数名',
-      }));
-    }
+  ): Promise<TestResult[]> {
+    const results: TestResult[] = [];
 
     for (const tc of testCases) {
       try {
+        const result = await this.sandbox.execute(code, tc.input);
+        
+        // 比较输出（去除首尾空白）
+        const actual = result.output.trim();
+        const expected = tc.expectedOutput.trim();
+        const passed = result.success && actual === expected;
+
         results.push({
-          passed: true,
           input: tc.input,
-          expected: tc.expectedOutput,
-          actual: '测试通过(沙盒未集成)',
+          expectedOutput: tc.expectedOutput,
+          description: tc.description,
+          actual: actual,
+          passed: passed,
         });
       } catch (error) {
         results.push({
-          passed: false,
           input: tc.input,
-          expected: tc.expectedOutput,
+          expectedOutput: tc.expectedOutput,
+          description: tc.description,
           actual: `执行错误: ${(error as Error).message}`,
+          passed: false,
         });
       }
     }
