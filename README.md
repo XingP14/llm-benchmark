@@ -4,11 +4,12 @@
 
 ## 特性
 
-- 🌐 **多平台支持**: OpenAI 兼容接口（可扩展 Anthropic、GLM 等）
+- 🌐 **多平台支持**: OpenAI / Anthropic Claude / 智谱 GLM
 - 📊 **统一评测**: 通用对话 + 代码能力双维度
 - ⚡ **快速执行**: 本地批量评测，无需云服务
 - 📈 **可视化报告**: 表格、雷达图、柱状图对比
 - 🔄 **多模型对比**: 同时评测多个模型并生成对比报告
+- 🐍 **沙盒执行**: 代码评测自动执行测试用例
 
 ## 安装
 
@@ -56,6 +57,15 @@ llm-bench list
 llm-bench help
 ```
 
+## 支持的模型
+
+| 平台 | 类型 | 示例模型 |
+|------|------|----------|
+| OpenAI | `openai` | GPT-4, GPT-3.5-turbo |
+| Anthropic | `anthropic` | Claude 3 Haiku, Claude 3 Opus |
+| 智谱 | `glm` | GLM-4, GLM-3-Turbo |
+| 其他 | `openai` | 任何 OpenAI 兼容接口 |
+
 ## 配置文件
 
 ```json
@@ -67,6 +77,20 @@ llm-bench help
       "apiKey": "sk-your-key",
       "type": "openai",
       "model": "gpt-4"
+    },
+    {
+      "name": "claude-3",
+      "endpoint": "https://api.anthropic.com",
+      "apiKey": "sk-ant-your-key",
+      "type": "anthropic",
+      "model": "claude-3-haiku-20240307"
+    },
+    {
+      "name": "glm-4",
+      "endpoint": "https://open.bigmodel.cn/api/paas/v4",
+      "apiKey": "your-key",
+      "type": "glm",
+      "model": "glm-4"
     }
   ],
   "benchmarks": {
@@ -79,23 +103,23 @@ llm-bench help
 
 ## 评测维度
 
-### 通用对话能力
-| 维度 | 描述 |
-|------|------|
-| 事实准确性 | 回答是否准确无误 |
-| 指令遵循 | 是否按要求格式/方式回答 |
-| 推理能力 | 逻辑推理、数学推理 |
-| 上下文一致性 | 多轮对话上下文保持 |
-| 安全性 | 有害/偏见内容的规避 |
+### 通用对话能力 (12题)
+| 维度 | 描述 | 权重 |
+|------|------|------|
+| factual_accuracy | 事实准确性 | 1.0 |
+| instruction_following | 指令遵循 | 1.5 |
+| reasoning | 推理能力 | 2.0 |
+| context_awareness | 上下文一致性 | 1.5 |
+| safety | 安全性 | 2.0 |
 
-### 代码能力
-| 维度 | 描述 |
-|------|------|
-| 语法正确性 | 代码能否正常运行 |
-| 逻辑正确性 | 输出结果是否正确 |
-| 字符串处理 | 字符串操作能力 |
-| 数组操作 | 数组/列表处理 |
-| 算法 | 排序、搜索、递归等 |
+### 代码能力 (10题)
+| 维度 | 描述 | 权重 |
+|------|------|------|
+| syntax | 语法正确性 | 1.0 |
+| string_processing | 字符串处理 | 1.5 |
+| array_operations | 数组操作 | 1.5 |
+| algorithms | 算法 | 2.0 |
+| data_structures | 数据结构 | 1.5 |
 
 ## 输出报告
 
@@ -120,6 +144,20 @@ npm test
 # 构建
 npm run build
 ```
+
+## 版本历史
+
+### v0.2.0 (2026-05-23)
+- ✨ 新增 Anthropic Claude 适配器
+- ✨ 新增 智谱 GLM 适配器
+- ✨ 新增 Python 沙盒执行器
+
+### v0.1.0 (2026-05-23)
+- 🎉 首次发布
+- ✅ OpenAI 兼容接口支持
+- ✅ 对话能力评测 (12题)
+- ✅ 代码能力评测 (10题)
+- ✅ 评测报告生成
 
 ## License
 
