@@ -104,4 +104,48 @@ describe('Reporter', () => {
       expect(html).toContain('Model B');
     });
   });
+
+  describe('saveReport', () => {
+    it('should save report files to output directory', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const outputDir = './test-report-output';
+
+      // 确保输出目录不存在
+      if (fs.existsSync(outputDir)) {
+        fs.rmSync(outputDir, { recursive: true });
+      }
+
+      Reporter.saveReport(mockResults, outputDir);
+
+      // 验证文件已创建
+      expect(fs.existsSync(outputDir)).toBe(true);
+
+      const files = fs.readdirSync(outputDir);
+      expect(files.length).toBe(3);
+      expect(files.some((f: string) => f.endsWith('.json'))).toBe(true);
+      expect(files.some((f: string) => f.endsWith('.md'))).toBe(true);
+      expect(files.some((f: string) => f.endsWith('.html'))).toBe(true);
+
+      // 清理
+      fs.rmSync(outputDir, { recursive: true });
+    });
+
+    it('should create output directory if it does not exist', () => {
+      const fs = require('fs');
+      const outputDir = './test-report-output-new';
+
+      // 确保输出目录不存在
+      if (fs.existsSync(outputDir)) {
+        fs.rmSync(outputDir, { recursive: true });
+      }
+
+      Reporter.saveReport(mockResults, outputDir);
+
+      expect(fs.existsSync(outputDir)).toBe(true);
+
+      // 清理
+      fs.rmSync(outputDir, { recursive: true });
+    });
+  });
 });

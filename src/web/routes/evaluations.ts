@@ -68,7 +68,11 @@ router.get('/:id', (req: AuthRequest, res: Response) => {
   const db = getDatabase();
   const evaluation = db.prepare('SELECT * FROM evaluations WHERE id=? AND user_id=?')
     .get(req.params.id, req.userId);
-  res.json(evaluation || null);
+  if (!evaluation) {
+    res.status(404).json({ error: 'Evaluation not found' });
+    return;
+  }
+  res.json(evaluation);
 });
 
 // GET /api/evaluations/:id/results - 获取评测结果

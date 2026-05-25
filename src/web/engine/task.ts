@@ -1,6 +1,6 @@
 // src/web/engine/task.ts - 评测任务管理器
 
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 export interface EvaluationTask {
   id: string;
@@ -26,7 +26,7 @@ class TaskManager {
     }
 
     this.currentTask = {
-      id: uuidv4(),
+      id: randomUUID(),
       userId,
       status: 'PENDING',
       configs,

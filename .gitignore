@@ -18,3 +18,8 @@ coverage/
 # Output
 results/
 *.log
+data/
+test-data/
+*.db
+*.db-shm
+*.db-wal

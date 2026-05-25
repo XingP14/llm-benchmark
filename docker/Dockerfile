@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
-# 安装 Python (用于沙盒执行)
-RUN apk add --no-cache python3
+# 安装构建工具和 Python
+RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
@@ -9,16 +9,22 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安装依赖
-RUN npm ci --only=production
+RUN npm ci
 
-# 复制构建文件
-COPY dist ./dist
+# 复制源码
+COPY src ./src
+COPY tsconfig.json ./
+
+# 复制静态资源
 COPY public ./public
 COPY database ./database
+
+# 构建
+RUN npm run build
 
 # 创建数据目录
 RUN mkdir -p /app/data
 
-EXPOSE 3000
+EXPOSE 3033
 
 CMD ["node", "dist/web/server.js"]

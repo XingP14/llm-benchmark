@@ -35,6 +35,57 @@ export function closeDatabase(): void {
 }
 
 /**
+ * 重置数据库单例（测试用）
+ */
+export function resetSingleton(): void {
+  if (db) {
+    db.close();
+    db = null;
+  }
+}
+
+/**
+ * 重置数据库（测试用）
+ * 使用 INSERT OR REPLACE 避免并行测试的 UNIQUE 冲突
+ */
+export function resetDatabase(): void {
+  // 如果单例不存在，重新创建连接
+  if (!db) {
+    db = new Database(DB_PATH);
+    db.pragma('journal_mode = WAL');
+    initializeSchema(db);
+  }
+
+  // 使用事务确保原子性
+  const reset = db.transaction(() => {
+    db!.exec('DELETE FROM results');
+    db!.exec('DELETE FROM evaluation_configs');
+    db!.exec('DELETE FROM evaluations');
+    db!.exec('DELETE FROM configs');
+    db!.exec('DELETE FROM users');
+
+    const bcrypt = require('bcrypt');
+    const hash = bcrypt.hashSync('admin123', 10);
+    db!.prepare('INSERT OR REPLACE INTO users (id, username, password_hash) VALUES (1, ?, ?)').run('admin', hash);
+  });
+  reset();
+}
+
+/**
+ * 初始化管理员用户
+ */
+export function initAdminUser(): void {
+  const database = getDatabase();
+  const bcrypt = require('bcrypt');
+  const hash = bcrypt.hashSync('admin123', 10);
+  // 只在 admin 用户不存在时插入
+  const existing = database.prepare('SELECT id FROM users WHERE username=?').get('admin');
+  if (!existing) {
+    database.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run('admin', hash);
+  }
+}
+
+/**
  * 初始化数据库表结构
  */
 function initializeSchema(database: Database.Database): void {

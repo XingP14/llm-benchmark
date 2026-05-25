@@ -1,4 +1,4 @@
-// tests/adapter.test.ts - 适配器测试
+// tests/adapter.test.ts - 适配器测试 (包含 fetch mock)
 
 import { OpenAIAdapter } from '../src/adapters/openai-adapter';
 import { AnthropicAdapter } from '../src/adapters/anthropic-adapter';
@@ -24,6 +24,79 @@ describe('OpenAIAdapter', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('chat', () => {
+    it('should return content on successful response', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Hello from OpenAI' } }],
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      const result = await adapter.chat(
+        [{ role: 'user', content: 'Hi' }],
+        { name: 'test', endpoint: 'https://api.openai.com/v1', apiKey: 'sk-test', type: 'openai' }
+      );
+
+      expect(result).toBe('Hello from OpenAI');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on non-ok response', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 401,
+        text: jest.fn().mockResolvedValue('Unauthorized'),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.openai.com/v1', apiKey: 'bad', type: 'openai' }
+        )
+      ).rejects.toThrow('OpenAI API Error: 401');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on API error in response body', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          error: { message: 'Rate limit exceeded', type: 'rate_limit_error' },
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.openai.com/v1', apiKey: 'sk-test', type: 'openai' }
+        )
+      ).rejects.toThrow('OpenAI Error: Rate limit exceeded');
+      jest.restoreAllMocks();
+    });
+
+    it('should handle empty choices array', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [],
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      const result = await adapter.chat(
+        [{ role: 'user', content: 'Hi' }],
+        { name: 'test', endpoint: 'https://api.openai.com/v1', apiKey: 'sk-test', type: 'openai' }
+      );
+
+      expect(result).toBe('');
+      jest.restoreAllMocks();
+    });
+  });
 });
 
 describe('AnthropicAdapter', () => {
@@ -46,6 +119,65 @@ describe('AnthropicAdapter', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('chat', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('should return content on successful response', async () => {
+      const mockJson = jest.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'Hello from Claude' }],
+      });
+      const mockResponse = {
+        ok: true,
+        json: mockJson,
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      const result = await adapter.chat(
+        [{ role: 'user', content: 'Hi' }],
+        { name: 'test', endpoint: 'https://api.anthropic.com', apiKey: 'sk-ant', type: 'anthropic' }
+      );
+
+      expect(result).toBe('Hello from Claude');
+    });
+
+    it('should throw error on non-ok response', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 403,
+        text: jest.fn().mockResolvedValue('Forbidden'),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.anthropic.com', apiKey: 'bad', type: 'anthropic' }
+        )
+      ).rejects.toThrow('Anthropic API Error: 403');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on API error in response body', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          error: { message: 'Invalid request', type: 'invalid_request_error' },
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.anthropic.com', apiKey: 'sk-ant', type: 'anthropic' }
+        )
+      ).rejects.toThrow('Anthropic Error: Invalid request');
+      jest.restoreAllMocks();
+    });
+  });
 });
 
 describe('GLMAdapter', () => {
@@ -66,6 +198,61 @@ describe('GLMAdapter', () => {
 
       const result = await adapter.ping(config);
       expect(result).toBe(false);
+    });
+  });
+
+  describe('chat', () => {
+    it('should return content on successful response', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Hello from GLM' } }],
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      const result = await adapter.chat(
+        [{ role: 'user', content: 'Hi' }],
+        { name: 'test', endpoint: 'https://api.zhipuai.com', apiKey: 'sk-glm', type: 'glm' }
+      );
+
+      expect(result).toBe('Hello from GLM');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on non-ok response', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 500,
+        text: jest.fn().mockResolvedValue('Internal Server Error'),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.zhipuai.com', apiKey: 'bad', type: 'glm' }
+        )
+      ).rejects.toThrow('GLM API Error: 500');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on API error in response body', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          error: { message: 'Model not found', type: 'model_error' },
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.zhipuai.com', apiKey: 'sk-glm', type: 'glm' }
+        )
+      ).rejects.toThrow('GLM Error: Model not found');
+      jest.restoreAllMocks();
     });
   });
 });
