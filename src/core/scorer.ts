@@ -89,10 +89,13 @@ export class Scorer {
       // 代码质量评分
       const qualityScore = this.evaluateCodeQuality(modelOutput);
 
+      // 总分 = 测试分(0-80) + 质量分(0-20)，上限 100
+      const totalScore = Math.min(100, Math.round(testScore + qualityScore));
+
       return {
         questionId: question.id,
         category: question.category,
-        score: Math.round(testScore + qualityScore),
+        score: totalScore,
         dimension: 'coding',
         modelOutput: modelOutput,
         detail: `测试通过: ${passed}/${total}, 质量评分: ${qualityScore.toFixed(1)}`,
@@ -185,10 +188,28 @@ ${modelOutput}
     return 0;
   }
 
+  /**
+   * 从 markdown 文本中提取 Python 代码（与 PythonSandbox 逻辑一致）
+   */
+  private extractPythonCode(text: string): string {
+    // 1. ```python ... ```
+    const m1 = text.match(/```python\s*\n([\s\S]*?)```/);
+    if (m1) return m1[1].trim();
+    // 2. ```py ... ```
+    const m2 = text.match(/```py\s*\n([\s\S]*?)```/);
+    if (m2) return m2[1].trim();
+    // 3. 第一个代码块且含 def
+    const m3 = text.match(/```\w*\s*\n([\s\S]*?)```/);
+    if (m3 && m3[1].includes('def ')) return m3[1].trim();
+    // 4. 回退
+    return text;
+  }
+
   private checkSyntax(code: string): boolean {
     try {
-      const hasDef = code.includes('def ');
-      const hasReturn = code.includes('return') || code.includes('print');
+      const cleanCode = this.extractPythonCode(code);
+      const hasDef = cleanCode.includes('def ');
+      const hasReturn = cleanCode.includes('return') || cleanCode.includes('print');
       return hasDef && hasReturn;
     } catch {
       return false;
@@ -235,25 +256,30 @@ ${modelOutput}
   }
 
   private evaluateCodeQuality(code: string): number {
-    let score = 40;
+    const cleanCode = this.extractPythonCode(code);
+    let score = 0;
 
-    if (code.includes('#') || code.includes('"""')) {
-      score += 10;
+    // 注释 (+5)
+    if (cleanCode.includes('#') || cleanCode.includes('"""') || cleanCode.includes("'''")) {
+      score += 5;
     }
 
-    const funcMatch = code.match(/def\s+(\w+)\s*\(/);
+    // 函数命名规范 (+5)
+    const funcMatch = cleanCode.match(/def\s+(\w+)\s*\(/);
     if (funcMatch && !funcMatch[1].startsWith('_')) {
-      score += 10;
+      score += 5;
     }
 
-    if (code.match(/\b[a-z_][a-z0-9_]*\b/i)) {
-      score += 10;
+    // 变量命名规范 (+5)
+    if (cleanCode.match(/\b[a-z_][a-z0-9_]*\b/i)) {
+      score += 5;
     }
 
-    if (code.includes('return')) {
-      score += 10;
+    // 有 return 语句 (+5)
+    if (cleanCode.includes('return')) {
+      score += 5;
     }
 
-    return Math.min(40, score);
+    return score; // 0-20
   }
 }

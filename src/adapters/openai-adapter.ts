@@ -32,34 +32,53 @@ export class OpenAIAdapter implements LLMAdapter {
     const model = config.model || 'gpt-3.5-turbo';
     const url = `${config.endpoint}/chat/completions`;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 2048,
-      }),
-    });
+    // 推理模型需要更长时间，300秒超时
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 300000);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `OpenAI API Error: ${response.status} - ${errorText}`
-      );
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 4096,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `OpenAI API Error: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data = await response.json() as any;
+
+      if (data.error) {
+        throw new Error(`OpenAI Error: ${data.error.message}`);
+      }
+
+      // 优先使用 content，如果为空则尝试 reasoning_content（推理模型）
+      const choice = data.choices?.[0]?.message;
+      const content = choice?.content || '';
+      const reasoning = choice?.reasoning_content || '';
+      return content || reasoning || '';
+    } catch (err: any) {
+      clearTimeout(timeout);
+      if (err.name === 'AbortError') {
+        throw new Error('API 请求超时 (300s)');
+      }
+      throw err;
     }
-
-    const data = await response.json() as OpenAIResponse;
-
-    if (data.error) {
-      throw new Error(`OpenAI Error: ${data.error.message}`);
-    }
-
-    return data.choices[0]?.message?.content || '';
   }
 
   async ping(config: ModelConfig): Promise<boolean> {

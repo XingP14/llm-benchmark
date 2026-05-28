@@ -32,19 +32,16 @@ export class Evaluator {
   }
 
   /**
-   * 运行评测
+   * 运行评测 - 所有模型并行执行
    */
   async run(): Promise<EvaluationResult[]> {
-    const results: EvaluationResult[] = [];
-
-    for (let i = 0; i < this.config.models.length; i++) {
-      const model = this.config.models[i];
-      console.log(`\n评测模型: ${model.name}`);
-
-      const result = await this.evaluateModel(model, i);
-      results.push(result);
-    }
-
+    console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
+    const results = await Promise.all(
+      this.config.models.map((model, i) => {
+        console.log(`\n启动评测: ${model.name}`);
+        return this.evaluateModel(model, i);
+      })
+    );
     return results;
   }
 
@@ -75,8 +72,9 @@ export class Evaluator {
         this.progressCallback(progress);
       }
 
+      const startTime = new Date().toISOString().slice(11,19);
       console.log(
-        `  [${model.name}] ${i + 1}/${questions.length}: ${question.id}`
+        `  [${model.name}] ${i + 1}/${questions.length}: ${question.id} (${startTime})`
       );
 
       try {
@@ -97,6 +95,8 @@ export class Evaluator {
 
     const totalScore = this.calculateTotalScore(scores);
     const dimensions = this.calculateDimensions(scores);
+    const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`\n✅ [${model.name}] 评测完成! 总分: ${totalScore}, 耗时: ${durationSec}s`);
 
     return {
       modelName: model.name,
