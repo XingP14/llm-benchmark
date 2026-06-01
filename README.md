@@ -248,6 +248,14 @@ npm run build
 
 ## 版本历史
 
+### v0.4.0 (2026-06-02)
+- ✨ 包名重命名为 `@xingp14/llm-benchmark`，新增 `publishConfig.access: "public"`（已通过 `npm publish --dry-run` 验证：95 files / 46.7 kB ✅）
+- ✨ 新增 GitHub Actions CI workflow（Node 20 + lint + build + `npm test --bail`）
+- ✨ 新增 Docker Hub 自动构建 workflow（`v*` tag 触发，构建 `xingp14/llm-benchmark` 镜像）
+- ✨ README 顶部加 GitHub Actions / Docker Hub / npm version / License / Node 徽章
+- ✨ README 新增「拉取预构建 Docker 镜像」子章节（`docker pull` / `docker run` / tag pin 完整示例）
+- ✨ 改用 `npx @xingp14/llm-benchmark` 一键运行引导
+
 ### v0.3.0 (2026-05-23)
 - ✨ 新增 Web UI（Express + WebSocket 实时进度）
 - ✨ 新增 SQLite 数据库层（configs / evaluations / results）
