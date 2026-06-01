@@ -41,9 +41,9 @@
 - [ ] Step 3: 验证镜像可 `docker run` 启动 Web UI（默认 3033 端口）
 
 #### Story 3.3: CI 徽章 + Workflow
-- [ ] Step 1: 在 README 顶部加 GitHub Actions / Docker Hub / npm version 徽章
-- [ ] Step 2: 新增 `.github/workflows/ci.yml`（Node 20 + `npm ci` + `npm test -- --bail`）
-- [ ] Step 3: 徽章真正显示状态后，从 ROADMAP 勾掉此 Story
+- [x] Step 1: 在 README 顶部加 GitHub Actions / Docker Hub / npm version 徽章 (2026-06-02)
+- [x] Step 2: 新增 `.github/workflows/ci.yml`（Node 20 + `npm ci` + lint + build + `npm test --bail`）(2026-06-02)
+- [ ] Step 3: CI 首次跑通、徽章从「unknown」变绿后，从 ROADMAP 勾掉此 Story
 
 ### Feature 4: 评测题目扩展
 
@@ -67,4 +67,5 @@
 
 ---
 
+_最近更新：2026-06-02 — Story 3.3 Step 1/2 完成（CI 徽章 + `.github/workflows/ci.yml`）；Step 3 待 CI 首次跑通后确认_
 _最近更新：2026-06-02 — Story 3.1 Step 2/3 完成（README npx 引导 + npm publish --dry-run 验证通过）；Step 4 正式发布待独立时段执行_
