@@ -5,6 +5,7 @@ import { AnthropicAdapter } from '../src/adapters/anthropic-adapter';
 import { GLMAdapter } from '../src/adapters/glm-adapter';
 import { DeepSeekAdapter } from '../src/adapters/deepseek-adapter';
 import { QwenAdapter } from '../src/adapters/qwen-adapter';
+import { OllamaAdapter } from '../src/adapters/ollama-adapter';
 
 describe('OpenAIAdapter', () => {
   const adapter = new OpenAIAdapter();
@@ -451,6 +452,106 @@ describe('QwenAdapter', () => {
           { name: 'test', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: 'bad', type: 'qwen' }
         )
       ).rejects.toThrow('Qwen Error: Invalid API key provided');
+      jest.restoreAllMocks();
+    });
+  });
+});
+
+describe('OllamaAdapter', () => {
+  const adapter = new OllamaAdapter();
+
+  it('should have correct name', () => {
+    expect(adapter.getName()).toBe('Ollama (Local)');
+  });
+
+  describe('ping', () => {
+    it('should return false for invalid endpoint', async () => {
+      const config = {
+        name: 'test',
+        endpoint: 'https://invalid-endpoint.com',
+        apiKey: '',
+        type: 'ollama' as const,
+      };
+
+      const result = await adapter.ping(config);
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('chat', () => {
+    it('should return content on successful response', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Hello from Ollama' } }],
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      const result = await adapter.chat(
+        [{ role: 'user', content: 'Hi' }],
+        { name: 'test', endpoint: 'http://localhost:11434', apiKey: '', type: 'ollama' }
+      );
+
+      expect(result).toBe('Hello from Ollama');
+      jest.restoreAllMocks();
+    });
+
+    it('should default to localhost:11434 when endpoint is empty', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'OK' } }],
+        }),
+      };
+      const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await adapter.chat(
+        [{ role: 'user', content: 'Hi' }],
+        { name: 'test', endpoint: '', apiKey: '', type: 'ollama', model: 'llama3.2' }
+      );
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'http://localhost:11434/v1/chat/completions',
+        expect.objectContaining({
+          body: expect.stringContaining('"model":"llama3.2"'),
+        })
+      );
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on non-ok response', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 404,
+        text: jest.fn().mockResolvedValue('model not found'),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'http://localhost:11434', apiKey: '', type: 'ollama', model: 'nonexistent' }
+        )
+      ).rejects.toThrow('Ollama API Error: 404');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on API error in response body', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          error: { message: 'model \"x\" not found', type: 'model_not_found' },
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'http://localhost:11434', apiKey: '', type: 'ollama' }
+        )
+      ).rejects.toThrow('Ollama Error:');
       jest.restoreAllMocks();
     });
   });

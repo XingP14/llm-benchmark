@@ -9,6 +9,7 @@ import { AnthropicAdapter } from './adapters/anthropic-adapter';
 import { GLMAdapter } from './adapters/glm-adapter';
 import { DeepSeekAdapter } from './adapters/deepseek-adapter';
 import { QwenAdapter } from './adapters/qwen-adapter';
+import { OllamaAdapter } from './adapters/ollama-adapter';
 import * as fs from 'fs';
 
 /**
@@ -27,6 +28,9 @@ function createAdapter(type: string): LLMAdapter {
     case 'tongyi':
     case 'dashscope':
       return new QwenAdapter();
+    case 'ollama':
+    case 'local':
+      return new OllamaAdapter();
     case 'openai':
     default:
       return new OpenAIAdapter();
