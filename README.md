@@ -14,7 +14,7 @@
 ## 安装
 
 ```bash
-npm install -g llm-benchmark
+npm install -g @xingp14/llm-benchmark
 ```
 
 或从源码安装：

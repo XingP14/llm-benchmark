@@ -30,7 +30,7 @@
 ### Feature 3: 分发与生态
 
 #### Story 3.1: npm 公开包发布
-- [ ] Step 1: 包名改为 `@xingp14/llm-benchmark`，加 `publishConfig.access: "public"`
+- [x] Step 1: 包名改为 `@xingp14/llm-benchmark`，加 `publishConfig.access: "public"` (2026-06-02)
 - [ ] Step 2: README / 安装文档同步更新为 `npx @xingp14/llm-benchmark`
 - [ ] Step 3: 跑一次 `npm publish --dry-run` 验证产物，再正式发布 0.4.0
 
@@ -66,4 +66,4 @@
 
 ---
 
-_最近更新：2026-06-02 — 创建 ROADMAP.md，固化 v0.3.0 已落地，列 v0.4.0 计划_
+_最近更新：2026-06-02 — Story 3.1 Step 1 完成（包名 @xingp14/llm-benchmark + publishConfig.public）_

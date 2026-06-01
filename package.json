@@ -1,11 +1,20 @@
 {
-  "name": "llm-benchmark",
-  "version": "0.3.0",
+  "name": "@xingp14/llm-benchmark",
+  "version": "0.4.0",
   "description": "本地快速LLM大模型智力评测工具",
   "main": "dist/index.js",
   "bin": {
     "llm-bench": "./dist/index.js"
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "ROADMAP.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "ts-node src/index.ts",
