@@ -147,6 +147,14 @@ npm run build
 
 ## 版本历史
 
+### v0.3.0 (2026-05-23)
+- ✨ 新增 Web UI（Express + WebSocket 实时进度）
+- ✨ 新增 SQLite 数据库层（configs / evaluations / results）
+- ✨ 新增 JWT 认证
+- ✨ 新增 Docker / docker-compose 一键部署
+- 🐛 修复评分系统 3 个 bug
+- 🐛 解决 56 个 failing tests（SQLite race + 覆盖率）
+
 ### v0.2.0 (2026-05-23)
 - ✨ 新增 Anthropic Claude 适配器
 - ✨ 新增 智谱 GLM 适配器

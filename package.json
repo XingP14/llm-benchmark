@@ -1,6 +1,6 @@
 {
   "name": "llm-benchmark",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "本地快速LLM大模型智力评测工具",
   "main": "dist/index.js",
   "bin": {
