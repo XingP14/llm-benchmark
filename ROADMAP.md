@@ -31,8 +31,9 @@
 
 #### Story 3.1: npm 公开包发布
 - [x] Step 1: 包名改为 `@xingp14/llm-benchmark`，加 `publishConfig.access: "public"` (2026-06-02)
-- [ ] Step 2: README / 安装文档同步更新为 `npx @xingp14/llm-benchmark`
-- [ ] Step 3: 跑一次 `npm publish --dry-run` 验证产物，再正式发布 0.4.0
+- [x] Step 2: README / 安装文档同步更新为 `npx @xingp14/llm-benchmark` (2026-06-02)
+- [x] Step 3: 跑一次 `npm publish --dry-run` 验证产物（95 files, 46.7 kB ✅ 2026-06-02）
+- [ ] Step 4: 正式 `npm publish --access public` 发布 0.4.0（需独立时段，含发布后验证）
 
 #### Story 3.2: Docker Hub 镜像
 - [ ] Step 1: 补 `.github/workflows/docker.yml`（buildx + push to `xingp14/llm-benchmark`）
@@ -66,4 +67,4 @@
 
 ---
 
-_最近更新：2026-06-02 — Story 3.1 Step 1 完成（包名 @xingp14/llm-benchmark + publishConfig.public）_
+_最近更新：2026-06-02 — Story 3.1 Step 2/3 完成（README npx 引导 + npm publish --dry-run 验证通过）；Step 4 正式发布待独立时段执行_

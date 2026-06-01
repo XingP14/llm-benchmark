@@ -2,6 +2,10 @@
 
 🎯 本地快速LLM大模型智力评测，支持多平台、多模型统一比较。
 
+[![npm version](https://img.shields.io/npm/v/@xingp14/llm-benchmark.svg)](https://www.npmjs.com/package/@xingp14/llm-benchmark)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+
 ## 特性
 
 - 🌐 **多平台支持**: OpenAI / Anthropic Claude / 智谱 GLM
@@ -13,11 +17,27 @@
 
 ## 安装
 
+### 方式 1: npx 一键运行（推荐，无需安装）
+
 ```bash
-npm install -g @xingp14/llm-benchmark
+# 初始化配置文件（会下载到当前目录）
+npx @xingp14/llm-benchmark init
+
+# 编辑 config.json 添加你的 API Key
+
+# 运行评测
+npx @xingp14/llm-benchmark run --config config.json
 ```
 
-或从源码安装：
+### 方式 2: 全局安装
+
+```bash
+npm install -g @xingp14/llm-benchmark
+llm-bench --version
+llm-bench init
+```
+
+### 方式 3: 从源码安装
 
 ```bash
 git clone https://github.com/XingP14/llm-benchmark.git
