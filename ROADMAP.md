@@ -48,7 +48,7 @@
 ### Feature 4: 评测题目扩展
 
 #### Story 4.1: 新增评测维度
-- [ ] Step 1: 加入「工具调用 / Function calling」评测维度（5 题）
+- [x] Step 1: 加入「工具调用 / Function calling」评测维度（5 题）— 2026-06-02 (`c71c2f2`，5 题覆盖简单参数 / 多工具选择 / 必填参数 / 嵌套对象 / 数组；Scorer 新增 scoreFunctionCalling，name+args 100/70/40/0；CLI + Web + DB + API 全链路接入)
 - [ ] Step 2: 加入「长上下文理解」评测维度（3 题，需 32k+ context）
 - [ ] Step 3: 加入「多轮对话一致性」评测维度（3 题）
 
@@ -67,6 +67,7 @@
 
 ---
 
+_最近更新：2026-06-02 — Story 4.1 Step 1 完成（Function Calling 评测维度：5 题 + Scorer + CLI + Web + DB + API 全链路）_
 _最近更新：2026-06-02 — Story 4.2 全部完成（DeepSeek + Qwen/DashScope + Ollama 本地模型 adapter）_
 _最近更新：2026-06-02 — Story 4.2 Step 2 完成（Qwen/DashScope adapter：OpenAI 兼容模式，默认 qwen-turbo，支持 qwen-plus / qwen-max / qwen3-max；含 5 个新单元测试 name/ping/chat success/Authorization Bearer 头/错误路径；tsc --noEmit 无错）_
 _最近更新：2026-06-02 — Story 4.2 Step 1 完成（DeepSeek adapter：OpenAI 兼容实现，含 deepseek-chat 默认模型 / deepseek-reasoner reasoning_content 回退 / 22 项 adapter 测试通过含 5 项新测试）_
