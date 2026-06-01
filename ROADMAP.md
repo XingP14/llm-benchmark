@@ -37,7 +37,7 @@
 
 #### Story 3.2: Docker Hub 镜像
 - [x] Step 1: 补 `.github/workflows/docker.yml`（buildx + push to `xingp14/llm-benchmark`）(2026-06-02)
-- [ ] Step 2: README 增加 `docker pull xingp14/llm-benchmark` 拉取说明
+- [x] Step 2: README 增加 `docker pull xingp14/llm-benchmark` 拉取说明（新增「拉取预构建 Docker 镜像」子章节，含 `docker pull` / `docker run` / 指定 tag 示例）(2026-06-02)
 - [ ] Step 3: 验证镜像可 `docker run` 启动 Web UI（默认 3033 端口）
 
 #### Story 3.3: CI 徽章 + Workflow
@@ -69,4 +69,5 @@
 
 _最近更新：2026-06-02 — Story 3.3 Step 1/2 完成（CI 徽章 + `.github/workflows/ci.yml`）；Step 3 待 CI 首次跑通后确认_
 _最近更新：2026-06-02 — Story 3.1 Step 2/3 完成（README npx 引导 + npm publish --dry-run 验证通过）；Step 4 正式发布待独立时段执行_
+_最近更新：2026-06-02 — Story 3.2 Step 2 完成（README 「拉取预构建 Docker 镜像」子章节 + `docker pull` / `docker run` / tag pin 示例）；Step 3 镜像实测待 PR 合并 / tag 推送后_
 _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/docker.yml`，buildx + multi-tag + Docker Hub login + PR-only build）；Step 2/3 待 README 同步 + 镜像实测_

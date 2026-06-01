@@ -116,6 +116,31 @@ docker compose logs -f
 
 `docker-compose.yml` 默认将主机 `192.168.160.14:3033` 映射到容器 `3033`，数据持久化到 `./data/llm-bench.db`。如需修改监听地址，编辑 `docker-compose.yml` 的 `ports` 配置。
 
+### 拉取预构建 Docker 镜像
+
+无需本地构建，可直接从 [Docker Hub](https://hub.docker.com/r/xingp14/llm-benchmark) 拉取 CI 自动构建的官方镜像：
+
+```bash
+# 拉取最新镜像
+docker pull xingp14/llm-benchmark:latest
+
+# 启动容器（数据持久化到 named volume `llm-bench-data`）
+docker run -d \
+  --name llm-bench \
+  -p 3033:3033 \
+  -e JWT_SECRET="your-strong-jwt-secret" \
+  -e ADMIN_PASSWORD="your-strong-password" \
+  -v llm-bench-data:/app/data \
+  --restart unless-stopped \
+  xingp14/llm-benchmark:latest
+```
+
+镜像由 `.github/workflows/docker.yml` 在打 `v*` tag 时自动构建并推送，可指定具体版本：
+
+```bash
+docker pull xingp14/llm-benchmark:0.4.0
+```
+
 ### 健康检查
 
 ```bash
