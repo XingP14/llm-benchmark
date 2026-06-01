@@ -11,7 +11,7 @@
 ## 特性
 
 - 🌐 **多平台支持**: OpenAI / Anthropic Claude / 智谱 GLM / DeepSeek / 通义千问 Qwen (DashScope) / Ollama 本地模型
-- 📊 **统一评测**: 通用对话 + 代码能力 + 工具调用三维度（v0.4.0 起）
+- 📊 **统一评测**: 通用对话 + 代码能力 + 工具调用 + 长上下文理解 四维度（v0.4.0 起）
 - ⚡ **快速执行**: 本地批量评测，无需云服务
 - 📈 **可视化报告**: 表格、雷达图、柱状图对比
 - 🔄 **多模型对比**: 同时评测多个模型并生成对比报告
@@ -302,6 +302,15 @@ CLI 与 Web UI 共享同一份 SQLite 数据库，可混用。
 
 > 评分规则：name + args 完全匹配 = 100；name 匹配 args 部分 = 70；name 匹配 args 错 = 40；name 不匹配 = 0。需要在配置中显式开启 `includeFunctionCalling: true`。
 
+### 长上下文理解 / Long Context (3题) — v0.4.0 新增
+| 维度 | 描述 | 权重 |
+|------|------|------|
+| Needle in haystack | 32k+ 上下文中定位关键事实 | 1.5 |
+| 长文档关键信息提取 | 单文档多段落要点抽取 | 1.5 |
+| 多文档交叉对比 | 跨段引用与一致性核对 | 2.0 |
+
+> 评分规则：基于 `keyFacts` 命中比例（100 / 命中比例×100 / 0）。需要模型 context window ≥ 32k，并在配置中开启 `includeLongContext: true`。
+
 ## 输出报告
 
 评测完成后会生成三种格式的报告：
@@ -338,6 +347,8 @@ npm run build
 - ✨ 新增 DeepSeek adapter（`type: 'deepseek'`，OpenAI 兼容，含 `deepseek-chat` 默认 + `deepseek-reasoner` 推理回退）
 - ✨ 新增 通义千问 Qwen (DashScope) adapter（`type: 'qwen' | 'tongyi' | 'dashscope'`，默认 `qwen-turbo`，支持 `qwen-plus` / `qwen-max` / `qwen3-max`）
 - ✨ 新增 Ollama 本地模型 adapter（`type: 'ollama' | 'local'`，默认 `http://localhost:11434` + `llama3.2`，本地无需 API key）
+- ✨ 新增「工具调用 / Function Calling」评测维度（5 题，Scorer.scoreFunctionCalling：name+args 100/70/40/0，CLI + Web + DB + API 全链路）
+- ✨ 新增「长上下文理解 / Long Context」评测维度（3 题，需 32k+ context，Scorer.scoreLongContext 基于 keyFacts 命中比例，CLI + Web + DB + API 全链路）
 
 ### v0.3.0 (2026-05-23)
 - ✨ 新增 Web UI（Express + WebSocket 实时进度）
