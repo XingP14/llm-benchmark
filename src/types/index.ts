@@ -28,6 +28,7 @@ export interface BenchmarkConfig {
   benchmarks: {
     dialogue: boolean;
     coding: boolean;
+    function_calling: boolean;
   };
   /** 输出目录 */
   output?: string;
@@ -52,7 +53,7 @@ export interface BenchmarkQuestion {
   /** 评分权重 */
   weight: number;
   /** 评测类型 */
-  type: 'dialogue' | 'coding';
+  type: 'dialogue' | 'coding' | 'function_calling';
   /** 额外提示 (给模型的 system prompt) */
   systemPrompt?: string;
 }
@@ -100,7 +101,7 @@ export interface QuestionScore {
   /** 得分 (0-100) */
   score: number;
   /** 评测维度 */
-  dimension: 'dialogue' | 'coding';
+  dimension: 'dialogue' | 'coding' | 'function_calling';
   /** 模型输出 */
   modelOutput: string;
   /** 评测详情 (LLM 判定) */
@@ -118,6 +119,12 @@ export interface DimensionScore {
     details: Record<string, number>;
   };
   coding: {
+    total: number;
+    count: number;
+    average: number;
+    details: Record<string, number>;
+  };
+  function_calling: {
     total: number;
     count: number;
     average: number;

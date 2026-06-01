@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS evaluations (
   status TEXT NOT NULL DEFAULT 'PENDING',
   include_dialogue INTEGER DEFAULT 1,
   include_coding INTEGER DEFAULT 1,
+  include_function_calling INTEGER DEFAULT 0,
   started_at DATETIME,
   completed_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

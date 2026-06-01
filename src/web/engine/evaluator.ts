@@ -12,6 +12,7 @@ import { LLMAdapter } from '../../adapters/adapter';
 import { ModelConfig } from '../../types';
 import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../../benchmarks/coding';
+import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calling';
 import { BenchmarkQuestion } from '../../types';
 import { PythonSandbox } from '../../sandbox/python-sandbox';
 
@@ -40,6 +41,7 @@ export class EvaluatorEngine {
       const questions: BenchmarkQuestion[] = [];
       if (task.includeDialogue) questions.push(...getAllDialogueBenchmarks());
       if (task.includeCoding) questions.push(...getAllCodeBenchmarks());
+      if (task.includeFunctionCalling) questions.push(...getAllFunctionCallingBenchmarks());
 
       const total = questions.length * task.configs.length;
       let current = 0;
@@ -173,9 +175,20 @@ export class EvaluatorEngine {
   private async scoreQuestion(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
     if (question.type === 'dialogue') {
       return this.scoreDialogue(question, output);
+    } else if (question.type === 'function_calling') {
+      return this.scoreFunctionCalling(question, output);
     } else {
       return this.scoreCoding(question, output);
     }
+  }
+
+  private async scoreFunctionCalling(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
+    const { Scorer } = require('../../core/scorer');
+    // Web 端 scorer 复用 core 的 Scorer（adapter 用于在 web 端走 LLM 评分的场景；这里仅做工具调用结构匹配）
+    const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
+    const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
+    const result = await scorer.scoreFunctionCalling(question, output);
+    return { score: result.score };
   }
 
   /**

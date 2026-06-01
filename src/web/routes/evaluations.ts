@@ -30,23 +30,46 @@ router.get('/', (req: AuthRequest, res: Response) => {
 
 // POST /api/evaluations - 触发新评测
 router.post('/', async (req: AuthRequest, res: Response) => {
-  const { config_ids, dialogue = true, coding = true } = req.body;
+  const {
+    config_ids,
+    dialogue = true,
+    coding = true,
+    function_calling = false,
+  } = req.body;
 
   if (!config_ids || !Array.isArray(config_ids) || config_ids.length === 0) {
     res.status(400).json({ error: 'config_ids required and must be non-empty array' });
     return;
   }
 
+  if (!dialogue && !coding && !function_calling) {
+    res.status(400).json({ error: 'at least one of dialogue/coding/function_calling must be true' });
+    return;
+  }
+
   try {
-    const evaluationId = taskManager.startTask(req.userId!, config_ids, dialogue, coding);
+    const evaluationId = taskManager.startTask(
+      req.userId!,
+      config_ids,
+      dialogue,
+      coding,
+      function_calling
+    );
 
     const db = getDatabase();
 
     // 创建评测记录
     db.prepare(`
-      INSERT INTO evaluations (id, user_id, status, include_dialogue, include_coding)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(evaluationId, req.userId, 'PENDING', dialogue ? 1 : 0, coding ? 1 : 0);
+      INSERT INTO evaluations (id, user_id, status, include_dialogue, include_coding, include_function_calling)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      evaluationId,
+      req.userId,
+      'PENDING',
+      dialogue ? 1 : 0,
+      coding ? 1 : 0,
+      function_calling ? 1 : 0
+    );
 
     // 关联配置
     for (const configId of config_ids) {

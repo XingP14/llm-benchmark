@@ -9,6 +9,7 @@ export interface EvaluationTask {
   configs: number[];
   includeDialogue: boolean;
   includeCoding: boolean;
+  includeFunctionCalling: boolean;
   startedAt?: Date;
   completedAt?: Date;
 }
@@ -20,7 +21,13 @@ class TaskManager {
   /**
    * 开始新任务
    */
-  startTask(userId: number, configs: number[], dialogue: boolean, coding: boolean): string {
+  startTask(
+    userId: number,
+    configs: number[],
+    dialogue: boolean,
+    coding: boolean,
+    functionCalling: boolean = false
+  ): string {
     if (this.currentTask && this.currentTask.status === 'RUNNING') {
       throw new Error('Another evaluation is running');
     }
@@ -32,6 +39,7 @@ class TaskManager {
       configs,
       includeDialogue: dialogue,
       includeCoding: coding,
+      includeFunctionCalling: functionCalling,
     };
     this.cancelRequested = false;
     return this.currentTask.id;

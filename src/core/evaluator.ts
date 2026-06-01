@@ -12,6 +12,7 @@ import { LLMAdapter } from '../adapters/adapter';
 import { Scorer } from './scorer';
 import { getAllDialogueBenchmarks } from '../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../benchmarks/coding';
+import { getAllFunctionCallingBenchmarks } from '../benchmarks/function-calling';
 
 /**
  * 评测引擎 - 协调整个评测流程
@@ -59,6 +60,9 @@ export class Evaluator {
     }
     if (this.config.benchmarks.coding) {
       questions.push(...getAllCodeBenchmarks());
+    }
+    if (this.config.benchmarks.function_calling) {
+      questions.push(...getAllFunctionCallingBenchmarks());
     }
 
     for (let i = 0; i < questions.length; i++) {
@@ -130,6 +134,10 @@ export class Evaluator {
       return scorer.scoreCoding(question, modelOutput, codeQuestion.testCases);
     }
 
+    if (question.type === 'function_calling') {
+      return scorer.scoreFunctionCalling(question, modelOutput);
+    }
+
     return scorer.scoreDialogue(question, modelOutput);
   }
 
@@ -144,6 +152,7 @@ export class Evaluator {
   private calculateDimensions(scores: QuestionScore[]): DimensionScore {
     const dialogueScores = scores.filter((s) => s.dimension === 'dialogue');
     const codingScores = scores.filter((s) => s.dimension === 'coding');
+    const fcScores = scores.filter((s) => s.dimension === 'function_calling');
 
     return {
       dialogue: {
@@ -169,6 +178,18 @@ export class Evaluator {
               )
             : 0,
         details: this.calculateCategoryDetails(codingScores),
+      },
+      function_calling: {
+        total: fcScores.reduce((sum, s) => sum + s.score, 0),
+        count: fcScores.length,
+        average:
+          fcScores.length > 0
+            ? Math.round(
+                fcScores.reduce((sum, s) => sum + s.score, 0) /
+                  fcScores.length
+              )
+            : 0,
+        details: this.calculateCategoryDetails(fcScores),
       },
     };
   }

@@ -3,6 +3,7 @@
 import { Router, Request, Response } from 'express';
 import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../../benchmarks/coding';
+import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calling';
 
 const router = Router();
 
@@ -30,12 +31,24 @@ router.get('/', (_req: Request, res: Response) => {
     weight: q.weight,
   }));
 
+  const functionCalling = getAllFunctionCallingBenchmarks().map(q => ({
+    id: q.id,
+    type: q.type,
+    category: q.category,
+    content: q.content,
+    available_tools: (q as any).availableTools,
+    expected_tool_call: (q as any).expectedToolCall,
+    weight: q.weight,
+  }));
+
   res.json({
-    total: dialogue.length + coding.length,
+    total: dialogue.length + coding.length + functionCalling.length,
     dialogue_count: dialogue.length,
     coding_count: coding.length,
+    function_calling_count: functionCalling.length,
     dialogue,
     coding,
+    function_calling: functionCalling,
   });
 });
 

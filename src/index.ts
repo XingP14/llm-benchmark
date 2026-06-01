@@ -123,6 +123,7 @@ function initConfig() {
     benchmarks: {
       dialogue: true,
       coding: true,
+      function_calling: false,
     },
     output: './results',
     concurrency: 3,
@@ -158,6 +159,7 @@ async function compareModels(args: string[]) {
     benchmarks: {
       dialogue: true,
       coding: true,
+      function_calling: false,
     },
     output: './results',
   };
@@ -176,6 +178,7 @@ async function compareModels(args: string[]) {
 function listBenchmarks() {
   const { getAllDialogueBenchmarks } = require('./benchmarks/dialogue');
   const { getAllCodeBenchmarks } = require('./benchmarks/coding');
+  const { getAllFunctionCallingBenchmarks } = require('./benchmarks/function-calling');
 
   console.log('\n📋 可用评测题:\n');
 
@@ -194,6 +197,15 @@ function listBenchmarks() {
 
   const codeByCategory = groupBy(codeBenchmarks, 'category');
   for (const [category, questions] of Object.entries(codeByCategory)) {
+    console.log(`  [${category}] - ${(questions as any[]).length} 题`);
+  }
+
+  console.log('\n=== 工具调用 (Function Calling) 评测 ===');
+  const fcBenchmarks = getAllFunctionCallingBenchmarks();
+  console.log(`共 ${fcBenchmarks.length} 题\n`);
+
+  const fcByCategory = groupBy(fcBenchmarks, 'category');
+  for (const [category, questions] of Object.entries(fcByCategory)) {
     console.log(`  [${category}] - ${(questions as any[]).length} 题`);
   }
 }
