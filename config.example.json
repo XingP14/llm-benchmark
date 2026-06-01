@@ -1,0 +1,16 @@
+{
+  "models": [
+    {
+      "name": "your-model-name",
+      "endpoint": "https://api.openai.com/v1",
+      "apiKey": "YOUR_API_KEY_HERE",
+      "type": "openai",
+      "model": "gpt-4o-mini"
+    }
+  ],
+  "benchmarks": {
+    "dialogue": true,
+    "coding": true
+  },
+  "output": "./results"
+}

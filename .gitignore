@@ -23,3 +23,9 @@ test-data/
 *.db
 *.db-shm
 *.db-wal
+
+# Local config files (may contain API keys)
+config.json
+config-*.json
+config.local.json
+*.local.json
