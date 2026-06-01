@@ -57,6 +57,60 @@ llm-bench list
 llm-bench help
 ```
 
+## Web UI / Docker 部署
+
+除了 CLI 之外，v0.3.0 起提供 Web UI（Express + WebSocket 实时进度）和 SQLite 持久化。可本地启动，也可 Docker 一键部署。
+
+### 本地启动 Web UI
+
+```bash
+# 构建
+npm run build
+
+# 启动 Web 服务器（默认 3033 端口）
+npm run start:web
+# 或开发模式
+npm run dev:web
+```
+
+打开浏览器访问 <http://localhost:3033>，默认管理员账户：
+
+- 用户名：`admin`
+- 密码：取自 `ADMIN_PASSWORD` 环境变量，默认 `admin123`（**生产环境务必修改**）
+
+### Docker 一键部署
+
+```bash
+# 设置环境变量（可选）
+export JWT_SECRET="your-strong-jwt-secret"
+export ADMIN_PASSWORD="your-strong-password"
+
+# 启动
+docker compose up -d
+
+# 查看日志
+docker compose logs -f
+```
+
+`docker-compose.yml` 默认将主机 `192.168.160.14:3033` 映射到容器 `3033`，数据持久化到 `./data/llm-bench.db`。如需修改监听地址，编辑 `docker-compose.yml` 的 `ports` 配置。
+
+### 健康检查
+
+```bash
+curl http://localhost:3033/api/health
+# {"status":"ok","timestamp":"2026-06-01T..."}
+```
+
+### Web UI 提供的能力
+
+- 🧩 浏览器内创建 / 编辑 / 删除评测配置
+- ▶️ 一键启动评测，WebSocket 实时推送进度
+- 📜 历史评测列表 + 详细结果（按配置/模型筛选）
+- 🗃️ SQLite 持久化所有配置和结果，容器重启不丢失
+- 🔐 JWT 鉴权，所有 `/api/*` 受保护
+
+CLI 与 Web UI 共享同一份 SQLite 数据库，可混用。
+
 ## 支持的模型
 
 | 平台 | 类型 | 示例模型 |
