@@ -172,6 +172,8 @@ CLI 与 Web UI 共享同一份 SQLite 数据库，可混用。
 
 ## 配置文件
 
+最小可用配置（OpenAI / Anthropic / 智谱 GLM）：
+
 ```json
 {
   "models": [
@@ -204,6 +206,70 @@ CLI 与 Web UI 共享同一份 SQLite 数据库，可混用。
   "output": "./results"
 }
 ```
+
+### DeepSeek（OpenAI 兼容，含推理模型回退）
+
+```json
+{
+  "models": [
+    {
+      "name": "deepseek-chat",
+      "endpoint": "https://api.deepseek.com/v1",
+      "apiKey": "sk-your-deepseek-key",
+      "type": "deepseek",
+      "model": "deepseek-chat"
+    },
+    {
+      "name": "deepseek-reasoner",
+      "endpoint": "https://api.deepseek.com/v1",
+      "apiKey": "sk-your-deepseek-key",
+      "type": "deepseek",
+      "model": "deepseek-reasoner"
+    }
+  ],
+  "benchmarks": { "dialogue": true, "coding": true }
+}
+```
+
+> `deepseek-reasoner` 推理模型会返回 `reasoning_content` 字段，适配器会自动回退到该字段；其余 OpenAI 兼容字段正常解析。
+
+### 通义千问 Qwen（DashScope 兼容模式）
+
+```json
+{
+  "models": [
+    {
+      "name": "qwen-turbo",
+      "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "apiKey": "sk-your-dashscope-key",
+      "type": "qwen",
+      "model": "qwen-turbo"
+    }
+  ],
+  "benchmarks": { "dialogue": true, "coding": true }
+}
+```
+
+> `type` 接受 `qwen` / `tongyi` / `dashscope` 三种写法（同一适配器）。其他可用模型：`qwen-plus`、`qwen-max`、`qwen3-max`。
+
+### Ollama 本地模型（无需 API Key）
+
+```json
+{
+  "models": [
+    {
+      "name": "ollama-llama",
+      "endpoint": "http://localhost:11434",
+      "apiKey": "ollama",
+      "type": "ollama",
+      "model": "llama3.2"
+    }
+  ],
+  "benchmarks": { "dialogue": true, "coding": true }
+}
+```
+
+> 前提：本机已启动 Ollama 服务（`ollama serve`），并 `ollama pull llama3.2` 拉取模型。`type` 接受 `ollama` / `local` 两种写法。`apiKey` 字段必填但可填任意非空字符串（Ollama 默认无鉴权）。
 
 ## 评测维度
 
