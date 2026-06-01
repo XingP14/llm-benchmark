@@ -10,7 +10,7 @@
 
 ## 特性
 
-- 🌐 **多平台支持**: OpenAI / Anthropic Claude / 智谱 GLM
+- 🌐 **多平台支持**: OpenAI / Anthropic Claude / 智谱 GLM / DeepSeek / 通义千问 Qwen (DashScope) / Ollama 本地模型
 - 📊 **统一评测**: 通用对话 + 代码能力双维度
 - ⚡ **快速执行**: 本地批量评测，无需云服务
 - 📈 **可视化报告**: 表格、雷达图、柱状图对比
@@ -165,6 +165,9 @@ CLI 与 Web UI 共享同一份 SQLite 数据库，可混用。
 | OpenAI | `openai` | GPT-4, GPT-3.5-turbo |
 | Anthropic | `anthropic` | Claude 3 Haiku, Claude 3 Opus |
 | 智谱 | `glm` | GLM-4, GLM-3-Turbo |
+| DeepSeek | `deepseek` | deepseek-chat, deepseek-reasoner |
+| 通义千问 | `qwen` / `tongyi` / `dashscope` | qwen-turbo, qwen-plus, qwen-max, qwen3-max |
+| Ollama (本地) | `ollama` / `local` | llama3.2, qwen2.5, mistral, codellama, deepseek-r1 |
 | 其他 | `openai` | 任何 OpenAI 兼容接口 |
 
 ## 配置文件
@@ -255,6 +258,9 @@ npm run build
 - ✨ README 顶部加 GitHub Actions / Docker Hub / npm version / License / Node 徽章
 - ✨ README 新增「拉取预构建 Docker 镜像」子章节（`docker pull` / `docker run` / tag pin 完整示例）
 - ✨ 改用 `npx @xingp14/llm-benchmark` 一键运行引导
+- ✨ 新增 DeepSeek adapter（`type: 'deepseek'`，OpenAI 兼容，含 `deepseek-chat` 默认 + `deepseek-reasoner` 推理回退）
+- ✨ 新增 通义千问 Qwen (DashScope) adapter（`type: 'qwen' | 'tongyi' | 'dashscope'`，默认 `qwen-turbo`，支持 `qwen-plus` / `qwen-max` / `qwen3-max`）
+- ✨ 新增 Ollama 本地模型 adapter（`type: 'ollama' | 'local'`，默认 `http://localhost:11434` + `llama3.2`，本地无需 API key）
 
 ### v0.3.0 (2026-05-23)
 - ✨ 新增 Web UI（Express + WebSocket 实时进度）
