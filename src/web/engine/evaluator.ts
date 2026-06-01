@@ -5,6 +5,7 @@ import { taskManager } from './task';
 import { OpenAIAdapter } from '../../adapters/openai-adapter';
 import { AnthropicAdapter } from '../../adapters/anthropic-adapter';
 import { GLMAdapter } from '../../adapters/glm-adapter';
+import { DeepSeekAdapter } from '../../adapters/deepseek-adapter';
 import { LLMAdapter } from '../../adapters/adapter';
 import { ModelConfig } from '../../types';
 import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
@@ -137,6 +138,8 @@ export class EvaluatorEngine {
         return new AnthropicAdapter();
       case 'glm':
         return new GLMAdapter();
+      case 'deepseek':
+        return new DeepSeekAdapter();
       default:
         return new OpenAIAdapter();
     }

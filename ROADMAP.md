@@ -53,7 +53,7 @@
 - [ ] Step 3: 加入「多轮对话一致性」评测维度（3 题）
 
 #### Story 4.2: 新模型 adapter
-- [ ] Step 1: DeepSeek adapter（OpenAI 兼容）
+- [x] Step 1: DeepSeek adapter（OpenAI 兼容，含 deepseek-chat / deepseek-reasoner 推理回退）— 2026-06-02
 - [ ] Step 2: Qwen (DashScope) adapter
 - [ ] Step 3: Ollama 本地模型 adapter
 
@@ -67,6 +67,7 @@
 
 ---
 
+_最近更新：2026-06-02 — Story 4.2 Step 1 完成（DeepSeek adapter：OpenAI 兼容实现，含 deepseek-chat 默认模型 / deepseek-reasoner reasoning_content 回退 / 22 项 adapter 测试通过含 5 项新测试）_
 _最近更新：2026-06-02 — Story 3.3 Step 1/2 完成（CI 徽章 + `.github/workflows/ci.yml`）；Step 3 待 CI 首次跑通后确认_
 _最近更新：2026-06-02 — Story 3.1 Step 2/3 完成（README npx 引导 + npm publish --dry-run 验证通过）；Step 4 正式发布待独立时段执行_
 _最近更新：2026-06-02 — Story 3.2 Step 2 完成（README 「拉取预构建 Docker 镜像」子章节 + `docker pull` / `docker run` / tag pin 示例）；Step 3 镜像实测待 PR 合并 / tag 推送后_

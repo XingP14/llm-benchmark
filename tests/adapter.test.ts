@@ -3,6 +3,7 @@
 import { OpenAIAdapter } from '../src/adapters/openai-adapter';
 import { AnthropicAdapter } from '../src/adapters/anthropic-adapter';
 import { GLMAdapter } from '../src/adapters/glm-adapter';
+import { DeepSeekAdapter } from '../src/adapters/deepseek-adapter';
 
 describe('OpenAIAdapter', () => {
   const adapter = new OpenAIAdapter();
@@ -252,6 +253,101 @@ describe('GLMAdapter', () => {
           { name: 'test', endpoint: 'https://api.zhipuai.com', apiKey: 'sk-glm', type: 'glm' }
         )
       ).rejects.toThrow('GLM Error: Model not found');
+      jest.restoreAllMocks();
+    });
+  });
+});
+
+describe('DeepSeekAdapter', () => {
+  const adapter = new DeepSeekAdapter();
+
+  it('should have correct name', () => {
+    expect(adapter.getName()).toBe('DeepSeek');
+  });
+
+  describe('ping', () => {
+    it('should return false for invalid endpoint', async () => {
+      const config = {
+        name: 'test',
+        endpoint: 'https://invalid-endpoint.com',
+        apiKey: 'invalid',
+        type: 'deepseek' as const,
+      };
+
+      const result = await adapter.ping(config);
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('chat', () => {
+    it('should return content on successful response', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Hello from DeepSeek' } }],
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      const result = await adapter.chat(
+        [{ role: 'user', content: 'Hi' }],
+        { name: 'test', endpoint: 'https://api.deepseek.com/v1', apiKey: 'sk-ds', type: 'deepseek' }
+      );
+
+      expect(result).toBe('Hello from DeepSeek');
+      jest.restoreAllMocks();
+    });
+
+    it('should fallback to reasoning_content when content is empty', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: '', reasoning_content: 'thinking...' } }],
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      const result = await adapter.chat(
+        [{ role: 'user', content: 'Solve this' }],
+        { name: 'test', endpoint: 'https://api.deepseek.com/v1', apiKey: 'sk-ds', type: 'deepseek', model: 'deepseek-reasoner' }
+      );
+
+      expect(result).toBe('thinking...');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on non-ok response', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 401,
+        text: jest.fn().mockResolvedValue('Unauthorized'),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.deepseek.com/v1', apiKey: 'bad', type: 'deepseek' }
+        )
+      ).rejects.toThrow('DeepSeek API Error: 401');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on API error in response body', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          error: { message: 'Invalid API key', type: 'authentication_error' },
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.deepseek.com/v1', apiKey: 'bad', type: 'deepseek' }
+        )
+      ).rejects.toThrow('DeepSeek Error: Invalid API key');
       jest.restoreAllMocks();
     });
   });

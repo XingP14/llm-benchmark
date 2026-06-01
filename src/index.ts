@@ -7,6 +7,7 @@ import { LLMAdapter } from './adapters/adapter';
 import { OpenAIAdapter } from './adapters/openai-adapter';
 import { AnthropicAdapter } from './adapters/anthropic-adapter';
 import { GLMAdapter } from './adapters/glm-adapter';
+import { DeepSeekAdapter } from './adapters/deepseek-adapter';
 import * as fs from 'fs';
 
 /**
@@ -19,6 +20,8 @@ function createAdapter(type: string): LLMAdapter {
     case 'glm':
     case 'zhipu':
       return new GLMAdapter();
+    case 'deepseek':
+      return new DeepSeekAdapter();
     case 'openai':
     default:
       return new OpenAIAdapter();
