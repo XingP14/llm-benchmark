@@ -185,6 +185,63 @@ export class Scorer {
   }
 
   /**
+   * 对长上下文理解评测答案进行评分
+   * 评分逻辑：检查 keyFacts 在模型回答中的命中比例
+   *  - 全部命中：100
+   *  - 部分命中：按比例给分 (Math.round(matched/total * 100))
+   *  - 都未命中：0
+   */
+  async scoreLongContext(
+    question: BenchmarkQuestion,
+    modelOutput: string
+  ): Promise<QuestionScore> {
+    try {
+      const lcQuestion = question as any;
+      const keyFacts: string[] = lcQuestion.keyFacts || [];
+      if (keyFacts.length === 0) {
+        return {
+          questionId: question.id,
+          category: question.category,
+          score: 0,
+          dimension: 'long_context',
+          modelOutput: modelOutput,
+          detail: '题目缺少 keyFacts',
+        };
+      }
+
+      const outputLower = (modelOutput || '').toLowerCase();
+      const matched: string[] = [];
+      const missed: string[] = [];
+      for (const fact of keyFacts) {
+        if (outputLower.includes(String(fact).toLowerCase())) {
+          matched.push(fact);
+        } else {
+          missed.push(fact);
+        }
+      }
+      const score = Math.round((matched.length / keyFacts.length) * 100);
+      const detail = `keyFacts ${matched.length}/${keyFacts.length} matched: [${matched.join(', ') || 'none'}]${missed.length > 0 ? ` missed: [${missed.join(', ')}]` : ''}`;
+      return {
+        questionId: question.id,
+        category: question.category,
+        score,
+        dimension: 'long_context',
+        modelOutput: modelOutput,
+        detail,
+      };
+    } catch (err) {
+      return {
+        questionId: question.id,
+        category: question.category,
+        score: 0,
+        dimension: 'long_context',
+        modelOutput: modelOutput,
+        detail: `LC 评分错误: ${(err as Error).message}`,
+      };
+    }
+  }
+
+  /**
    * 从模型输出中提取首个 tool_call
    * 兼容: OpenAI tool_calls 数组 / 顶层 JSON / 文本内嵌 JSON
    */

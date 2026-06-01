@@ -13,6 +13,7 @@ import { ModelConfig } from '../../types';
 import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calling';
+import { getAllLongContextBenchmarks } from '../../benchmarks/long-context';
 import { BenchmarkQuestion } from '../../types';
 import { PythonSandbox } from '../../sandbox/python-sandbox';
 
@@ -42,6 +43,7 @@ export class EvaluatorEngine {
       if (task.includeDialogue) questions.push(...getAllDialogueBenchmarks());
       if (task.includeCoding) questions.push(...getAllCodeBenchmarks());
       if (task.includeFunctionCalling) questions.push(...getAllFunctionCallingBenchmarks());
+      if (task.includeLongContext) questions.push(...getAllLongContextBenchmarks());
 
       const total = questions.length * task.configs.length;
       let current = 0;
@@ -177,6 +179,8 @@ export class EvaluatorEngine {
       return this.scoreDialogue(question, output);
     } else if (question.type === 'function_calling') {
       return this.scoreFunctionCalling(question, output);
+    } else if (question.type === 'long_context') {
+      return this.scoreLongContext(question, output);
     } else {
       return this.scoreCoding(question, output);
     }
@@ -188,6 +192,18 @@ export class EvaluatorEngine {
     const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
     const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
     const result = await scorer.scoreFunctionCalling(question, output);
+    return { score: result.score };
+  }
+
+  /**
+   * 长上下文评分（Web 端）
+   * 复用 core Scorer 的 keyFacts 命中算法
+   */
+  private async scoreLongContext(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
+    const { Scorer } = require('../../core/scorer');
+    const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
+    const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
+    const result = await scorer.scoreLongContext(question, output);
     return { score: result.score };
   }
 

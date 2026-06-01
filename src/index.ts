@@ -124,6 +124,7 @@ function initConfig() {
       dialogue: true,
       coding: true,
       function_calling: false,
+      long_context: false,
     },
     output: './results',
     concurrency: 3,
@@ -160,6 +161,7 @@ async function compareModels(args: string[]) {
       dialogue: true,
       coding: true,
       function_calling: false,
+      long_context: false,
     },
     output: './results',
   };
@@ -179,6 +181,7 @@ function listBenchmarks() {
   const { getAllDialogueBenchmarks } = require('./benchmarks/dialogue');
   const { getAllCodeBenchmarks } = require('./benchmarks/coding');
   const { getAllFunctionCallingBenchmarks } = require('./benchmarks/function-calling');
+  const { getAllLongContextBenchmarks } = require('./benchmarks/long-context');
 
   console.log('\n📋 可用评测题:\n');
 
@@ -206,6 +209,15 @@ function listBenchmarks() {
 
   const fcByCategory = groupBy(fcBenchmarks, 'category');
   for (const [category, questions] of Object.entries(fcByCategory)) {
+    console.log(`  [${category}] - ${(questions as any[]).length} 题`);
+  }
+
+  console.log('\n=== 长上下文理解评测 ===');
+  const lcBenchmarks = getAllLongContextBenchmarks();
+  console.log(`共 ${lcBenchmarks.length} 题\n`);
+
+  const lcByCategory = groupBy(lcBenchmarks, 'category');
+  for (const [category, questions] of Object.entries(lcByCategory)) {
     console.log(`  [${category}] - ${(questions as any[]).length} 题`);
   }
 }

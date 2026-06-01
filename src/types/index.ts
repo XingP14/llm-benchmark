@@ -29,6 +29,8 @@ export interface BenchmarkConfig {
     dialogue: boolean;
     coding: boolean;
     function_calling: boolean;
+    /** v0.4.0+ 新增：长上下文理解（默认 false，需 32k+ context 模型） */
+    long_context?: boolean;
   };
   /** 输出目录 */
   output?: string;
@@ -53,7 +55,7 @@ export interface BenchmarkQuestion {
   /** 评分权重 */
   weight: number;
   /** 评测类型 */
-  type: 'dialogue' | 'coding' | 'function_calling';
+  type: 'dialogue' | 'coding' | 'function_calling' | 'long_context';
   /** 额外提示 (给模型的 system prompt) */
   systemPrompt?: string;
 }
@@ -101,7 +103,7 @@ export interface QuestionScore {
   /** 得分 (0-100) */
   score: number;
   /** 评测维度 */
-  dimension: 'dialogue' | 'coding' | 'function_calling';
+  dimension: 'dialogue' | 'coding' | 'function_calling' | 'long_context';
   /** 模型输出 */
   modelOutput: string;
   /** 评测详情 (LLM 判定) */
@@ -125,6 +127,13 @@ export interface DimensionScore {
     details: Record<string, number>;
   };
   function_calling: {
+    total: number;
+    count: number;
+    average: number;
+    details: Record<string, number>;
+  };
+  /** v0.4.0+ 新增：长上下文理解评分汇总（可选，启用 long_context 评测时存在） */
+  long_context?: {
     total: number;
     count: number;
     average: number;

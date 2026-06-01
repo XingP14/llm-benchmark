@@ -10,6 +10,7 @@ export interface EvaluationTask {
   includeDialogue: boolean;
   includeCoding: boolean;
   includeFunctionCalling: boolean;
+  includeLongContext: boolean;
   startedAt?: Date;
   completedAt?: Date;
 }
@@ -26,7 +27,8 @@ class TaskManager {
     configs: number[],
     dialogue: boolean,
     coding: boolean,
-    functionCalling: boolean = false
+    functionCalling: boolean = false,
+    longContext: boolean = false
   ): string {
     if (this.currentTask && this.currentTask.status === 'RUNNING') {
       throw new Error('Another evaluation is running');
@@ -40,6 +42,7 @@ class TaskManager {
       includeDialogue: dialogue,
       includeCoding: coding,
       includeFunctionCalling: functionCalling,
+      includeLongContext: longContext,
     };
     this.cancelRequested = false;
     return this.currentTask.id;

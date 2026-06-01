@@ -4,6 +4,7 @@ import { Router, Request, Response } from 'express';
 import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calling';
+import { getAllLongContextBenchmarks } from '../../benchmarks/long-context';
 
 const router = Router();
 
@@ -41,14 +42,26 @@ router.get('/', (_req: Request, res: Response) => {
     weight: q.weight,
   }));
 
+  const longContext = getAllLongContextBenchmarks().map(q => ({
+    id: q.id,
+    type: q.type,
+    category: q.category,
+    content: q.content,
+    context_tokens: (q as any).contextTokens,
+    key_facts: (q as any).keyFacts,
+    weight: q.weight,
+  }));
+
   res.json({
-    total: dialogue.length + coding.length + functionCalling.length,
+    total: dialogue.length + coding.length + functionCalling.length + longContext.length,
     dialogue_count: dialogue.length,
     coding_count: coding.length,
     function_calling_count: functionCalling.length,
+    long_context_count: longContext.length,
     dialogue,
     coding,
     function_calling: functionCalling,
+    long_context: longContext,
   });
 });
 

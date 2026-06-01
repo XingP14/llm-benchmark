@@ -117,6 +117,7 @@ function initializeSchema(database: Database.Database): void {
       include_dialogue INTEGER DEFAULT 1,
       include_coding INTEGER DEFAULT 1,
       include_function_calling INTEGER DEFAULT 0,
+      include_long_context INTEGER DEFAULT 0,
       started_at DATETIME,
       completed_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -152,4 +153,12 @@ function initializeSchema(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_evaluations_user ON evaluations(user_id);
     CREATE INDEX IF NOT EXISTS idx_configs_user ON configs(user_id);
   `);
+
+  // 兼容已有库：补加 include_long_context 列
+  if (db) {
+    const evalCols = db.prepare("PRAGMA table_info(evaluations)").all() as any[];
+    if (!evalCols.some((c: any) => c.name === 'include_long_context')) {
+      db.exec("ALTER TABLE evaluations ADD COLUMN include_long_context INTEGER DEFAULT 0");
+    }
+  }
 }
