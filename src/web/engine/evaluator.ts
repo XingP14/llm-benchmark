@@ -6,6 +6,7 @@ import { OpenAIAdapter } from '../../adapters/openai-adapter';
 import { AnthropicAdapter } from '../../adapters/anthropic-adapter';
 import { GLMAdapter } from '../../adapters/glm-adapter';
 import { DeepSeekAdapter } from '../../adapters/deepseek-adapter';
+import { QwenAdapter } from '../../adapters/qwen-adapter';
 import { LLMAdapter } from '../../adapters/adapter';
 import { ModelConfig } from '../../types';
 import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
@@ -140,6 +141,10 @@ export class EvaluatorEngine {
         return new GLMAdapter();
       case 'deepseek':
         return new DeepSeekAdapter();
+      case 'qwen':
+      case 'tongyi':
+      case 'dashscope':
+        return new QwenAdapter();
       default:
         return new OpenAIAdapter();
     }

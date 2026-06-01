@@ -11,7 +11,7 @@ export interface ModelConfig {
   /** API Key */
   apiKey: string;
   /** 模型类型 (用于适配器选择) */
-  type: 'openai' | 'anthropic' | 'glm' | 'deepseek' | 'custom';
+  type: 'openai' | 'anthropic' | 'glm' | 'deepseek' | 'qwen' | 'custom';
   /** 可选: 具体模型名 (如 gpt-4, gpt-3.5-turbo) */
   model?: string;
   /** 可选: 额外参数 */

@@ -54,7 +54,7 @@
 
 #### Story 4.2: 新模型 adapter
 - [x] Step 1: DeepSeek adapter（OpenAI 兼容，含 deepseek-chat / deepseek-reasoner 推理回退）— 2026-06-02
-- [ ] Step 2: Qwen (DashScope) adapter
+- [x] Step 2: Qwen (DashScope) adapter（OpenAI 兼容模式，默认 qwen-turbo，支持 qwen-plus / qwen-max / qwen3-max；含 5 个单元测试）— 2026-06-02
 - [ ] Step 3: Ollama 本地模型 adapter
 
 ## 📋 候选池（待排序）
@@ -67,6 +67,7 @@
 
 ---
 
+_最近更新：2026-06-02 — Story 4.2 Step 2 完成（Qwen/DashScope adapter：OpenAI 兼容模式，默认 qwen-turbo，支持 qwen-plus / qwen-max / qwen3-max；含 5 个新单元测试 name/ping/chat success/Authorization Bearer 头/错误路径；tsc --noEmit 无错）_
 _最近更新：2026-06-02 — Story 4.2 Step 1 完成（DeepSeek adapter：OpenAI 兼容实现，含 deepseek-chat 默认模型 / deepseek-reasoner reasoning_content 回退 / 22 项 adapter 测试通过含 5 项新测试）_
 _最近更新：2026-06-02 — Story 3.3 Step 1/2 完成（CI 徽章 + `.github/workflows/ci.yml`）；Step 3 待 CI 首次跑通后确认_
 _最近更新：2026-06-02 — Story 3.1 Step 2/3 完成（README npx 引导 + npm publish --dry-run 验证通过）；Step 4 正式发布待独立时段执行_

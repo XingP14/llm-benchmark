@@ -8,6 +8,7 @@ import { OpenAIAdapter } from './adapters/openai-adapter';
 import { AnthropicAdapter } from './adapters/anthropic-adapter';
 import { GLMAdapter } from './adapters/glm-adapter';
 import { DeepSeekAdapter } from './adapters/deepseek-adapter';
+import { QwenAdapter } from './adapters/qwen-adapter';
 import * as fs from 'fs';
 
 /**
@@ -22,6 +23,10 @@ function createAdapter(type: string): LLMAdapter {
       return new GLMAdapter();
     case 'deepseek':
       return new DeepSeekAdapter();
+    case 'qwen':
+    case 'tongyi':
+    case 'dashscope':
+      return new QwenAdapter();
     case 'openai':
     default:
       return new OpenAIAdapter();

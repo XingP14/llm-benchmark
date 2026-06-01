@@ -4,6 +4,7 @@ import { OpenAIAdapter } from '../src/adapters/openai-adapter';
 import { AnthropicAdapter } from '../src/adapters/anthropic-adapter';
 import { GLMAdapter } from '../src/adapters/glm-adapter';
 import { DeepSeekAdapter } from '../src/adapters/deepseek-adapter';
+import { QwenAdapter } from '../src/adapters/qwen-adapter';
 
 describe('OpenAIAdapter', () => {
   const adapter = new OpenAIAdapter();
@@ -348,6 +349,108 @@ describe('DeepSeekAdapter', () => {
           { name: 'test', endpoint: 'https://api.deepseek.com/v1', apiKey: 'bad', type: 'deepseek' }
         )
       ).rejects.toThrow('DeepSeek Error: Invalid API key');
+      jest.restoreAllMocks();
+    });
+  });
+});
+
+describe('QwenAdapter', () => {
+  const adapter = new QwenAdapter();
+
+  it('should have correct name', () => {
+    expect(adapter.getName()).toBe('Qwen (DashScope)');
+  });
+
+  describe('ping', () => {
+    it('should return false for invalid endpoint', async () => {
+      const config = {
+        name: 'test',
+        endpoint: 'https://invalid-endpoint.com',
+        apiKey: 'invalid',
+        type: 'qwen' as const,
+      };
+
+      const result = await adapter.ping(config);
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('chat', () => {
+    it('should return content on successful response', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Hello from Qwen' } }],
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      const result = await adapter.chat(
+        [{ role: 'user', content: 'Hi' }],
+        { name: 'test', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: 'sk-qwen', type: 'qwen' }
+      );
+
+      expect(result).toBe('Hello from Qwen');
+      jest.restoreAllMocks();
+    });
+
+    it('should send Authorization Bearer with API key', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'OK' } }],
+        }),
+      };
+      const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await adapter.chat(
+        [{ role: 'user', content: 'Hi' }],
+        { name: 'test', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: 'sk-test-123', type: 'qwen' }
+      );
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer sk-test-123',
+          }),
+        })
+      );
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on non-ok response', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 403,
+        text: jest.fn().mockResolvedValue('Forbidden'),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: 'bad', type: 'qwen' }
+        )
+      ).rejects.toThrow('Qwen API Error: 403');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw error on API error in response body', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          error: { message: 'Invalid API key provided', type: 'invalid_api_key' },
+        }),
+      };
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: 'bad', type: 'qwen' }
+        )
+      ).rejects.toThrow('Qwen Error: Invalid API key provided');
       jest.restoreAllMocks();
     });
   });
