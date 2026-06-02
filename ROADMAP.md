@@ -67,6 +67,7 @@
 
 ---
 
+_最近更新：2026-06-02 — Story 3.3 Step 2 闭合：补 `.eslintrc.cjs`（ESLint v8 + @typescript-eslint v7）+ `lint` script + 2 个 devDeps，让 CI workflow 的 `npm run lint --if-present` 真正可跑（commit `3216f31`）_
 _最近更新：2026-06-02 — Story 4.1 Step 3 完成（多轮对话一致性 dimension：3 题 + types + evaluator 多轮 turns + Scorer.scoreMultiTurn + CLI list 默认值 + Web routes/evaluations/questions + DB 列迁移 + 评分聚合 multi_turn_score；commit `47d8602`）_
 _最近更新：2026-06-02 — Story 4.1 Step 1 完成（Function Calling 评测维度：5 题 + Scorer + CLI + Web + DB + API 全链路）_
 _最近更新：2026-06-02 — Story 4.2 全部完成（DeepSeek + Qwen/DashScope + Ollama 本地模型 adapter）_
