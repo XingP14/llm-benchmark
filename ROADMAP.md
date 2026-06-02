@@ -50,7 +50,7 @@
 #### Story 4.1: 新增评测维度
 - [x] Step 1: 加入「工具调用 / Function calling」评测维度（5 题）— 2026-06-02 (`c71c2f2`，5 题覆盖简单参数 / 多工具选择 / 必填参数 / 嵌套对象 / 数组；Scorer 新增 scoreFunctionCalling，name+args 100/70/40/0；CLI + Web + DB + API 全链路接入)
 - [x] Step 2: 加入「长上下文理解」评测维度（3 题，需 32k+ context）— 2026-06-02 (`pending`，3 题覆盖 needle in haystack / 长文档关键信息提取 / 多文档交叉对比；contextTokens ≥ 32k；keyFacts 评分 100/按比例/0；Scorer.scoreLongContext + CLI list/init/config + Web routes/evaluations/questions + DB 列 + 兼容迁移 + 评分聚合，全链路接)
-- [ ] Step 3: 加入「多轮对话一致性」评测维度（3 题）
+- [ ] Step 3: 加入「多轮对话一致性」评测维度（3 题）— 进行中：core 部分（types + evaluator + scorer + 3 题）已 commit `beaa84c` (2026-06-02)；CLI / Web UI / DB 集成待续
 
 #### Story 4.2: 新模型 adapter
 - [x] Step 1: DeepSeek adapter（OpenAI 兼容，含 deepseek-chat / deepseek-reasoner 推理回退）— 2026-06-02
@@ -67,7 +67,7 @@
 
 ---
 
-_最近更新：2026-06-02 — Story 4.1 Step 2 完成（Long Context 3 题 + Scorer.scoreLongContext keyFacts 100/比例/0 + types long_context + CLI list/init/config + Web routes/evaluations/questions + DB include_long_context 列 + 兼容旧库迁移 + 结果聚合 long_context_score）_
+_最近更新：2026-06-02 — Story 4.1 Step 3 core 部分完成（multi_turn 评测维度 3 题 + types 扩展 + evaluator 路由多轮 turns + Scorer.scoreMultiTurn required/forbidden 100/-20 评分）`_pending_ → in-progress 标记：CLI / Web UI / DB 集成待续_
 _最近更新：2026-06-02 — Story 4.1 Step 1 完成（Function Calling 评测维度：5 题 + Scorer + CLI + Web + DB + API 全链路）_
 _最近更新：2026-06-02 — Story 4.2 全部完成（DeepSeek + Qwen/DashScope + Ollama 本地模型 adapter）_
 _最近更新：2026-06-02 — Story 4.2 Step 2 完成（Qwen/DashScope adapter：OpenAI 兼容模式，默认 qwen-turbo，支持 qwen-plus / qwen-max / qwen3-max；含 5 个新单元测试 name/ping/chat success/Authorization Bearer 头/错误路径；tsc --noEmit 无错）_
