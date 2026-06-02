@@ -125,6 +125,7 @@ function initConfig() {
       coding: true,
       function_calling: false,
       long_context: false,
+      multi_turn: false,
     },
     output: './results',
     concurrency: 3,
@@ -162,6 +163,7 @@ async function compareModels(args: string[]) {
       coding: true,
       function_calling: false,
       long_context: false,
+      multi_turn: false,
     },
     output: './results',
   };
@@ -182,6 +184,7 @@ function listBenchmarks() {
   const { getAllCodeBenchmarks } = require('./benchmarks/coding');
   const { getAllFunctionCallingBenchmarks } = require('./benchmarks/function-calling');
   const { getAllLongContextBenchmarks } = require('./benchmarks/long-context');
+  const { getAllMultiTurnBenchmarks } = require('./benchmarks/multi-turn');
 
   console.log('\n📋 可用评测题:\n');
 
@@ -218,6 +221,15 @@ function listBenchmarks() {
 
   const lcByCategory = groupBy(lcBenchmarks, 'category');
   for (const [category, questions] of Object.entries(lcByCategory)) {
+    console.log(`  [${category}] - ${(questions as any[]).length} 题`);
+  }
+
+  console.log('\n=== 多轮对话一致性评测 ===');
+  const mtBenchmarks = getAllMultiTurnBenchmarks();
+  console.log(`共 ${mtBenchmarks.length} 题\n`);
+
+  const mtByCategory = groupBy(mtBenchmarks, 'category');
+  for (const [category, questions] of Object.entries(mtByCategory)) {
     console.log(`  [${category}] - ${(questions as any[]).length} 题`);
   }
 }

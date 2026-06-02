@@ -5,6 +5,7 @@ import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calling';
 import { getAllLongContextBenchmarks } from '../../benchmarks/long-context';
+import { getAllMultiTurnBenchmarks } from '../../benchmarks/multi-turn';
 
 const router = Router();
 
@@ -52,16 +53,28 @@ router.get('/', (_req: Request, res: Response) => {
     weight: q.weight,
   }));
 
+  const multiTurn = getAllMultiTurnBenchmarks().map(q => ({
+    id: q.id,
+    type: q.type,
+    category: q.category,
+    content: q.content,
+    turns: (q as any).turns,
+    consistency_check: (q as any).consistencyCheck,
+    weight: q.weight,
+  }));
+
   res.json({
-    total: dialogue.length + coding.length + functionCalling.length + longContext.length,
+    total: dialogue.length + coding.length + functionCalling.length + longContext.length + multiTurn.length,
     dialogue_count: dialogue.length,
     coding_count: coding.length,
     function_calling_count: functionCalling.length,
     long_context_count: longContext.length,
+    multi_turn_count: multiTurn.length,
     dialogue,
     coding,
     function_calling: functionCalling,
     long_context: longContext,
+    multi_turn: multiTurn,
   });
 });
 

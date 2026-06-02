@@ -14,6 +14,7 @@ import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calling';
 import { getAllLongContextBenchmarks } from '../../benchmarks/long-context';
+import { getAllMultiTurnBenchmarks } from '../../benchmarks/multi-turn';
 import { BenchmarkQuestion } from '../../types';
 import { PythonSandbox } from '../../sandbox/python-sandbox';
 
@@ -44,6 +45,7 @@ export class EvaluatorEngine {
       if (task.includeCoding) questions.push(...getAllCodeBenchmarks());
       if (task.includeFunctionCalling) questions.push(...getAllFunctionCallingBenchmarks());
       if (task.includeLongContext) questions.push(...getAllLongContextBenchmarks());
+      if (task.includeMultiTurn) questions.push(...getAllMultiTurnBenchmarks());
 
       const total = questions.length * task.configs.length;
       let current = 0;
@@ -72,10 +74,17 @@ export class EvaluatorEngine {
 
           try {
             // 调用 LLM
-            const output = await adapter.chat(
-              [{ role: 'user', content: question.content }],
-              this.buildModelConfig(config)
-            );
+            let output: string;
+            if (question.type === 'multi_turn') {
+              const mtQuestion = question as any;
+              const turns: Array<{ role: string; content: string }> = mtQuestion.turns || [];
+              output = await adapter.chat(turns, this.buildModelConfig(config));
+            } else {
+              output = await adapter.chat(
+                [{ role: 'user', content: question.content }],
+                this.buildModelConfig(config)
+              );
+            }
 
             // 评分
             const score = await this.scoreQuestion(question, output);
@@ -181,6 +190,8 @@ export class EvaluatorEngine {
       return this.scoreFunctionCalling(question, output);
     } else if (question.type === 'long_context') {
       return this.scoreLongContext(question, output);
+    } else if (question.type === 'multi_turn') {
+      return this.scoreMultiTurn(question, output);
     } else {
       return this.scoreCoding(question, output);
     }
@@ -204,6 +215,18 @@ export class EvaluatorEngine {
     const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
     const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
     const result = await scorer.scoreLongContext(question, output);
+    return { score: result.score };
+  }
+
+  /**
+   * 多轮对话一致性评分（Web 端）
+   * 复用 core Scorer 的 required/forbidden 评分算法
+   */
+  private async scoreMultiTurn(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
+    const { Scorer } = require('../../core/scorer');
+    const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
+    const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
+    const result = await scorer.scoreMultiTurn(question, output);
     return { score: result.score };
   }
 

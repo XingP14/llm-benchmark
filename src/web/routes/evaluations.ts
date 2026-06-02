@@ -36,6 +36,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     coding = true,
     function_calling = false,
     long_context = false,
+    multi_turn = false,
   } = req.body;
 
   if (!config_ids || !Array.isArray(config_ids) || config_ids.length === 0) {
@@ -43,8 +44,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  if (!dialogue && !coding && !function_calling && !long_context) {
-    res.status(400).json({ error: 'at least one of dialogue/coding/function_calling/long_context must be true' });
+  if (!dialogue && !coding && !function_calling && !long_context && !multi_turn) {
+    res.status(400).json({ error: 'at least one of dialogue/coding/function_calling/long_context/multi_turn must be true' });
     return;
   }
 
@@ -55,15 +56,16 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       dialogue,
       coding,
       function_calling,
-      long_context
+      long_context,
+      multi_turn
     );
 
     const db = getDatabase();
 
     // 创建评测记录
     db.prepare(`
-      INSERT INTO evaluations (id, user_id, status, include_dialogue, include_coding, include_function_calling, include_long_context)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO evaluations (id, user_id, status, include_dialogue, include_coding, include_function_calling, include_long_context, include_multi_turn)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       evaluationId,
       req.userId,
@@ -71,7 +73,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       dialogue ? 1 : 0,
       coding ? 1 : 0,
       function_calling ? 1 : 0,
-      long_context ? 1 : 0
+      long_context ? 1 : 0,
+      multi_turn ? 1 : 0
     );
 
     // 关联配置
@@ -142,6 +145,10 @@ router.get('/:id/results', (req: AuthRequest, res: Response) => {
       .filter(r => r.question_type === 'long_context')
       .map(r => r.score);
 
+    const mtScores = configResults
+      .filter(r => r.question_type === 'multi_turn')
+      .map(r => r.score);
+
     const dialogueAvg = dialogueScores.length > 0
       ? Math.round(dialogueScores.reduce((a, b) => a + b, 0) / dialogueScores.length)
       : 0;
@@ -158,7 +165,11 @@ router.get('/:id/results', (req: AuthRequest, res: Response) => {
       ? Math.round(lcScores.reduce((a, b) => a + b, 0) / lcScores.length)
       : 0;
 
-    const allScores = [...dialogueScores, ...codingScores, ...fcScores, ...lcScores];
+    const mtAvg = mtScores.length > 0
+      ? Math.round(mtScores.reduce((a, b) => a + b, 0) / mtScores.length)
+      : 0;
+
+    const allScores = [...dialogueScores, ...codingScores, ...fcScores, ...lcScores, ...mtScores];
     const totalAvg = allScores.length > 0
       ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
       : 0;
@@ -170,6 +181,7 @@ router.get('/:id/results', (req: AuthRequest, res: Response) => {
       coding_score: codingAvg,
       function_calling_score: fcAvg,
       long_context_score: lcAvg,
+      multi_turn_score: mtAvg,
       question_results: configResults.map(r => ({
         question_id: r.question_id,
         question_type: r.question_type,
