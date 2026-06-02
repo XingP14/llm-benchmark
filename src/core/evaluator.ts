@@ -14,6 +14,7 @@ import { getAllDialogueBenchmarks } from '../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../benchmarks/function-calling';
 import { getAllLongContextBenchmarks } from '../benchmarks/long-context';
+import { getAllMultiTurnBenchmarks } from '../benchmarks/multi-turn';
 
 /**
  * 评测引擎 - 协调整个评测流程
@@ -67,6 +68,9 @@ export class Evaluator {
     }
     if (this.config.benchmarks.long_context) {
       questions.push(...getAllLongContextBenchmarks());
+    }
+    if (this.config.benchmarks.multi_turn) {
+      questions.push(...getAllMultiTurnBenchmarks());
     }
 
     for (let i = 0; i < questions.length; i++) {
@@ -123,6 +127,14 @@ export class Evaluator {
   ): Promise<QuestionScore> {
     const scorer = new Scorer(this.adapter, model);
 
+    // 多轮对话：把 turns 整体作为 messages 发送，最后一轮 user 作为"问题轮"
+    if (question.type === 'multi_turn') {
+      const mtQuestion = question as any;
+      const turns: Array<{ role: string; content: string }> = mtQuestion.turns || [];
+      const modelOutput = await this.adapter.chat(turns, model);
+      return scorer.scoreMultiTurn(question, modelOutput);
+    }
+
     const messages: Array<{ role: string; content: string }> = [];
 
     if (question.systemPrompt) {
@@ -162,6 +174,7 @@ export class Evaluator {
     const codingScores = scores.filter((s) => s.dimension === 'coding');
     const fcScores = scores.filter((s) => s.dimension === 'function_calling');
     const lcScores = scores.filter((s) => s.dimension === 'long_context');
+    const mtScores = scores.filter((s) => s.dimension === 'multi_turn');
 
     return {
       dialogue: {
@@ -211,6 +224,18 @@ export class Evaluator {
               )
             : 0,
         details: this.calculateCategoryDetails(lcScores),
+      },
+      multi_turn: {
+        total: mtScores.reduce((sum, s) => sum + s.score, 0),
+        count: mtScores.length,
+        average:
+          mtScores.length > 0
+            ? Math.round(
+                mtScores.reduce((sum, s) => sum + s.score, 0) /
+                  mtScores.length
+              )
+            : 0,
+        details: this.calculateCategoryDetails(mtScores),
       },
     };
   }

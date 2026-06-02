@@ -31,6 +31,8 @@ export interface BenchmarkConfig {
     function_calling: boolean;
     /** v0.4.0+ 新增：长上下文理解（默认 false，需 32k+ context 模型） */
     long_context?: boolean;
+    /** v0.4.0+ 新增：多轮对话一致性（默认 false） */
+    multi_turn?: boolean;
   };
   /** 输出目录 */
   output?: string;
@@ -55,7 +57,7 @@ export interface BenchmarkQuestion {
   /** 评分权重 */
   weight: number;
   /** 评测类型 */
-  type: 'dialogue' | 'coding' | 'function_calling' | 'long_context';
+  type: 'dialogue' | 'coding' | 'function_calling' | 'long_context' | 'multi_turn';
   /** 额外提示 (给模型的 system prompt) */
   systemPrompt?: string;
 }
@@ -103,7 +105,7 @@ export interface QuestionScore {
   /** 得分 (0-100) */
   score: number;
   /** 评测维度 */
-  dimension: 'dialogue' | 'coding' | 'function_calling' | 'long_context';
+  dimension: 'dialogue' | 'coding' | 'function_calling' | 'long_context' | 'multi_turn';
   /** 模型输出 */
   modelOutput: string;
   /** 评测详情 (LLM 判定) */
@@ -134,6 +136,13 @@ export interface DimensionScore {
   };
   /** v0.4.0+ 新增：长上下文理解评分汇总（可选，启用 long_context 评测时存在） */
   long_context?: {
+    total: number;
+    count: number;
+    average: number;
+    details: Record<string, number>;
+  };
+  /** v0.4.0+ 新增：多轮对话一致性评分汇总（可选，启用 multi_turn 评测时存在） */
+  multi_turn?: {
     total: number;
     count: number;
     average: number;

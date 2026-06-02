@@ -242,6 +242,67 @@ export class Scorer {
   }
 
   /**
+   * 对多轮对话一致性答案进行评分
+   * 评分逻辑（结合 required + forbidden 两组短语）：
+   *  - 基础分 = required 命中比例 (matched/required.length) * 100
+   *  - forbidden 命中：每个扣 20 分
+   *  - 最终分钳制在 [0, 100]
+   *  - 若 required 全部命中且 forbidden 全部未命中 → 100
+   */
+  async scoreMultiTurn(
+    question: BenchmarkQuestion,
+    modelOutput: string
+  ): Promise<QuestionScore> {
+    try {
+      const mtQuestion = question as any;
+      const check = mtQuestion.consistencyCheck || { required: [], forbidden: [] };
+      const required: string[] = check.required || [];
+      const forbidden: string[] = check.forbidden || [];
+
+      const outputLower = (modelOutput || '').toLowerCase();
+
+      const matched: string[] = [];
+      const missed: string[] = [];
+      for (const kw of required) {
+        if (outputLower.includes(String(kw).toLowerCase())) matched.push(kw);
+        else missed.push(kw);
+      }
+
+      const forbiddenHit: string[] = [];
+      for (const kw of forbidden) {
+        if (outputLower.includes(String(kw).toLowerCase())) forbiddenHit.push(kw);
+      }
+
+      const requiredRatio = required.length === 0 ? 1 : matched.length / required.length;
+      let score = Math.round(requiredRatio * 100);
+      score = Math.max(0, Math.min(100, score - forbiddenHit.length * 20));
+
+      const detail =
+        `required ${matched.length}/${required.length} [${matched.join(', ') || 'none'}]` +
+        (missed.length > 0 ? ` missed: [${missed.join(', ')}]` : '') +
+        ` | forbidden hit: ${forbiddenHit.length} [${forbiddenHit.join(', ') || 'none'}]`;
+
+      return {
+        questionId: question.id,
+        category: question.category,
+        score,
+        dimension: 'multi_turn',
+        modelOutput: modelOutput,
+        detail,
+      };
+    } catch (err) {
+      return {
+        questionId: question.id,
+        category: question.category,
+        score: 0,
+        dimension: 'multi_turn',
+        modelOutput: modelOutput,
+        detail: `MT 评分错误: ${(err as Error).message}`,
+      };
+    }
+  }
+
+  /**
    * 从模型输出中提取首个 tool_call
    * 兼容: OpenAI tool_calls 数组 / 顶层 JSON / 文本内嵌 JSON
    */
