@@ -1,6 +1,6 @@
 // src/core/reporter.ts - 报告生成器
 
-import { ComparisonReport, EvaluationResult } from '../types';
+import { ComparisonReport, DimensionScore, EvaluationResult } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -193,6 +193,52 @@ export class Reporter {
     return html;
   }
 
+  /**
+   * 生成 CSV 排行榜（横向：模型 / 维度平均分 / 总分 / 耗时）
+   * 适合直接用 Excel / Google Sheets 打开二次分析
+   */
+  static generateCSV(results: EvaluationResult[]): string {
+    const sorted = [...results].sort((a, b) => b.totalScore - a.totalScore);
+
+    // 维度列：固定 5 列（长上下文/多轮 可选，没有时填 -）
+    const dimHeaders: Array<{ key: keyof DimensionScore; label: string }> = [
+      { key: 'dialogue', label: 'dialogue' },
+      { key: 'coding', label: 'coding' },
+      { key: 'function_calling', label: 'function_calling' },
+      { key: 'long_context', label: 'long_context' },
+      { key: 'multi_turn', label: 'multi_turn' },
+    ];
+
+    const headers = ['rank', 'model', 'total', ...dimHeaders.map((d) => d.label), 'duration_s', 'questions'];
+    const lines: string[] = [headers.join(',')];
+
+    const escape = (v: unknown): string => {
+      const s = String(v ?? '');
+      // 简单 CSV 转义：含逗号/引号/换行 → 整段加双引号，内部双引号转义
+      if (/[",\n\r]/.test(s)) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    sorted.forEach((r, idx) => {
+      const row: (string | number)[] = [
+        idx + 1,
+        r.modelName,
+        r.totalScore,
+        ...dimHeaders.map(({ key }) => {
+          const dim = (r.dimensions as any)[key];
+          return dim && typeof dim.average === 'number' ? dim.average : '-';
+        }),
+        (r.duration / 1000).toFixed(2),
+        r.scores.length,
+      ];
+      lines.push(row.map(escape).join(','));
+    });
+
+    return lines.join('\n') + '\n';
+  }
+
   static saveReport(results: EvaluationResult[], outputDir: string): void {
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
@@ -213,9 +259,13 @@ export class Reporter {
     const htmlReport = this.generateHTML(results);
     fs.writeFileSync(path.join(outputDir, `${baseName}.html`), htmlReport);
 
+    const csvReport = this.generateCSV(results);
+    fs.writeFileSync(path.join(outputDir, `${baseName}.csv`), csvReport);
+
     console.log(`\n报告已保存到: ${outputDir}`);
     console.log(`  - ${baseName}.json`);
     console.log(`  - ${baseName}.md`);
     console.log(`  - ${baseName}.html`);
+    console.log(`  - ${baseName}.csv (排行榜，可 Excel 打开)`);
   }
 }

@@ -59,7 +59,7 @@
 
 ## 📋 候选池（待排序）
 
-- 排行榜导出 CSV / JSON
+- 排行榜导出 CSV / JSON — ✅ 已完成（CSV：`Reporter.generateCSV` + `saveReport` 同步输出 `.csv`，commit 见下；JSON 由现有 `generateJSON` 覆盖）
 - 历史评测对比（同一模型不同 prompt 版本）
 - Web UI 暗黑模式
 - i18n（英文 README 同步）
@@ -67,6 +67,7 @@
 
 ---
 
+_最近更新：2026-06-02 — 候选池「排行榜导出 CSV」完成：`Reporter.generateCSV()` + `saveReport` 同步输出 `.csv`（Excel 可直接打开，含 rank/model/total/5 维度/duration/questions 列；含 CSV 转义处理含逗号/引号/换行的模型名）_
 _最近更新：2026-06-02 — Story 3.3 Step 2 闭合：补 `.eslintrc.cjs`（ESLint v8 + @typescript-eslint v7）+ `lint` script + 2 个 devDeps，让 CI workflow 的 `npm run lint --if-present` 真正可跑（commit `3216f31`）_
 _最近更新：2026-06-02 — Story 4.1 Step 3 完成（多轮对话一致性 dimension：3 题 + types + evaluator 多轮 turns + Scorer.scoreMultiTurn + CLI list 默认值 + Web routes/evaluations/questions + DB 列迁移 + 评分聚合 multi_turn_score；commit `47d8602`）_
 _最近更新：2026-06-02 — Story 4.1 Step 1 完成（Function Calling 评测维度：5 题 + Scorer + CLI + Web + DB + API 全链路）_
