@@ -89,9 +89,8 @@ function openModal(editId = null) {
     }
   } else {
     title.textContent = '新增配置';
-    // 设置默认 endpoint
+    // 设置默认 endpoint（change 监听在 DOMContentLoaded 一次性注册，避免重复 addEventListener 泄漏）
     document.getElementById('configEndpoint').value = 'https://api.openai.com/v1';
-    document.getElementById('configType').addEventListener('change', updateDefaultEndpoint);
     updateDefaultEndpoint();
   }
 
@@ -217,6 +216,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('configForm');
   if (form) {
     form.addEventListener('submit', saveConfig);
+  }
+
+  // 一次性注册：类型切换时自动更新默认 endpoint
+  // （原本在 openModal() 中重复 addEventListener，会随新建次数累积同一 listener N 份）
+  const typeSelect = document.getElementById('configType');
+  if (typeSelect) {
+    typeSelect.addEventListener('change', updateDefaultEndpoint);
   }
 
   loadConfigs();
