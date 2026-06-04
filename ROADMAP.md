@@ -67,6 +67,7 @@
 
 ---
 
+_最近更新：2026-06-04 — **Bugfix (Bug F)**：`public/js/websocket.js` WebSocket 鉴权失败 (close code 4001/4002) 后不再无限 3s 重连刷屏，改为清 token 跳登录；普通断开 (1000/1006) 走指数退避 (3s → 30s 封顶) + 累计 10 次后停止重连，用户可手动刷新；与 `apiRequest` 401 行为对齐（08:40 cron dashboard bug 审计时记的 Bug F，本次落地）_
 _最近更新：2026-06-04 — **i18n**：补 `README.en.md`（387 行）作为中文 README 的英文镜像，覆盖「特性 / 安装 / 快速开始 / CLI / Web UI / Docker 拉取 / 4 适配器（DeepSeek/Qwen/Ollama + OpenAI/Anthropic/GLM）/ 5 维度评分（General/Coding/Function Calling/Long Context/Multi-Turn）/ 开发 / 版本历史」全章节；中文 README 顶部加 `📖 Other languages: [English](./README.en.md) | 中文` 互链；为 GitHub 仓库面向英文使用者打开（v0.4.0 后 npm 已公开 + Docker Hub 即将发布，英文 README 提升首次访问留存）_
 _最近更新：2026-06-04 — **Bugfix 批**：`805e53b` 修 Web dashboard 3 个显示/交互 bug (Bug #1, #3, #4) + `4b754e9` 修 lint 3 errors + 3 warnings（之前会卡 CI lint 阶段）+ `2118f0c` 修 `Reporter` Markdown/HTML 报告仍停留在 2 维度输出（v0.4.0 之后加了 function_calling/long_context/multi_turn 但 md/html 漏更，与 CSV 在 `eb87074` 修复同模式；本次提取 `DIM_HEADERS` 常量复用于 md/html/csv 三个 reporter，排名表与详情段统一 5 维度 + HTML 5 色 score-fill 渐变）_
 _最近更新：2026-06-04 — **Docs 漏更**：`069bfeb` 补 README「评测维度 → 多轮对话一致性 / Multi-Turn」子章节（v0.4.0 加了 3 题 multi_turn 但 README 漏更，与同期 function_calling/long_context 维度 README 文档漏更同模式；评分规则、required/forbidden 短语一致性 + 启用开关 `includeMultiTurn: true` 已记录）_
