@@ -77,7 +77,7 @@ See [`docs/TESTING_STANDARD.md`](./docs/TESTING_STANDARD.md) for the test layout
 
 ### 3. Test locally
 
-We do **not** run `npm test` as part of PR CI yet (it is on the roadmap — see Story 3.3 in `ROADMAP.md`). Before requesting review:
+We **do** run `npm test --bail --forceExit` in PR CI (alongside `npm run lint` and `npm run build`) — see `.github/workflows/ci.yml`. The first end-to-end green run is still pending; see Story 3.3 Step 3 in `ROADMAP.md`. Before requesting review:
 
 ```bash
 npm run build              # TypeScript must compile clean
@@ -88,7 +88,7 @@ npm start -- --version
 npm start -- init
 # Smoke-test the Web UI:
 npm run build && npm run start:web
-curl -s http://localhost:3000/api/health   # if available, else navigate to /
+curl -s http://localhost:3033/api/health   # default port per src/web/server.ts; override via PORT env var
 ```
 
 If your change touches `src/core/scoring/` or `src/adapters/`, also run the relevant Jest tests in `tests/` (file-scoped, e.g. `npx jest tests/scoring/dialogue.test.ts`).
