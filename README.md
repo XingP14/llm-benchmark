@@ -11,7 +11,7 @@
 ## 特性
 
 - 🌐 **多平台支持**: OpenAI / Anthropic Claude / 智谱 GLM / DeepSeek / 通义千问 Qwen (DashScope) / Ollama 本地模型
-- 📊 **统一评测**: 通用对话 + 代码能力 + 工具调用 + 长上下文理解 四维度（v0.4.0 起）
+- 📊 **统一评测**: 通用对话 + 代码能力 + 工具调用 + 长上下文理解 + 多轮对话一致性 五维度（v0.4.0 起）
 - ⚡ **快速执行**: 本地批量评测，无需云服务
 - 📈 **可视化报告**: 表格、雷达图、柱状图对比
 - 🔄 **多模型对比**: 同时评测多个模型并生成对比报告
@@ -311,6 +311,15 @@ CLI 与 Web UI 共享同一份 SQLite 数据库，可混用。
 
 > 评分规则：基于 `keyFacts` 命中比例（100 / 命中比例×100 / 0）。需要模型 context window ≥ 32k，并在配置中开启 `includeLongContext: true`。
 
+### 多轮对话一致性 / Multi-Turn (3题) — v0.4.0 新增
+| 维度 | 描述 | 权重 |
+|------|------|------|
+| 上下文保留 | 多轮后记住关键事实（豆豆/3 岁/逗猫棒/挑食） | 2.0 |
+| 角色一致性 | persona 不跑题（中餐厨师不答西餐） | 1.5 |
+| 逻辑一致性 | 多轮后不自相矛盾（钱包数学、跨段引用） | 2.0 |
+
+> 评分规则：基础分 = `required` 命中比例 × 100，每个 `forbidden` 命中扣 20 分，钳制在 [0, 100]。考察模型在多轮上下文中保持事实/角色/逻辑一致性的能力，需要在配置中开启 `includeMultiTurn: true`。
+
 ## 输出报告
 
 评测完成后会生成三种格式的报告：
@@ -349,6 +358,7 @@ npm run build
 - ✨ 新增 Ollama 本地模型 adapter（`type: 'ollama' | 'local'`，默认 `http://localhost:11434` + `llama3.2`，本地无需 API key）
 - ✨ 新增「工具调用 / Function Calling」评测维度（5 题，Scorer.scoreFunctionCalling：name+args 100/70/40/0，CLI + Web + DB + API 全链路）
 - ✨ 新增「长上下文理解 / Long Context」评测维度（3 题，需 32k+ context，Scorer.scoreLongContext 基于 keyFacts 命中比例，CLI + Web + DB + API 全链路）
+- ✨ 新增「多轮对话一致性 / Multi-Turn」评测维度（3 题，Scorer.scoreMultiTurn 基于 required/forbidden 短语一致性校验，CLI + Web + DB + API 全链路）
 
 ### v0.3.0 (2026-05-23)
 - ✨ 新增 Web UI（Express + WebSocket 实时进度）
