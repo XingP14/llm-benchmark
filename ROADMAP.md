@@ -62,12 +62,12 @@
 - 排行榜导出 CSV / JSON — ✅ 已完成（CSV：`Reporter.generateCSV` + `saveReport` 同步输出 `.csv`，commit 见下；JSON 由现有 `generateJSON` 覆盖）
 - 历史评测对比（同一模型不同 prompt 版本）
 - Web UI 暗黑模式
-- i18n（英文 README 同步）
+- i18n（英文 README 同步）— ✅ 已完成（新增 `README.en.md` 完整镜像中文 README（387 行），含 5 维度 / 4 适配器 / v0.4.0 变更日志 / CLI / Web UI / Docker 拉取镜像 / npm npx 等全部章节；中文 README 顶部加互链徽章；未动 CI 脚本）
 - ClawHub 公开列表（等 GitHub 账号满 14 天）
 
 ---
 
-_最近更新：2026-06-04 — **微修复**：补 `LICENSE` 文件（MIT, 2026, XingP14）；`package.json` 声明 `"license": "MIT"` + `files: ["..., "LICENSE"]` 但工作区缺文件，会被 `npm publish` 跳过；现补齐为 npm publish 做好准备_
+_最近更新：2026-06-04 — **i18n**：补 `README.en.md`（387 行）作为中文 README 的英文镜像，覆盖「特性 / 安装 / 快速开始 / CLI / Web UI / Docker 拉取 / 4 适配器（DeepSeek/Qwen/Ollama + OpenAI/Anthropic/GLM）/ 5 维度评分（General/Coding/Function Calling/Long Context/Multi-Turn）/ 开发 / 版本历史」全章节；中文 README 顶部加 `📖 Other languages: [English](./README.en.md) | 中文` 互链；为 GitHub 仓库面向英文使用者打开（v0.4.0 后 npm 已公开 + Docker Hub 即将发布，英文 README 提升首次访问留存）_
 _最近更新：2026-06-04 — **Bugfix 批**：`805e53b` 修 Web dashboard 3 个显示/交互 bug (Bug #1, #3, #4) + `4b754e9` 修 lint 3 errors + 3 warnings（之前会卡 CI lint 阶段）+ `2118f0c` 修 `Reporter` Markdown/HTML 报告仍停留在 2 维度输出（v0.4.0 之后加了 function_calling/long_context/multi_turn 但 md/html 漏更，与 CSV 在 `eb87074` 修复同模式；本次提取 `DIM_HEADERS` 常量复用于 md/html/csv 三个 reporter，排名表与详情段统一 5 维度 + HTML 5 色 score-fill 渐变）_
 _最近更新：2026-06-04 — **Docs 漏更**：`069bfeb` 补 README「评测维度 → 多轮对话一致性 / Multi-Turn」子章节（v0.4.0 加了 3 题 multi_turn 但 README 漏更，与同期 function_calling/long_context 维度 README 文档漏更同模式；评分规则、required/forbidden 短语一致性 + 启用开关 `includeMultiTurn: true` 已记录）_
 _最近更新：2026-06-02 — 候选池「排行榜导出 CSV」完成：`Reporter.generateCSV()` + `saveReport` 同步输出 `.csv`（Excel 可直接打开，含 rank/model/total/5 维度/duration/questions 列；含 CSV 转义处理含逗号/引号/换行的模型名）_
