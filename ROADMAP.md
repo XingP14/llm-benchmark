@@ -159,6 +159,8 @@
 
 ---
 
+_最近更新：2026-06-04 16:50 — **Config 模板漏更**：延续 16:20 轮 `public/js/evaluation.js` 5 维度漏更同模式，`config.example.json`（npm 包内首次使用模板）与 `src/index.ts` `showHelp()` 行内「配置示例」块仍停留在 v0.3.0 的 2 维度（`dialogue` / `coding`），与 `initConfig()` 实际生成（3 模型 + 5 维度，dialogue/coding=true + function_calling/long_context/multi_turn=false）、README 「五维度 v0.4.0 起」描述、`Reporter.DIM_HEADERS` 5 维度输出均不一致；2 处 `benchmarks` 块补齐 3 个 false 字段（function_calling / long_context / multi_turn），`node JSON.parse` 通过 + `tsc --noEmit -p tsconfig.json` 0 错误 0 新告警；不动 `initConfig()`（已对齐）、README 「最小可用配置」段（明确标注最小，2 维合理）、各 adapter 独立示例（1 模型 + 2 维合理，作为该 adapter smoke test）_
+
 _最近更新：2026-06-04 — **npm package 静态文件漏发**：Story 3.1 Step 4 (`npm publish`) 的 pre-flight bug — `package.json` 的 `files` 字段缺少 `public/` 目录，导致 `dist/web/server.js` 启动后 `express.static(PUBLIC_DIR)` 找不到任何静态文件（HTML/CSS/JS 全部 404）；`npm pack --dry-run` 验证：未修前 121 files / 80.8 kB / 0 public files → 修后 129 files / 90.5 kB / 7 public files (css + 2 html + 4 js)；同时补 `README.en.md` (12.8 kB, 12:22 i18n 加入但未在 files) 与 `config.example.json` (用户首次使用模板)；父端后续 `npm adduser` + `npm publish` 时即可直接发完整 0.4.0 包，无需补发补丁版本_
 
 _最近更新：2026-06-04 — **Web UI 暗黑模式**: `public/css/style.css` 末尾追加 `@media (prefers-color-scheme: dark)` 块覆盖 body/section/h2/卡片/历史/表格/输入/进度条/模态框/滚动条；自动跟随系统暗黑模式设置（macOS / Windows / Linux 均支持 `prefers-color-scheme: dark`），无需手动切换 / 无需 JS / 无需 localStorage；README.md 与 README.en.md 「Web UI / Docker 部署」后新增「暗黑模式」子章节说明；ROADMAP 候选池「Web UI 暗黑模式」勾掉 (5min 硬上限内, 1 commit)_

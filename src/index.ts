@@ -374,7 +374,10 @@ function showHelp() {
     ],
     "benchmarks": {
       "dialogue": true,
-      "coding": true
+      "coding": true,
+      "function_calling": false,
+      "long_context": false,
+      "multi_turn": false
     },
     "output": "./results"
   }
