@@ -74,20 +74,22 @@
 - [ ] npm publish 完成
 ```
 
-### 当前版本覆盖详情 (v0.3.0)
+### 当前版本覆盖详情 (v0.4.0 — **覆盖率数据待刷新**)
 
-**测试执行:**
+> **数据状态**: 本节覆盖率 / 测试数为 v0.3.0 末次跑结果 (2026-05-24 01:00 UTC, 19 套件 / 129 用例)。v0.4.0 已新增 `function-calling.ts` / `long-context.ts` / `multi-turn.ts` 三个 benchmark + `Scorer.scoreFunctionCalling` / `scoreLongContext` / `scoreMultiTurn` + 全链路接入 (CLI / Web routes / DB 列 / 评分聚合 / 兼容迁移)，实际测试数与覆盖率应高于 v0.3.0 基线。5min cron 跳过 `npm test` (cron 规则禁 + 5min 硬上限)，需在父端空闲时跑一次 `npm test --coverage` 刷新本节。
+
+**测试执行 (v0.3.0 基线, 待 v0.4.0 刷新):**
 - 测试套件: 19 个通过 / 19 个总数
 - 测试用例: 129 个通过 / 129 个总数
 - 运行时长: ~16s
 
-**覆盖率:**
+**覆盖率 (v0.3.0 基线, 待 v0.4.0 刷新):**
 - Statements: 96.28% (目标 100%)
 - Branches: 77.37% (目标 100%)
 - Functions: 95.55% (目标 100%)
 - Lines: 96.55% (目标 100%)
 
-**主要缺口:**
+**主要缺口 (v0.3.0 基线, v0.4.0 缺口待重新评估):**
 - `evaluator.ts` branches: 80.76% (lines 59-60, 180 未覆盖)
 - `websocket.ts` branches: 66.66% (empty catch blocks)
 - `auth.ts` routes branches: 72.72%
@@ -103,4 +105,5 @@
 - [ ] 生成完整测试报告
 
 ---
-_Last updated: 2026-05-24 01:00 UTC_
+_Last updated: 2026-06-04 09:20 UTC (v0.4.0 覆盖率标记待刷新, 下一行是 v0.3.0 数据基线)_
+_Last coverage refresh: 2026-05-24 01:00 UTC_
