@@ -181,3 +181,20 @@ _最近更新：2026-06-02 — Story 3.3 Step 1/2 完成（CI 徽章 + `.github/
 _最近更新：2026-06-02 — Story 3.1 Step 2/3 完成（README npx 引导 + npm publish --dry-run 验证通过）；Step 4 正式发布待独立时段执行_
 _最近更新：2026-06-02 — Story 3.2 Step 2 完成（README 「拉取预构建 Docker 镜像」子章节 + `docker pull` / `docker run` / tag pin 示例）；Step 3 镜像实测待 PR 合并 / tag 推送后_
 _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/docker.yml`，buildx + multi-tag + Docker Hub login + PR-only build）；Step 2/3 待 README 同步 + 镜像实测_
+
+---
+
+## 🩺 15:50 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 15:44)
+
+**轮转依据**: 上轮 picked=woclaw (1780559400+ 附近, 15:44 docs/README.md 表格漏更 0.4.1→0.5.0), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 3f9d1fa / llm-benchmark f0a5c80)。
+
+**Hub /health**: 200 OK, uptime 1041975s ≈ 12.05 days (与 15:44 轮 +~530s), agents 0 / topics 0。
+
+**挑选 5min 项**: 扫 `public/js/configs.js` 找到 `configType` change listener 泄漏 bug——`openModal(editId=null)` "新增配置" 分支每次都 addEventListener, 无 removeEventListener 对应, 打开 N 次后 change 事件触发 N 次。Fix: 把 addEventListener 移到 DOMContentLoaded 一次性注册 (与 addBtn / form 提交 / evaluation.js / websocket.js 模式一致)。1 file, +8/-2, commit 979f806, push master OK。
+
+**耗时**: 4.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期)
+- 下次轮转 → **woclaw** (L→W)
