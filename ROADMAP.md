@@ -300,7 +300,7 @@ package-lock.json **未变**（包版本和物理安装位置都未变，只是 
 - **新候选池** (2026-06-04 23:23 轮 `cb8477a` 沿父 22:10 hint, 漏更扫 19+ 轮耗尽后换新类型): 
   - SECURITY.md — ✅ 已完成 (`cb8477a`, 4.2KB / 88 lines, GitHub Private Vulnerability Reporting + SLA 7/14/30+90d + 5 类 In-scope 路径点名 + 7 类 Out-of-scope + 架构 note 链 README Web UI 段)
   - CONTRIBUTING.md — ✅ 已完成 (`01:03 轮` 本轮, 8.2KB / 190 lines, 沿 woclaw `b70d83c` 模板 + 1 包范围收窄: PR 流程 / Conventional Commits / npm scripts + ESLint + tsc --noEmit / 1 包 repo layout / npm + Docker Hub 双通道发布)
-  - CODE_OF_CONDUCT.md — 候选 (Contributor Covenant v2.1, 2min 估)
+  - CODE_OF_CONDUCT.md — ✅ 已完成 (`02:23 轮` 本轮, 7.3KB / 156 lines, Contributor Covenant v2.1 全文 + llm-benchmark 单包范围/GitHub/Docker Hub/npm 三渠道 + `llm-benchmark-conduct@xingp14.dev` 独立于 woclaw 举报渠道 + CONTRIBUTING.md 交叉引用 + ROADMAP 候选池剩 1/4)
   - CHANGELOG.md — 候选 (提取 README「版本历史」0.1.0→0.4.0, 独立文件 5-10min)
 
 ## 🩺 13:50 轮 — llm-benchmark (L→W 轮转命中 llm-benchmark, 上一轮 woclaw 13:40)

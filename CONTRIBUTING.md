@@ -9,8 +9,11 @@ Contributions of all sizes — typo fixes, doc clarifications, new adapter provi
 
 ## 🧭 Code of Conduct
 
-By participating, you agree to follow the [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
-Please be respectful and constructive. (A standalone `CODE_OF_CONDUCT.md` file is on the roadmap; in the meantime, the upstream Covenant applies.)
+By participating, you agree to follow [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
+(adapted from [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)).
+Please be respectful and constructive. Reports of conduct violations go to
+**llm-benchmark-conduct@xingp14.dev** — do not use that address for security
+issues; for those, follow [`SECURITY.md`](./SECURITY.md) instead.
 
 ## 🐛 Reporting Bugs
 
