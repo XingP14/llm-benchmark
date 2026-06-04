@@ -90,6 +90,41 @@
 
 ---
 
+## 🩺 14:50 轮 — llm-benchmark (W→L 轮转命中 llm-benchmark, 上一轮 woclaw 14:40)
+
+**轮转依据**: 上轮 picked=woclaw (1780557600), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (faf8012 / d38984a)。两项目 v0.4.0 父端阻塞持续, 候选池中: 历史评测对比 (2 eval CANCELLED, 无数据) / ClawHub 14天 (等账号 36天) / CHANGELOG.md (README 已有 版本历史 章节, 独立文件冗余)。Hub /health: 200 OK, uptime 1038378s ≈ 12.01 days (与 14:40 轮 +778s), agents 0 / topics 0。
+
+**挑洗 5min 项**: 2 个轻量级「发布/Docker 体验」缺陷, 都是 5min 内可做、不依赖父端、3.2 父端 docker run 验证前就需要的:
+
+1. **缺 `.dockerignore`**: docker build 上下文会把 `.git/`, `node_modules/`, `dist/`, `coverage/`, `results/`, `test-data/`, `*.db`, 本地 `config-*.json` (含 API key 风险), `tests/`, `__mocks__/`, `docs/`, README/ROADMAP/LICENSE, `.github/`, `*.log`, IDE/OS, `.env` 等全部送进构建上下文; 3.2 Step 3 父端 `docker buildx build` 会把几百 MB 上下文推给 buildx server (慢、可能超时)。**不过 Dockerfile 实际 COPY 的 6 个路径 (package*.json/src/tsconfig.json/public/database) 都保留**, 只排除多余的。
+2. **缺 `homepage` + `bugs`**: package.json 缺这 2 个 npm 注册表元数据字段。`npm view @xingp14/llm-benchmark` 与 npmjs.com 页面会缺少「Homepage / Bugs」链接, 不利于 3.1 Step 4 `npm publish` 后用户从注册表跳到 GitHub 仓库 / 提 issue。
+
+**执行**:
+- 新增 `.dockerignore` (57 行), 8 个 section: build artifacts / VCS-CI-IDE / logs-runtime / local configs (含 API key 风险) / docs-metadata / test scaffolding / env files. 顶部注释 `── Build artifacts (regenerated inside the container) ──` 说表。
+- `package.json` 加 `"homepage": "https://github.com/XingP14/llm-benchmark#readme"` + `"bugs": "https://github.com/XingP14/llm-benchmark/issues"` (在 `author` 前)。
+- 不动: Dockerfile (COPY 路径不变)、schema.sql (未被 src 引用但是文档参考, 不删)、其他文件。
+
+**验证**:
+- `python3 -c "import json; json.load(open('package.json'))"` → OK, homepage + bugs 都在。
+- Dockerfile 6 个 COPY 路径全不 .dockerignore 包含: package.json / package-lock.json / src / tsconfig.json / public / database ✅。
+- 未跑 `npm test` / `npm run lint` (cron 规则禁)。
+- 未跑 `docker build` (父端 + 风险起时长, 5min 上限不起)。
+
+**commit + push**:
+- 1 commit: `chore(meta): add .dockerignore + package.json homepage/bugs for npm+Docker polish`
+- 2 files: `.dockerignore` (new, +57) + `package.json` (+2 lines, 在 author 上方)。
+- push 到 master 成功。
+
+**耗时**: 候选评估 1min + .dockerignore 草稿 2min + package.json 改 30s + ROADMAP 记录 1min + 验证 30s + commit/push 30s ≈ 5min (上限边缘)。
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变。
+- 本次装点了 npm+Docker 体验, 发布后 3.1 Step 4 / 3.2 Step 3 都会更顺: docker build 上下文变小, npm 包页面有「Homepage / Bugs」链接。
+- **未做**: 死代码清理 `database/schema.sql` (未被 src 引用) + Dockerfile 减一 COPY 路径。考虑原因: (1) 5min 边缘; (2) 避免本周扣删除; (3) 留给一次明确的「dead-code cleanup」轮, 也许未来一并看「其他可能死文件」。
+- 下次轮转 → **woclaw** (L→W 序列)。候选池同近 10 轮: RS-1 Step 2/3/4 父端阻塞 / /ready 部署 父端阻塞 (dashboard Bug 已前置修, 等 rebuild) / 视频演示 重活 / 官方托管 长期。
+
+---
+
 _最近更新：2026-06-04 — **npm package 静态文件漏发**：Story 3.1 Step 4 (`npm publish`) 的 pre-flight bug — `package.json` 的 `files` 字段缺少 `public/` 目录，导致 `dist/web/server.js` 启动后 `express.static(PUBLIC_DIR)` 找不到任何静态文件（HTML/CSS/JS 全部 404）；`npm pack --dry-run` 验证：未修前 121 files / 80.8 kB / 0 public files → 修后 129 files / 90.5 kB / 7 public files (css + 2 html + 4 js)；同时补 `README.en.md` (12.8 kB, 12:22 i18n 加入但未在 files) 与 `config.example.json` (用户首次使用模板)；父端后续 `npm adduser` + `npm publish` 时即可直接发完整 0.4.0 包，无需补发补丁版本_
 
 _最近更新：2026-06-04 — **Web UI 暗黑模式**: `public/css/style.css` 末尾追加 `@media (prefers-color-scheme: dark)` 块覆盖 body/section/h2/卡片/历史/表格/输入/进度条/模态框/滚动条；自动跟随系统暗黑模式设置（macOS / Windows / Linux 均支持 `prefers-color-scheme: dark`），无需手动切换 / 无需 JS / 无需 localStorage；README.md 与 README.en.md 「Web UI / Docker 部署」后新增「暗黑模式」子章节说明；ROADMAP 候选池「Web UI 暗黑模式」勾掉 (5min 硬上限内, 1 commit)_

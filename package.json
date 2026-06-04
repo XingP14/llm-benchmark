@@ -36,6 +36,8 @@
     "claude",
     "openai"
   ],
+  "homepage": "https://github.com/XingP14/llm-benchmark#readme",
+  "bugs": "https://github.com/XingP14/llm-benchmark/issues",
   "author": "XingP14",
   "license": "MIT",
   "repository": {

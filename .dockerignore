@@ -1,0 +1,57 @@
+# ── Build artifacts (regenerated inside the container) ──
+node_modules
+dist
+coverage
+*.tsbuildinfo
+
+# ── VCS / CI / IDE ──
+.git
+.gitignore
+.gitattributes
+.github
+.gitlab-ci.yml
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Logs / runtime artifacts ──
+*.log
+npm-debug.log*
+results
+test-data
+*.db
+*.db-shm
+*.db-wal
+
+# ── Local configs (may contain API keys; runtime uses env vars only) ──
+config.json
+config-*.json
+config.local.json
+config.batch*.json
+config-mimo.json
+config-batch2.json
+
+# ── Docs / metadata (not needed at container runtime) ──
+README.md
+README.en.md
+ROADMAP.md
+docs
+LICENSE
+.editorconfig
+.git-blame-ignore-revs
+
+# ── Test scaffolding (not needed at container runtime) ──
+tests
+__mocks__
+jest.config.js
+jest.setup.js
+coverage
+
+# ── Env files ──
+.env
+.env.*
+!.env.example
