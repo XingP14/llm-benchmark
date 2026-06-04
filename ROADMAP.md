@@ -413,3 +413,35 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 - 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
 - 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期)
 - 下次轮转 → **woclaw** (L→W 序列)
+
+## 🩺 22:10 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 21:50)
+
+**轮转依据**: 上轮 picked=woclaw (21:50 45a604c woclaw-hooks README self-contradiction #13), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 45a604c / llm-benchmark 08abf3a), 按规则 4 轮转命中。
+
+**Hub /health**: 200 OK, uptime 1064775s ≈ 12.32 days (与 21:50 轮 +~20min), agents 0 / topics 0。
+
+**挑选 5min 项**: **`README.md` / `README.en.md`「开发 / Development」段漏列 `npm run lint` (1min 级小修, 上轮 ROADMAP 候选池中明确标记的「极低收益候选」)** —— `package.json` line 27 定义 `"lint": "eslint src/**/*.ts"` (Story 3.3 Step 2 闭合 2026-06-02 加), `docs/TESTING_STANDARD.md` 与 README「开发」段均无 `npm run lint` 出现, 用户照 README 跑开发流程不会知道有 lint 命令, GitHub Actions CI 才会跑 (`--if-present` 触发)。3 路径验证:
+- `grep -rn "npm run lint" --include="*.md"` (排除 node_modules): 仅 ROADMAP.md cron 日志 (4 处历史 entry) + Story 3.3 Step 2 闭合段, 零用户面向 README/docs
+- `package.json` scripts: `lint` 在
+- `.eslintrc.cjs` + `@typescript-eslint/eslint-plugin` + `@typescript-eslint/parser` devDeps 均存在 (Story 3.3 Step 2 配齐)
+
+**修复**:
+- `README.md` line 350-353 「## 开发」bash 块: 在 `npm test` 后、`npm run build` 前补 `# 代码检查` + `npm run lint` 2 行
+- `README.en.md` line 349-353 「## Development」bash 块: 同样在 `npm test` 后、`npm run build` 前补 `# Lint` + `npm run lint` 2 行
+- 顺序: install → start → test → **lint** → build (与 `package.json` 实际 script 顺序 / CI workflow 跑序对齐)
+- diff: 2 files / +6 / -0, 0 npm test / 0 lint / 0 tsc (纯 README 文案)
+
+**验证**:
+- `git diff` 仅 2 README 文件, 0 package.json 改动
+- README 「开发」bash 块现 5 步 (install / start / test / lint / build), 与 package.json 5 个 script 对齐
+- 未跑 `npm test` / `npm run lint` (cron 5min 硬上限禁)
+
+**commit + push**: (待定)
+
+**耗时**: 候选评估 30s (上轮 ROADMAP 标记的「极低收益候选」) + grep 验证 30s + 2 README 各 1 edit 30s + ROADMAP 1min + commit/push 30s ≈ 3min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期) / HTML 雷达图 1-2h (超 5min) / TESTING_STANDARD 覆盖率刷新 (npm test 5+min) / 19 轮漏更扫收益递减弱化
+- 候选池耗尽预警: 19 轮 (woclaw 13 + llm-benchmark 6) 漏更扫 + 本轮「极低收益」收官, 下轮若无新候选可考虑: (a) 接受父端阻塞逐步推进, (b) 换新类型扫描 (CHANGELOG / CONTRIBUTING / CODE_OF_CONDUCT / SECURITY), (c) 跳轮 (本规则 4)
+- 下次轮转 → **woclaw** (L→W 序列)

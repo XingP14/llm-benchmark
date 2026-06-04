@@ -349,6 +349,9 @@ npm run start
 # 运行测试
 npm test
 
+# 代码检查
+npm run lint
+
 # 构建
 npm run build
 ```

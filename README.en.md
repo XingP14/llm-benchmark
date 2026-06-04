@@ -349,6 +349,9 @@ npm run start
 # Run tests
 npm test
 
+# Lint
+npm run lint
+
 # Build
 npm run build
 ```
