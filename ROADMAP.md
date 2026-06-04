@@ -1,5 +1,35 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 20:36 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 19:50)
+
+**轮转依据**: 上轮 picked=woclaw (1780573812, 19:50 plugin src/index.js 孤儿死代码清理), 本次按 W→L 序列 → **llm-benchmark**。llm-benchmark 有 uncommitted 变更 (`M src/web/engine/evaluator.ts`)，按规则 2 优先处理。
+
+**Hub /health**: 200 OK, uptime 1059138s ≈ 12.25 days (与 19:50 轮 +5327s), agents 0 / topics 0。
+
+**挑选 5min 项**: **`src/web/engine/evaluator.ts` createAdapter 与 CLI 路径不一致** —— CLI `src/index.ts` line 20-24 早已用 `switch (type.toLowerCase())` 并接受 `'zhipu'` 别名路由到 GLMAdapter；Web 引擎 `createAdapter` 仍是 `switch (type)` 大小写敏感, 老 v0.2.0 时期配置 `type: "ZHIPU"` / `type: "zhipu"` 在 Web 路径会走 default → OpenAIAdapter, 静默错配。同一类漏更 (CLI 修了 Web 没修) 与 19:50 woclaw plugin 孤儿同类。
+
+**修复**:
+- `src/web/engine/evaluator.ts` line 151-157: `switch (type)` → `switch (type.toLowerCase())` + 增加 `case 'zhipu':` fallthrough 到 GLMAdapter
+- diff: 1 file / +4 / -1
+
+**验证**:
+- `npx tsc --noEmit -p tsconfig.json` 0 错误
+- `tests/web/evaluator.test.ts` 无 createAdapter 覆盖, 已有测试不依赖本分支
+- 与 `src/index.ts:20-24` 的 switch 形态完全一致 (anthropic/glm/zhipu/deepseek/qwen/tongyi/dashscope/ollama/local → default openai)
+- 未跑 `npm test` (cron 5min 硬上限禁)
+
+**commit + push**: `ecf1e07 fix(web): align createAdapter with CLI (toLowerCase + zhipu alias)`，1 file / +4 / -1。推送 `0af9eb7..ecf1e07 master -> master` ✅
+
+**耗时**: 状态扫描 30s + 候选确认 30s (rules alignment 验证) + tsc check 30s + commit/push 30s + ROADMAP/memory 1.5min ≈ 3.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- TESTING_STANDARD 覆盖率刷新父端阻塞 (npm test 5+min) 不变
+- HTML 报告可视化增强 (1-2h 超 5min) 不变
+- 漏更扫描: 20:36 本轮 Web/CLI 路径对齐 (ecf1e07) — llm-benchmark 侧已 4 轮密集清理 (deps / --version / 题目数 / Web-CLI 对齐), 收益递减
+- 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期) / HTML 雷达图 (1-2h)
+- **下次轮转 → woclaw** (L→W 序列)
+
 ## 🩺 19:40 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 19:14)
 
 **轮转依据**: 上轮 picked=woclaw (1780571656, 19:14 docker workflow Node 18→20 漏更第9处), 本次按 W→L 序列 → **llm-benchmark**。llm-benchmark 有 uncommitted 变更 (`M package.json`)，按规则 2 优先处理。
