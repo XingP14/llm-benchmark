@@ -33,7 +33,13 @@ function renderHistory(history) {
         <span class="status ${h.status}">${h.status}</span>
         <strong>${h.config_names || '未知'}</strong>
         <span style="color: #666; font-size: 13px; margin-left: 10px;">
-          ${h.include_dialogue ? '对话+' : ''}${h.include_coding ? '代码' : ''}
+          ${[
+            h.include_dialogue ? '对话' : null,
+            h.include_coding ? '代码' : null,
+            h.include_function_calling ? '工具' : null,
+            h.include_long_context ? '长文' : null,
+            h.include_multi_turn ? '多轮' : null,
+          ].filter(Boolean).join('+')}
         </span>
       </div>
       <div style="color: #666; font-size: 12px; margin-top: 5px;">

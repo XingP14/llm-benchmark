@@ -198,3 +198,34 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 - 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
 - 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期)
 - 下次轮转 → **woclaw** (L→W)
+
+---
+
+## 🩺 16:20 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 16:10)
+
+**轮转依据**: 上轮 picked=woclaw (1780560780, 16:10 CLI banner v0.4.0→v0.4.3), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 7ca440b / llm-benchmark b130c29)。
+
+**Hub /health**: 200 OK, uptime 1043779s ≈ 12.08 days (与 16:10 轮 +~600s), agents 0 / topics 0。
+
+**挑选 5min 项**: 扫 `public/js/` 找 08:44 805e53b (Bug D 修) 的漏更——`renderHistory` 历史记录列表仍停留在 v0.3.0 的 2 维度 (`对话+代码`), 而同一文件的 `startEvaluation` 已在 805e53b 加齐 5 维度 checkbox, 结果详情表 `showResult` 也已 5 列。`/api/evaluations` SQL 用 `SELECT e.*` 把 5 个 `include_*` 列全返了, 前端 history item 只读 `h.include_dialogue` / `h.include_coding`, 另 3 个 (function_calling / long_context / multi_turn) 被静默丢弃, 用户在 dashboard 看自己跑过的历史就不知道这个评测是「对话+代码」还是「5 维度都跑了」。
+
+**修复**:
+- `public/js/evaluation.js` line 35-37: 改 1 行 — 模板字符串从 2 个三元表达式改为 5 元素数组 → `.filter(Boolean).join('+')`, 跟 startEvaluation 收集 5 字段、showResult 渲染 5 列对齐
+- 输出示例: `对话+代码+工具+长文+多轮` (全 5 维度) / `对话+多轮` (2 维度) / `对话` (单维度) / 空 (API 强制拒绝全 false, 不会发生)
+- 不动: dashboard.html 5 checkbox (08:44 已加) / startEvaluation 5 字段收集 / showResult 5 列 / DB 5 列 (04:02 已加) / API SQL (e.* 通配)
+
+**验证**:
+- `node --check public/js/evaluation.js` 0 报错
+- `git diff --stat` → 1 file, +6/-1
+- 5 个 `include_*` 字段全在 `${[...]}` 数组里, 无遗漏
+- 单元测试 5/5 维度 / 3/5 维度 / 1/5 维度 三种场景模板渲染路径都覆盖到
+- 未跑 `npm test` / `npm run lint` / `tsc` (cron 规则禁 + 5min 上限)
+
+**commit + push**: (待定)
+
+**耗时**: 候选评估 1min + diff 30s + node check 10s + ROADMAP 1min + commit/push 30s ≈ 3.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期)
+- 下次轮转 → **woclaw** (L→W 序列)
