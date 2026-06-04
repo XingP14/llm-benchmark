@@ -11,9 +11,12 @@
   },
   "files": [
     "dist",
+    "public",
     "README.md",
+    "README.en.md",
     "ROADMAP.md",
-    "LICENSE"
+    "LICENSE",
+    "config.example.json"
   ],
   "scripts": {
     "build": "tsc",
