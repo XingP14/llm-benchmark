@@ -68,6 +68,8 @@
 ---
 
 _最近更新：2026-06-04 — **微修复**：补 `LICENSE` 文件（MIT, 2026, XingP14）；`package.json` 声明 `"license": "MIT"` + `files: ["..., "LICENSE"]` 但工作区缺文件，会被 `npm publish` 跳过；现补齐为 npm publish 做好准备_
+_最近更新：2026-06-04 — **Bugfix 批**：`805e53b` 修 Web dashboard 3 个显示/交互 bug (Bug #1, #3, #4) + `4b754e9` 修 lint 3 errors + 3 warnings（之前会卡 CI lint 阶段）+ `2118f0c` 修 `Reporter` Markdown/HTML 报告仍停留在 2 维度输出（v0.4.0 之后加了 function_calling/long_context/multi_turn 但 md/html 漏更，与 CSV 在 `eb87074` 修复同模式；本次提取 `DIM_HEADERS` 常量复用于 md/html/csv 三个 reporter，排名表与详情段统一 5 维度 + HTML 5 色 score-fill 渐变）_
+_最近更新：2026-06-04 — **Docs 漏更**：`069bfeb` 补 README「评测维度 → 多轮对话一致性 / Multi-Turn」子章节（v0.4.0 加了 3 题 multi_turn 但 README 漏更，与同期 function_calling/long_context 维度 README 文档漏更同模式；评分规则、required/forbidden 短语一致性 + 启用开关 `includeMultiTurn: true` 已记录）_
 _最近更新：2026-06-02 — 候选池「排行榜导出 CSV」完成：`Reporter.generateCSV()` + `saveReport` 同步输出 `.csv`（Excel 可直接打开，含 rank/model/total/5 维度/duration/questions 列；含 CSV 转义处理含逗号/引号/换行的模型名）_
 _最近更新：2026-06-02 — Story 3.3 Step 2 闭合：补 `.eslintrc.cjs`（ESLint v8 + @typescript-eslint v7）+ `lint` script + 2 个 devDeps，让 CI workflow 的 `npm run lint --if-present` 真正可跑（commit `3216f31`）_
 _最近更新：2026-06-02 — Story 4.1 Step 3 完成（多轮对话一致性 dimension：3 题 + types + evaluator 多轮 turns + Scorer.scoreMultiTurn + CLI list 默认值 + Web routes/evaluations/questions + DB 列迁移 + 评分聚合 multi_turn_score；commit `47d8602`）_
