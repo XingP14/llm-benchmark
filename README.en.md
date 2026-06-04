@@ -309,7 +309,7 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 | Nested objects | Nested JSON shapes | 2.0 |
 | Array parameters | Array-typed arguments | 1.5 |
 
-> Scoring: name + args both correct = 100; name correct, args partial = 70; name correct, args wrong = 40; name wrong = 0. Enable in config with `includeFunctionCalling: true`.
+> Scoring: name + args both correct = 100; name correct, args partial = 70; name correct, args wrong = 40; name wrong = 0. Enable in `config.json` under `benchmarks` with `"function_calling": true` (defaults to `false`). The same field name is used by both CLI and the Web API.
 
 ### Long Context (3 questions) — new in v0.4.0
 | Sub-dimension | Description | Weight |
@@ -318,7 +318,7 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 | Long-doc key-fact extraction | Multi-paragraph key points | 1.5 |
 | Multi-doc cross-reference | Cross-segment consistency | 2.0 |
 
-> Scoring: based on `keyFacts` hit ratio (100 / hit-ratio × 100 / 0). Requires a model context window ≥ 32k. Enable with `includeLongContext: true`.
+> Scoring: based on `keyFacts` hit ratio (100 / hit-ratio × 100 / 0). Requires a model context window ≥ 32k. Enable in `config.json` under `benchmarks` with `"long_context": true` (defaults to `false`).
 
 ### Multi-Turn Consistency (3 questions) — new in v0.4.0
 | Sub-dimension | Description | Weight |
@@ -327,7 +327,7 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 | Persona consistency | Stay in character (e.g. a Chinese chef does not answer Western cuisine questions) | 1.5 |
 | Logical consistency | No self-contradiction across turns | 2.0 |
 
-> Scoring: base = `required` phrase hit ratio × 100; each `forbidden` phrase hit subtracts 20; clamped to [0, 100]. Enable with `includeMultiTurn: true`.
+> Scoring: base = `required` phrase hit ratio × 100; each `forbidden` phrase hit subtracts 20; clamped to [0, 100]. Enable in `config.json` under `benchmarks` with `"multi_turn": true` (defaults to `false`).
 
 ## Output reports
 

@@ -1,5 +1,53 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 21:36 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 21:21)
+
+**轮转依据**: 上轮 picked=woclaw (21:21 b7846c8 opencode-woclaw npm badge 漏更 #12), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 3001906 / llm-benchmark 107eaa6), 按规则 4 轮转命中。
+
+**Hub /health**: 200 OK, uptime 1062738s ≈ 12.30 days (与 21:21 轮 +~12min), agents 0 / topics 0。
+
+**挑选 5min 项**: **`README.md` / `README.en.md`「评测维度」3 段配置项名误把 Web 引擎内部 task 字段写成用户配置 (漏更第 6 处, 沿 20:54 CLI 段 / 20:36 web-CLI 对齐同类)** —— v0.4.0 加 function_calling / long_context / multi_turn 3 个可选维度时, 文档在每个新维度的「评分规则」段后写「需要在配置中显式开启 `includeFunctionCalling: true` / `includeLongContext: true` / `includeMultiTurn: true`」, 但 `includeFunctionCalling` 等是 `src/web/engine/task.ts` 内部 `EvaluationTask` 字段名, **不是** 任何用户可见配置项。
+
+**实际配置项名** (3 路径验证):
+- **CLI 路径** (`src/core/evaluator.ts` line 66-73): 读 `this.config.benchmarks.function_calling` / `.long_context` / `.multi_turn` (snake_case)
+- **Web API 路径** (`src/web/routes/evaluations.ts` line 37-39): POST body 用 `function_calling` / `long_context` / `multi_turn` (snake_case)
+- **Web UI 前端** (`public/js/evaluation.js` line 225-227): fetch body 用 `function_calling` / `long_context` / `multi_turn` (snake_case)
+- **config.example.json**: `benchmarks.function_calling: false` / `.long_context: false` / `.multi_turn: false` (snake_case)
+- **Web 引擎内部 task 字段**: `includeFunctionCalling` / `includeLongContext` / `includeMultiTurn` (camelCase, includeXxx) ← **仅 task 内部用, 不可见不可写**
+
+**漏更点详查**:
+- `README.md` line 312: `includeFunctionCalling: true` ❌ (内部 task 字段)
+- `README.md` line 321: `includeLongContext: true` ❌
+- `README.md` line 330: `includeMultiTurn: true` ❌
+- `README.en.md` line 312 / 321 / 330: 同 3 处 ❌
+- 实际应写 `config.json` 的 `benchmarks.function_calling: true` / `benchmarks.long_context: true` / `benchmarks.multi_turn: true`, 用户按本节加字段不会被静默忽略 (CLI 读 `.benchmarks.function_calling`, HTTP body 读 `function_calling`, 两者名字相同)
+
+**修复**:
+- `README.md` line 312: `includeFunctionCalling: true` → 在 `config.json` 的 `benchmarks` 段开启 `"function_calling": true` (默认 false); 加一句 "CLI 与 Web API 共用同一字段名"
+- `README.md` line 321: `includeLongContext: true` → `benchmarks` 段开启 `"long_context": true`
+- `README.md` line 330: `includeMultiTurn: true` → `benchmarks` 段开启 `"multi_turn": true`
+- `README.en.md` 同样 3 处: `includeFunctionCalling/LongContext/MultiTurn` → 正确 snake_case 字段名 + 英文提示
+- diff: 2 files / +6 / -6
+
+**验证**:
+- `grep "includeFunctionCalling\|includeLongContext\|includeMultiTurn" src/core/ src/web/routes/ public/ config.example.json` = 0 hits (用户路径都不识别 includeXxx)
+- `grep "includeFunctionCalling\|includeLongContext\|includeMultiTurn" src/web/engine/` = 3 hits (仅 task 内部, 不暴露给用户)
+- 修复后 README 提示的字段名 = config.example.json + HTTP body + CLI 路径, 单一来源统一
+- 未跑 `npm test` / `npx tsc` (cron 5min 硬上限禁, 纯 README 文案 0 影响)
+- 0 npm 行为变更
+
+**commit + push**: (待定)
+
+**耗时**: 状态扫描 30s + 候选评估 1min + 3 路径 grep 验证 1min + 2 文件 edit 1min + ROADMAP 1min + commit/push 30s + memory/heartbeat 1min ≈ 5min (硬上限内, 紧凑)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run / CI #21) 不变
+- TESTING_STANDARD 覆盖率刷新父端阻塞 (npm test 5+min) 不变
+- HTML 报告可视化 1-2h 超 5min 不变
+- 漏更扫描 6 轮密集: deps / --version 实现 / 题目数 / Web-CLI 对齐 / CLI 段 / 配置项名对齐, 收益显著递减
+- 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期) / HTML 雷达图 (1-2h) / README「开发」段漏列 `npm run lint` (1 行, 收益极低)
+- **下次轮转 → woclaw** (L→W 序列), 候选池同前轮 (RS-1 / /ready / 视频 / 官方托管 父端阻塞或重活, 临时候选 CHANGELOG 修辞 / plugin dist/ 验证 / 3.1 上线后署名入口 / 新候选: 子包 README 顶部 description 统一性)
+
 ## 🩺 20:50 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 20:40)
 
 **轮转依据**: 上轮 picked=woclaw (1780579200, 20:40 跨子包版本矩阵漏更 #11), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean, 无 uncommitted 变更, 按规则 4 轮转命中。
