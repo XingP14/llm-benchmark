@@ -1,6 +1,7 @@
 // src/index.ts - 入口文件
 
 import { BenchmarkConfig, ModelConfig } from './types';
+import { version as pkgVersion } from '../package.json';
 import { Evaluator } from './core/evaluator';
 import { Reporter } from './core/reporter';
 import { LLMAdapter } from './adapters/adapter';
@@ -42,6 +43,11 @@ async function main() {
   const command = args[0] || 'help';
 
   switch (command) {
+    case '--version':
+    case '-v':
+      // 文档承诺 (README 「方式 2: 全局安装」段) 必须可用
+      console.log(`llm-bench v${pkgVersion}`);
+      break;
     case 'run':
       await runBenchmark(args.slice(1));
       break;
@@ -314,6 +320,7 @@ function showHelp() {
   compare <files...>     对比多个模型
   list                   列出可用评测题
   help                   显示帮助
+  --version, -v          输出版本号
 
 支持的模型类型:
   openai     OpenAI 兼容接口 (GPT-4, GPT-3.5, etc.)

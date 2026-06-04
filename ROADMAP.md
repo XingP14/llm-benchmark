@@ -1,5 +1,38 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 18:20 轮 — llm-benchmark (W→L 轮转命中 llm-benchmark, 上一轮 woclaw 18:10)
+
+**轮转依据**: 上轮 picked=woclaw (1780567800, 18:10 INSTALL.md docker image tag), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 12d756d / llm-benchmark c3a3d60)。
+
+**Hub /health**: 200 OK, uptime 1050975s ≈ 12.16 days (与 18:10 轮 +160s), agents 0 / topics 0。
+
+**挑选 5min 项**: **`llm-bench --version` 漏更（文档承诺 vs 代码实现）** —— README.md line 40 / README.en.md line 40 在「方式 2: 全局安装」段明写 `llm-bench --version` 作为安装验证命令，但 `src/index.ts` 的 switch 只处理 `run/init/compare/list/help` 5 个 case，`--version`/`-v` 走 default → showHelp() 输出 100+ 行帮助文本而不是版本号。npm 生态惯例 + 文档承诺 → 必须可用。判定：1 个遗漏的小功能 + 1 处 showHelp 文案同步。
+
+**修复**:
+- `src/index.ts` line 2: 新增 `import { version as pkgVersion } from '../package.json'`（tsconfig `resolveJsonModule: true` 已开启）
+- `src/index.ts` line 49-50: switch 新增 `case '--version':` + `case '-v':` 分支，输出 `llm-bench v${pkgVersion}`
+- `src/index.ts` line 321-322: showHelp「命令」段追加 `  --version, -v          输出版本号` 1 行（不删其它命令）
+
+**验证**:
+- `npx tsc --noEmit -p tsconfig.json` 0 错误
+- `npx tsc -p tsconfig.json` 重新构建 dist/ 0 报错
+- `node dist/index.js --version` → `llm-bench v0.4.0` ✅
+- `node dist/index.js -v` → `llm-bench v0.4.0` ✅
+- `node dist/index.js help` → 命令列表含 `--version, -v 输出版本号` ✅
+- 不动: 5 个原 case (run/init/compare/list/help) / default → showHelp 行为 / main() catch 错误处理 / help 其它段落
+- 未跑 `npm test` / `npm run lint` (cron 规则禁 + 5min 硬上限)
+
+**commit + push**: (待定)
+
+**耗时**: 候选评估 1min + edit 1min + tsc build 1min + 行为验证 30s + ROADMAP 1min + commit/push 30s ≈ 4.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期) / HTML 报告可视化增强 (1-2h)
+- 下次轮转 → **woclaw** (L→W 序列)
+
+
+
 > 规划 LLM-Benchmark 的发展方向，持续迭代
 
 ## 🎯 项目定位
