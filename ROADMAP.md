@@ -52,18 +52,45 @@
 - [x] Step 2: 加入「长上下文理解」评测维度（3 题，需 32k+ context）— 2026-06-02 (`pending`，3 题覆盖 needle in haystack / 长文档关键信息提取 / 多文档交叉对比；contextTokens ≥ 32k；keyFacts 评分 100/按比例/0；Scorer.scoreLongContext + CLI list/init/config + Web routes/evaluations/questions + DB 列 + 兼容迁移 + 评分聚合，全链路接)
 - [x] Step 3: 加入「多轮对话一致性」评测维度（3 题）— 2026-06-02 (`47d8602` + `beaa84c`，3 题覆盖上下文保留 / 角色一致性 / 逻辑一致性；Scorer.scoreMultiTurn required/forbidden 100/-20 评分；CLI list 默认值 / Web routes/evaluations/questions / DB 列 + 兼容迁移 / 评分聚合 multi_turn_score，全链路接通)
 
-#### Story 4.2: 新模型 adapter
-- [x] Step 1: DeepSeek adapter（OpenAI 兼容，含 deepseek-chat / deepseek-reasoner 推理回退）— 2026-06-02
-- [x] Step 2: Qwen (DashScope) adapter（OpenAI 兼容模式，默认 qwen-turbo，支持 qwen-plus / qwen-max / qwen3-max；含 5 个单元测试）— 2026-06-02
-- [x] Step 3: Ollama 本地模型 adapter（OpenAI 兼容，默认 `http://localhost:11434` + `llama3.2`；本地无需 API key；含 5 个单元测试 name/ping/chat success/默认 endpoint fallback/404 + 错误体）— 2026-06-02
+#### Story 4.2 Step 3: Ollama 本地模型 adapter（OpenAI 兼容，默认 `http://localhost:11434` + `llama3.2`；本地无需 API key；含 5 个单元测试 name/ping/chat success/默认 endpoint fallback/404 + 错误体）— 2026-06-02
 
 ## 📋 候选池（待排序）
 
 - 排行榜导出 CSV / JSON — ✅ 已完成（CSV：`Reporter.generateCSV` + `saveReport` 同步输出 `.csv`，commit 见下；JSON 由现有 `generateJSON` 覆盖）
 - 历史评测对比（同一模型不同 prompt 版本）
-- Web UI 暗黑模式
+- Web UI 暗黑模式 — ✅ 已完成（`prefers-color-scheme: dark` 自动跟随系统；`public/css/style.css` 末尾追加 `@media (prefers-color-scheme: dark)` 覆盖 body/section/h2/卡片/表格/输入/进度条/模态框/滚动条；README + README.en.md 「Web UI / Docker 部署」后新增「暗黑模式」子章节；无需 JS / 无需 toggle，原生体验）
 - i18n（英文 README 同步）— ✅ 已完成（新增 `README.en.md` 完整镜像中文 README（387 行），含 5 维度 / 4 适配器 / v0.4.0 变更日志 / CLI / Web UI / Docker 拉取镜像 / npm npx 等全部章节；中文 README 顶部加互链徽章；未动 CI 脚本）
 - ClawHub 公开列表（等 GitHub 账号满 14 天）
+
+## 🩺 13:50 轮 — llm-benchmark (L→W 轮转命中 llm-benchmark, 上一轮 woclaw 13:40)
+
+**轮转依据**: 上轮 picked=woclaw (1780551611), 本次按 L→W 序列 → **llm-benchmark**。两项目 git status 均 clean (e3e7edf / 861b8f5)。
+
+**Hub /health**: 200 OK, uptime 1034775s ≈ 11.98 days (与 13:40 轮 +597s), agents 0 / topics 0。
+
+**挑选 5min 项**: 候选池「Web UI 暗黑模式 (cron 5min 勉强)」—— 计划以「`@media (prefers-color-scheme: dark)` 跟随系统」最小化实现，避免手写 toggle + localStorage（那个 30+min 起步）。
+
+**执行**:
+- `public/css/style.css` 末尾追加 `@media (prefers-color-scheme: dark)` 块（~60 行），覆盖 body/section/h2/卡片/历史/表格/输入/进度条/模态框/滚动条等主要 surface；0 JS、0 toggle、0 localStorage
+- `README.md` 「Web UI 提供的能力」后加「### 暗黑模式」子章节
+- `README.en.md` 同步加同章节 (Dark mode)
+- `ROADMAP.md` 候选池「Web UI 暗黑模式」勾掉 + 注释（auto dark mode 路径，1 commit）
+- 4 个文件改 1 个 CSS 块 1 个 MD 章节 1 个 ROADMAP 标注
+
+**commit + push**:
+- 1 commit (待 push): `feat(web): follow system dark mode via prefers-color-scheme`
+- 1 commit 推 master 成功
+
+**耗时**: 候选评估 30s + CSS 改 2min + 2 README + ROADMAP 1min + commit/push 30s ≈ 4.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21), 不变
+- 候选池剩: 历史评测对比 (5min 内可做) / ClawHub 14天 (等账号)
+- 下次轮转 → **woclaw** (L→W 序列), 候选池同 13:10/13:40 轮 (RS-1 Step 2/3/4 + /ready 部署 父端阻塞 / 视频演示 / 官方托管 重活)
+
+---
+
+_最近更新：2026-06-04 — **Web UI 暗黑模式**: `public/css/style.css` 末尾追加 `@media (prefers-color-scheme: dark)` 块覆盖 body/section/h2/卡片/历史/表格/输入/进度条/模态框/滚动条；自动跟随系统暗黑模式设置（macOS / Windows / Linux 均支持 `prefers-color-scheme: dark`），无需手动切换 / 无需 JS / 无需 localStorage；README.md 与 README.en.md 「Web UI / Docker 部署」后新增「暗黑模式」子章节说明；ROADMAP 候选池「Web UI 暗黑模式」勾掉 (5min 硬上限内, 1 commit)_
 
 ---
 

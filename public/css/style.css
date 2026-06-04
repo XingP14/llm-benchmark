@@ -397,3 +397,87 @@ input[type="checkbox"] {
     gap: 15px;
   }
 }
+
+/* 自动暗黑模式 (跟随系统 prefers-color-scheme) */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1d23;
+    color: #e4e6eb;
+  }
+
+  section {
+    background: #2a2d35;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+
+  h2 {
+    color: #e4e6eb;
+    border-bottom-color: #3a3d45;
+  }
+
+  .config-card,
+  .history-item,
+  .model-output,
+  .ranking-table th,
+  .ranking-table tr:hover {
+    background: #34373f;
+  }
+
+  .config-card .name,
+  .ranking-table td {
+    color: #e4e6eb;
+  }
+
+  .config-card .details,
+  .modal-close {
+    color: #a0a3a8;
+  }
+
+  .history-item:hover {
+    background: #3e4149;
+  }
+
+  .ranking-table th,
+  .ranking-table td {
+    border-bottom-color: #3a3d45;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="url"],
+  select {
+    background: #1f2227;
+    color: #e4e6eb;
+    border-color: #3a3d45;
+  }
+
+  .progress-bar,
+  .score-bar {
+    background: #3a3d45;
+  }
+
+  .login-container,
+  .modal-content {
+    background: #2a2d35;
+  }
+
+  .history-item .status.RUNNING {
+    color: #1a1d23;
+  }
+
+  /* 适配系统滚动条 */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #1a1d23;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3a3d45;
+    border-radius: 5px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4a4d55;
+  }
+}

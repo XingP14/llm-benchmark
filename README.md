@@ -160,6 +160,10 @@ curl http://localhost:3033/api/health
 
 CLI 与 Web UI 共享同一份 SQLite 数据库，可混用。
 
+### 暗黑模式
+
+Web UI 自动跟随操作系统的暗黑模式设置（macOS / Windows / Linux 均支持 `prefers-color-scheme: dark`），无需手动切换；输入框、卡片、表格、滚动条都已适配。
+
 ## 支持的模型
 
 | 平台 | 类型 | 示例模型 |

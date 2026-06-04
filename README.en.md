@@ -160,6 +160,10 @@ curl http://localhost:3033/api/health
 
 The CLI and the Web UI share the same SQLite database — mix and match.
 
+### Dark mode
+
+The Web UI automatically follows the operating system's dark mode setting (macOS / Windows / Linux all support `prefers-color-scheme: dark`); no manual toggle required — inputs, cards, tables and scrollbars are all adapted.
+
 ## Supported models
 
 | Provider | `type` value | Example models |
