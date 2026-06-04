@@ -1,5 +1,30 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 19:40 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 19:14)
+
+**轮转依据**: 上轮 picked=woclaw (1780571656, 19:14 docker workflow Node 18→20 漏更第9处), 本次按 W→L 序列 → **llm-benchmark**。llm-benchmark 有 uncommitted 变更 (`M package.json`)，按规则 2 优先处理。
+
+**Hub /health**: 200 OK, uptime 1055776s ≈ 12.22 days (与 19:14 轮 +1605s), agents 0 / topics 0。
+
+**挑选 5min 项**: **`package.json` devDependencies 漏分（@types/* 和 @typescript-eslint/* 错放在 dependencies）** —— 工作区 `M package.json` 已经把 8 个开发时依赖从 `dependencies` 移到 `devDependencies`：
+- `@types/bcrypt` / `@types/better-sqlite3` / `@types/express` / `@types/jsonwebtoken` / `@types/uuid` / `@types/ws`（TS 类型定义，仅编译时用）
+- `@typescript-eslint/eslint-plugin` / `@typescript-eslint/parser`（lint 工具，仅 dev 用）
+- 真正的运行时依赖 (`bcrypt` / `better-sqlite3` / `express` / `jsonwebtoken` / `uuid` / `ws`) 留在 `dependencies`
+
+package-lock.json **未变**（包版本和物理安装位置都未变，只是 manifest 分组变了），无需 `npm install`。`engines: ">=18.0.0"` 覆盖。**零运行时风险**——纯 npm manifest 卫生清理。
+
+**commit + push**: `76aa724 chore(deps): move @types/* and @typescript-eslint/* to devDependencies`，1 file / +8 / -8。推送 `6148360..76aa724 master -> master` ✅
+
+**耗时**: 状态扫描 30s + 分类评估 30s + 候选确认 30s + commit/push 30s + ROADMAP/memory 1min ≈ 3min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- TESTING_STANDARD 覆盖率刷新父端阻塞 (npm test 5+min) 不变
+- HTML 报告可视化增强 (1-2h 超 5min) 不变
+- 漏更扫描: 18:20 轮 `--version` 实现已 commit (17a5235), 18:54 题目数修正已 commit (6148360), 19:41 本轮 deps 清理已 commit (76aa724) — llm-benchmark 侧已 3 轮密集清理, 收益递减
+- 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期)
+- **下次轮转 → woclaw** (L→W 序列)
+
 ## 🩺 18:20 轮 — llm-benchmark (W→L 轮转命中 llm-benchmark, 上一轮 woclaw 18:10)
 
 **轮转依据**: 上轮 picked=woclaw (1780567800, 18:10 INSTALL.md docker image tag), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 12d756d / llm-benchmark c3a3d60)。
