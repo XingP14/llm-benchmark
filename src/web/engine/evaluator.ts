@@ -148,10 +148,13 @@ export class EvaluatorEngine {
    * 创建适配器
    */
   private createAdapter(type: string): LLMAdapter {
-    switch (type) {
+    // 与 src/index.ts CLI 路径对齐：toLowerCase + 接受 'zhipu' 别名,
+    // 避免老 v0.2.0 时期配置 (type: "ZHIPU" / "zhipu") 走 default → OpenAI
+    switch (type.toLowerCase()) {
       case 'anthropic':
         return new AnthropicAdapter();
       case 'glm':
+      case 'zhipu':
         return new GLMAdapter();
       case 'deepseek':
         return new DeepSeekAdapter();
