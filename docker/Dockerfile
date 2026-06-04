@@ -17,7 +17,6 @@ COPY tsconfig.json ./
 
 # 复制静态资源
 COPY public ./public
-COPY database ./database
 
 # 构建
 RUN npm run build

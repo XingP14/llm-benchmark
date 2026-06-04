@@ -125,6 +125,40 @@
 
 ---
 
+## 🩺 15:20 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 15:10)
+
+**轮转依据**: 上轮 picked=woclaw (1780559400, 15:10 README 5 处 npm 徽章), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw f3f929a / llm-benchmark c6c2b35)。
+
+**Hub /health**: 200 OK, uptime 1040176s ≈ 12.04 days (与 15:10 轮 +596s), agents 0 / topics 0。
+
+**挑选 5min 项**: 兑现 14:50 轮扣留的「dead-code cleanup」: **`database/schema.sql` 删除** + **`docker/Dockerfile` 减一 COPY 路径**。论证: `schema.sql` 69 行, 5 张表 (users/configs/evaluations/evaluation_configs/results) + 4 索引, 但 **0 处被源码引用** (`grep -rn "schema.sql" src/ public/ tests/ 2>/dev/null` 0 hit; `src/web/db/database.ts` 完整内联一份一模一样的 schema 作为权威源, 还多了 v0.4.0 才加的 `include_long_context` / `include_multi_turn` 两列)。Dockerfile 的 `COPY database ./database` 是 schema.sql 唯一运到镜像的路径, schema 死代码让这一步 COPY 也变成无用功, 一起清。
+
+**执行**:
+- `git rm database/schema.sql` + `rmdir database` (目录空) → 1 文件删除
+- `docker/Dockerfile`: 删 `COPY database ./database` 1 行
+- 不动: `src/web/db/database.ts` 的内联 schema (是权威源, 不能动); `package.json` 的 `files` 字段 (本来就不含 `database/`, 14:50 轮已验证); `.dockerignore` (本来就不排除 `database/`, 现在不需要了)
+
+**验证**:
+- `database/` 目录已空, 跟随 `git rm` 移出仓库 (git 不跟踪空目录)
+- `docker/Dockerfile` COPY 路径剩 5 个 (package*.json / src / tsconfig.json / public), 都在 .dockerignore 排除项之外, 不被误伤
+- `grep -rn "schema.sql" src/ public/ tests/ docker/ 2>/dev/null` 0 hit, 无遗留引用
+- `grep -rn "database/" src/ public/ tests/ docker/ 2>/dev/null` 0 hit (除了 README.md 文本中的"数据库"中文, 不影响)
+- 未跑 `npm test` / `npm run lint` / `docker build` (cron 规则禁 + 5min 上限)
+
+**commit + push**:
+- 1 commit: `chore(cleanup): remove dead database/schema.sql + Dockerfile COPY path`
+- 2 changes: `database/schema.sql` (D, -69) + `docker/Dockerfile` (-1 line)
+- push 到 master 成功
+
+**耗时**: 候选评估 + grep 验证 1.5min + 2 文件改 30s + ROADMAP 记录 1.5min + commit/push 30s ≈ 4min (5min 硬上限内)。
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管服务 (WoClaw 长期)
+- 下次轮转 → **woclaw** (L→W 序列)。候选池: RS-1 Step 2/3/4 父端阻塞 / /ready 部署 父端阻塞 / 视频演示 重活 / 官方托管 长期 — 父端阻塞持续, cron 范围狭小, 主动候选需临时找 (上次 15:10 命中"漏更扫描 npm 徽章", 模式可复用)
+
+---
+
 _最近更新：2026-06-04 — **npm package 静态文件漏发**：Story 3.1 Step 4 (`npm publish`) 的 pre-flight bug — `package.json` 的 `files` 字段缺少 `public/` 目录，导致 `dist/web/server.js` 启动后 `express.static(PUBLIC_DIR)` 找不到任何静态文件（HTML/CSS/JS 全部 404）；`npm pack --dry-run` 验证：未修前 121 files / 80.8 kB / 0 public files → 修后 129 files / 90.5 kB / 7 public files (css + 2 html + 4 js)；同时补 `README.en.md` (12.8 kB, 12:22 i18n 加入但未在 files) 与 `config.example.json` (用户首次使用模板)；父端后续 `npm adduser` + `npm publish` 时即可直接发完整 0.4.0 包，无需补发补丁版本_
 
 _最近更新：2026-06-04 — **Web UI 暗黑模式**: `public/css/style.css` 末尾追加 `@media (prefers-color-scheme: dark)` 块覆盖 body/section/h2/卡片/历史/表格/输入/进度条/模态框/滚动条；自动跟随系统暗黑模式设置（macOS / Windows / Linux 均支持 `prefers-color-scheme: dark`），无需手动切换 / 无需 JS / 无需 localStorage；README.md 与 README.en.md 「Web UI / Docker 部署」后新增「暗黑模式」子章节说明；ROADMAP 候选池「Web UI 暗黑模式」勾掉 (5min 硬上限内, 1 commit)_
