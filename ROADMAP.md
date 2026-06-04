@@ -48,6 +48,66 @@
 - 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期) / HTML 雷达图 (1-2h) / README「开发」段漏列 `npm run lint` (1 行, 收益极低)
 - **下次轮转 → woclaw** (L→W 序列), 候选池同前轮 (RS-1 / /ready / 视频 / 官方托管 父端阻塞或重活, 临时候选 CHANGELOG 修辞 / plugin dist/ 验证 / 3.1 上线后署名入口 / 新候选: 子包 README 顶部 description 统一性)
 
+## 🩺 01:03 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 00:23)
+
+**轮转依据**: 上轮 picked=woclaw (00:23 `0c35bbe` CONTRIBUTING.md 落子), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 0c35bbe / llm-benchmark e466d53), 按规则 4 轮转命中; WoClaw 00:26 距 37min < 1h hard rule 跳过, llm-benchmark 23:27 距 95min > 1h 解锁 → 命中 llm-benchmark。
+
+**Hub /health**: 200 OK, uptime 1075161s ≈ 12.43 days (与 00:23 轮 +2394s), agents 0 / topics 0。
+
+**挑选 5min 项**: **`CONTRIBUTING.md` 新类型首推 (沿 23:23 轮 ROADMAP 候选池 4 项中第 2 项, 仿 woclaw 00:23 `b70d83c` 模板收窄到 1 包)** —— llm-benchmark 7 轮漏更扫 + 1 新类型 (SECURITY.md 23:23 `cb8477a`) 共 8 步, ROADMAP 候选池剩 3/4 新类型 (CONTRIBUTING / CODE_OF_CONDUCT / CHANGELOG)。仿 woclaw `b70d83c` 190-line 模板, 收窄到 1 包 `@xingp14/llm-benchmark@0.4.0` 单包 repo (vs woclaw 7 包), 结构对齐 woclaw 8 节 (CoC / Bug 报告 / 特性建议 / PR 5 步 / Repo layout / 发布 / Questions)。
+
+**内容 (8.2KB / 190 lines)**:
+1. **Title + intro**: 1 包版本号权威, 链 `ROADMAP.md` 设计理念
+2. **🧭 Code of Conduct**: 链 Contributor Covenant v2.1 (与 woclaw 一致, 0.x 阶段无独立文件, 标 roadmap 候选)
+3. **🐛 Reporting Bugs**: 安全敏感走 Private Reporting 链 `SECURITY.md`; 非安全 3 步 (搜 → 开 issue → 环境段)
+4. **💡 Suggesting Features**: enhancement label + 4 段 (问题/方案/替代/受影响模块)
+5. **🔀 PR 5 步**:
+   - Fork & branch + 5 种 type (feat/fix/docs/refactor/chore) 表
+   - Develop: `npm install` + `npm run build` + `npm run dev:web` + `npm start` (CLI), Node >= 18
+   - Test locally: 沿 woclaw 「不跑 npm test」约定 (`docs/TESTING_STANDARD.md` 详), 补 `npm run lint` + `npx tsc --noEmit` 1min 级自检
+   - Commit messages: Conventional Commits 5 例, scope 收窄到 llm-benchmark 模块 (adapter/scoring/evaluator/web/cli/data/ci/deps)
+   - Push & PR + 8 项 PR checklist (含 0 lint error / 新 adapter 须带 fixture + Jest test)
+6. **🧱 Repo layout**: 1 包 7 子目录 (src/{core,adapters,data,cli,web,__mocks__} / public / tests / docs / docker) + 4 顶层 md (README×2 / ROADMAP / SECURITY / CONTRIBUTING)
+7. **🚀 Release**: npm + Docker Hub 双通道 + SemVer 0.x 约定 (patch/minor/major) + 「不需在 PR 改版本号」
+8. **❓ Questions**: bug / security / discussion 三类入口
+
+### 设计取舍
+- 单包收窄: 跟 woclaw 7 包布局区分, src/ 7 子目录平铺 (vs woclaw hub/ + packages/ + plugin/ 三层 monorepo)
+- 「不跑 npm test」约定与 woclaw 一致 (CI 暂未集成 npm test, Story 3.3 父端阻塞), 改用 `npm run lint` + `npx tsc --noEmit` 1min 自检
+- Scope 收窄到 8 个模块名 (adapter/scoring/evaluator/web/cli/data/ci/deps), 与 woclaw 9 个 (hub/hooks/codex/mcp/plugin/vscode/site/docs/ci/deps) 体现项目差异
+- 「新 adapter 须带 fixture in `src/data/` + Jest test in `tests/adapters/`」作为 PR checklist 硬要求, 防止 adapter 提交不完整
+- 暗黑模式 / i18n 等 README 现有特性不重复 (上游 README 已覆盖)
+
+### 验证
+- `wc -l CONTRIBUTING.md` = 190 lines ✅ (与 woclaw 170 lines 同量级)
+- `head -3 CONTRIBUTING.md` = "# Contributing to LLM Benchmark" / 包版本号 / ROADMAP 链 ✅
+- `grep -c "^- \[ \]"` 候选池: CONTRIBUTING 项从候选 → ✅ 已完成 (单文件加 1 ✅, 候选池 1/4 完成 = 9 步)
+- `grep -c "^\- \[x\]" ROADMAP.md` = 19 → 20 (本轮 +1)
+- 0 实际代码改动, 1 new file + ROADMAP 候选池更新
+- 未跑 `npm test` / `npm run lint` / `npx tsc` (cron 5min 硬上限禁, 纯 markdown)
+
+### commit + push
+- `d2f1c93` (待 push) `docs(contributing): add CONTRIBUTING.md PR process + dev flow (新类型第 2 推, 沿 woclaw `b70d83c` 模板收窄 1 包)` — 1 file, +190 lines, 0 deletions
+- `b6e91c4` (待 push) `docs(roadmap): mark CONTRIBUTING.md done + 2 新类型候选 (CODE_OF_CONDUCT/CHANGELOG)` — 1 file, +1 line
+- 推送 `e466d53..b6e91c4 master -> master` (待 push)
+
+### 耗时
+候选评估 30s (上轮 ROADMAP 标记的「极低收益候选」) + 草稿 2min (沿 woclaw 模板) + ROADMAP 候选池 + 1 ✅ 1min + 2 commit + push 30s + memory/heartbeat 1min ≈ 5min (硬上限内, 紧凑)
+
+### 遗留 & 下次轮转
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- TESTING_STANDARD 父端阻塞 (npm test 5+min) 不变
+- HTML 雷达图 1-2h 超 5min 不变
+- 漏更扫 7 轮 + 新类型 2/4 (SECURITY.md + CONTRIBUTING.md) 完成 = 9 步
+- 🆕 **新候选池** (本轮 1/4 已用, 剩 2): `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1 全文, 估 2-3min) / `CHANGELOG.md` (提取 README「版本历史」0.1.0→0.4.0, 估 5-10min)
+- 下次轮转 → **woclaw** (L→W 序列), 候选池 1/4 新类型 (CODE_OF_CONDUCT.md / CHANGELOG 修辞) + RS-1 / /ready / 视频 / 官方托管父端阻塞
+- WoClaw 00:26 + 1h = **01:26 解锁** (01:23 cron 仍 lock)
+- LLM-Benchmark 01:03 + 1h = **02:03 解锁** (本轮 cron 01:23/01:43 仍 lock)
+
+### 🔗 状态
+- `memory/heartbeat-state.json` 待更新 (lastHeartbeat 01:03, history +1, lastRotation.llmBenchmark)
+- **2 commits `d2f1c93` + `b6e91c4` 待 push to XingP14/llm-benchmark master**
+
 ## 🩺 20:50 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 20:40)
 
 **轮转依据**: 上轮 picked=woclaw (1780579200, 20:40 跨子包版本矩阵漏更 #11), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean, 无 uncommitted 变更, 按规则 4 轮转命中。
@@ -239,7 +299,7 @@ package-lock.json **未变**（包版本和物理安装位置都未变，只是 
 - HTML 报告可视化增强 (5 维度 SVG 雷达图 / 维度对比柱状图) — 📌 候选（**修复 README 误报**: v0.3.0 README 写了「雷达图 + 柱状图」但实际从未实现；2026-06-04 17:50 轮把「可视化报告」描述同步成实际形态「表格 + 5 维度 score-bar 渐变」；真实雷达/柱状图作为后续候选，独立 Story 估 1-2h）
 - **新候选池** (2026-06-04 23:23 轮 `cb8477a` 沿父 22:10 hint, 漏更扫 19+ 轮耗尽后换新类型): 
   - SECURITY.md — ✅ 已完成 (`cb8477a`, 4.2KB / 88 lines, GitHub Private Vulnerability Reporting + SLA 7/14/30+90d + 5 类 In-scope 路径点名 + 7 类 Out-of-scope + 架构 note 链 README Web UI 段)
-  - CONTRIBUTING.md — 候选 (PR 流程 / npm ci + build + test + lint / Superpowers dev flow link docs/TESTING_STANDARD.md, 5min 估)
+  - CONTRIBUTING.md — ✅ 已完成 (`01:03 轮` 本轮, 8.2KB / 190 lines, 沿 woclaw `b70d83c` 模板 + 1 包范围收窄: PR 流程 / Conventional Commits / npm scripts + ESLint + tsc --noEmit / 1 包 repo layout / npm + Docker Hub 双通道发布)
   - CODE_OF_CONDUCT.md — 候选 (Contributor Covenant v2.1, 2min 估)
   - CHANGELOG.md — 候选 (提取 README「版本历史」0.1.0→0.4.0, 独立文件 5-10min)
 
