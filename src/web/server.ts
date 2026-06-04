@@ -3,12 +3,13 @@
 import express from 'express';
 import { createServer } from 'http';
 import path from 'path';
+import { existsSync, statSync } from 'fs';
 import authRoutes, { initAdmin } from './routes/auth';
 import configsRoutes from './routes/configs';
 import evaluationsRoutes from './routes/evaluations';
 import questionsRoutes from './routes/questions';
 import { initWebSocket } from './websocket';
-import { getDatabase } from './db/database';
+import { closeDatabase } from './db/database';
 
 const PORT = process.env.PORT || 3033;
 const PUBLIC_DIR = path.join(__dirname, '../../public');
@@ -35,7 +36,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 // SPA fallback - 所有非 API 路由都返回 index.html
-app.use((req, res, next) => {
+app.use((req, res, _next) => {
   // 跳过 API 路径
   if (req.path.startsWith('/api/')) {
     res.status(404).json({ error: 'Not found' });
@@ -43,7 +44,7 @@ app.use((req, res, next) => {
   }
   // 如果是文件请求且存在，直接返回
   const filePath = path.join(PUBLIC_DIR, req.path);
-  if (require('fs').existsSync(filePath) && require('fs').statSync(filePath).isFile()) {
+  if (existsSync(filePath) && statSync(filePath).isFile()) {
     res.sendFile(filePath);
     return;
   }
@@ -68,7 +69,6 @@ Default Admin: admin / ${process.env.ADMIN_PASSWORD || 'admin123'}
 // 优雅关闭
 process.on('SIGINT', () => {
   console.log('\nShutting down...');
-  const { closeDatabase } = require('./db/database');
   closeDatabase();
   process.exit(0);
 });

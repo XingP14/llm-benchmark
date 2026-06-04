@@ -8,18 +8,6 @@ interface OpenAIMessage {
   content: string;
 }
 
-interface OpenAIResponse {
-  choices: Array<{
-    message: {
-      content: string;
-    };
-  }>;
-  error?: {
-    message: string;
-    type: string;
-  };
-}
-
 export class OpenAIAdapter implements LLMAdapter {
   getName(): string {
     return 'OpenAI Compatible';
