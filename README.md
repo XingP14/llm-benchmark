@@ -77,6 +77,9 @@ llm-bench compare model-a.json model-b.json
 # 列出可用评测题
 llm-bench list
 
+# 查看版本号
+llm-bench --version
+
 # 显示帮助
 llm-bench help
 ```

@@ -1,5 +1,44 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 20:50 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 20:40)
+
+**轮转依据**: 上轮 picked=woclaw (1780579200, 20:40 跨子包版本矩阵漏更 #11), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean, 无 uncommitted 变更, 按规则 4 轮转命中。
+
+**Hub /health**: 200 OK, uptime 1060000s ≈ 12.27 days (与 20:40 轮 +623s), agents 0 / topics 0。
+
+**挑选 5min 项**: **`README.md` / `README.en.md` 「CLI 用法」段漏列 `--version` 命令 (漏更第 5 处, 沿 20:36 web/CLI 路径对齐同类)** —— 18:20 轮 (17a5235) 在 `src/index.ts` switch 新增 `case '--version':` / `case '-v':` + showHelp()「命令」段补一行 `  --version, -v          输出版本号`, 但 README 「## CLI 用法」示例块当时只补了 5 个常用命令, **漏补 `--version`**。同时 README line 40 (「方式 2: 全局安装」段) 早已用 `llm-bench --version` 作为安装验证命令, 自身段内不一致。
+
+**漏更点详查**:
+- `README.md` line 67-82 「CLI 用法」段: 5 行命令 (init / run / compare / list / help), 缺 `llm-bench --version`
+- `README.en.md` line 67-82 「CLI usage」段: 5 行命令, 缺 `llm-bench --version`
+- 实际 `src/index.ts` line 45-48 switch + showHelp() line 322 共 6 个命令 (run / init / compare / list / help / --version,-v)
+- README line 40 / README.en.md line 40 在「方式 2: 全局安装」段也明写 `llm-bench --version` 作为安装验证 → 自相矛盾 (同一份 README 既说「安装后跑 --version 验证」, 但「CLI 用法」段又漏列这个命令)
+
+**修复**:
+- `README.md` line 78-82 (list 之后, help 之前): 补 `# 查看版本号\nllm-bench --version\n` 2 行
+- `README.en.md` line 78-82: 补 `# Show version\nllm-bench --version\n` 2 行
+- 顺序: `list` → `--version` → `help` (与 showHelp() 内部顺序一致, help 是兜底, --version 是 meta)
+- diff: 2 files / +6 / -0
+
+**验证**:
+- README.md 「## CLI 用法」段现 6 个命令示例, 与 src/index.ts switch 完整对齐
+- README 「方式 2: 全局安装」段 (line 40) 与「CLI 用法」段 (line 67-86) 不再自相矛盾
+- README.en.md 同上
+- 未跑 `npm test` (cron 5min 硬上限禁)
+- 0 npm 行为变更, 0 tsc 影响 (纯 README 文案)
+
+**commit + push**: (待定)
+
+**耗时**: 状态扫描 30s + 候选评估 1min + grep 验证 30s + 2 文件 edit 30s + ROADMAP 1.5min + commit/push 30s + memory/heartbeat 1min ≈ 5min (硬上限内, 紧凑)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- TESTING_STANDARD 覆盖率刷新父端阻塞 (npm test 5+min) 不变
+- HTML 报告可视化增强 (1-2h 超 5min) 不变
+- 漏更扫描 5 轮密集完成, 收益显著递减: deps / --version 实现 / 题目数 / Web-CLI 对齐 / 本轮 CLI 段对齐
+- 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期) / HTML 雷达图 (1-2h) / README 「快速开始」段示例 (npx 一键) 是否还有未对齐
+- **下次轮转 → woclaw** (L→W 序列)
+
 ## 🩺 20:36 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 19:50)
 
 **轮转依据**: 上轮 picked=woclaw (1780573812, 19:50 plugin src/index.js 孤儿死代码清理), 本次按 W→L 序列 → **llm-benchmark**。llm-benchmark 有 uncommitted 变更 (`M src/web/engine/evaluator.ts`)，按规则 2 优先处理。
@@ -247,6 +286,8 @@ package-lock.json **未变**（包版本和物理安装位置都未变，只是 
 - 下次轮转 → **woclaw** (L→W 序列)。候选池: RS-1 Step 2/3/4 父端阻塞 / /ready 部署 父端阻塞 / 视频演示 重活 / 官方托管 长期 — 父端阻塞持续, cron 范围狭小, 主动候选需临时找 (上次 15:10 命中"漏更扫描 npm 徽章", 模式可复用)
 
 ---
+
+_最近更新：2026-06-04 20:50 — **CLI 用法段漏更第 5 处**：`README.md` 与 `README.en.md` 「## CLI 用法」/「## CLI usage」示例块沿 18:20 轮 (17a5235) 在 `src/index.ts` switch + showHelp() 补齐 `--version, -v` 后, 文档侧只更新了 line 40 「方式 2: 全局安装」段的 `llm-bench --version` 安装验证命令, **「CLI 用法」段 (line 67-82) 漏补**, 形成段内不一致: 同一份 README 既在「方式 2」段明写「安装后跑 `llm-bench --version`」又在「CLI 用法」段漏列这个命令。修复: 2 文件 list 之后、help 之前各补 2 行 (`# 查看版本号` / `# Show version` + `llm-bench --version`), 顺序与 showHelp() 内部一致; 2 files / +6 / -0, 0 npm test / 0 lint / 0 tsc。源查: `grep -n -- "--version\|-v" README.md` = line 40 (line 40 已对) + line 67-82 缺 (本轮补) + line 135 (`-v llm-bench-data:`, docker volume mount 无关) → 唯一漏更点 1 处, 本轮补完。沿 20:36 web/CLI 路径对齐同类: 都是「同一项目 README 多段 / docs 漏更」。_
 
 _最近更新：2026-06-04 17:50 — **README 可视化误报漏更**：v0.3.0 README 特性行写「📈 **可视化报告**: 表格、雷达图、柱状图对比」+ README.en.md 写「Tables, radar charts, bar charts for comparison」+ `benchmark-xxx.html` 行写「visual HTML report (with charts)」，但实际 codebase 0 处实现 radar/chart/canvas/svg（`grep -rn "radar\|chart\|svg" src/ public/ 2>/dev/null` 0 命中），唯一「可视化」是 reporter.ts 的 `.score-bar` mini 渐变进度条（v0.4.0 后 5 维度各 1 色：dialogue 蓝 / coding 绿 / function-calling 橙 / long-context 紫 / multi-turn 红 / total 青绿）。本轮诚实同步：中文 README 改为「表格 + 5 维度彩色 score-bar 渐变进度条」+ README.en.md 同步 + 删「with charts」误报；候选池新增「HTML 报告可视化增强 (5 维度 SVG 雷达图 / 维度对比柱状图)」独立 Story 候选，估 1-2h（v0.5+ Sprint 候选）。3 files, +4/-3, 0 npm test / 0 lint / 0 tsc（纯文案修复）。源查: grep 「radar\|chart\|svg」src/public = 0 hit, src/core/reporter.ts 行 95-130 是 score-fill 渐变（CSS 5 色 linear-gradient）, 不是真 chart._
 

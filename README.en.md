@@ -77,6 +77,9 @@ llm-bench compare model-a.json model-b.json
 # List available benchmark questions
 llm-bench list
 
+# Show version
+llm-bench --version
+
 # Show help
 llm-bench help
 ```
