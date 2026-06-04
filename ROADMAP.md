@@ -237,6 +237,11 @@ package-lock.json **未变**（包版本和物理安装位置都未变，只是 
 - i18n（英文 README 同步）— ✅ 已完成（新增 `README.en.md` 完整镜像中文 README（387 行），含 5 维度 / 4 适配器 / v0.4.0 变更日志 / CLI / Web UI / Docker 拉取镜像 / npm npx 等全部章节；中文 README 顶部加互链徽章；未动 CI 脚本）
 - ClawHub 公开列表（等 GitHub 账号满 14 天）
 - HTML 报告可视化增强 (5 维度 SVG 雷达图 / 维度对比柱状图) — 📌 候选（**修复 README 误报**: v0.3.0 README 写了「雷达图 + 柱状图」但实际从未实现；2026-06-04 17:50 轮把「可视化报告」描述同步成实际形态「表格 + 5 维度 score-bar 渐变」；真实雷达/柱状图作为后续候选，独立 Story 估 1-2h）
+- **新候选池** (2026-06-04 23:23 轮 `cb8477a` 沿父 22:10 hint, 漏更扫 19+ 轮耗尽后换新类型): 
+  - SECURITY.md — ✅ 已完成 (`cb8477a`, 4.2KB / 88 lines, GitHub Private Vulnerability Reporting + SLA 7/14/30+90d + 5 类 In-scope 路径点名 + 7 类 Out-of-scope + 架构 note 链 README Web UI 段)
+  - CONTRIBUTING.md — 候选 (PR 流程 / npm ci + build + test + lint / Superpowers dev flow link docs/TESTING_STANDARD.md, 5min 估)
+  - CODE_OF_CONDUCT.md — 候选 (Contributor Covenant v2.1, 2min 估)
+  - CHANGELOG.md — 候选 (提取 README「版本历史」0.1.0→0.4.0, 独立文件 5-10min)
 
 ## 🩺 13:50 轮 — llm-benchmark (L→W 轮转命中 llm-benchmark, 上一轮 woclaw 13:40)
 
