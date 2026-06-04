@@ -290,6 +290,9 @@ input[type="checkbox"] {
 .score-bar .fill.dialogue { background: #3498db; }
 .score-bar .fill.coding { background: #2ecc71; }
 .score-bar .fill.total { background: #9b59b6; }
+.score-bar .fill.function-calling { background: #e67e22; }
+.score-bar .fill.long-context { background: #16a085; }
+.score-bar .fill.multi-turn { background: #d35400; }
 
 /* 模型输出预览 */
 .model-output {
@@ -323,7 +326,7 @@ input[type="checkbox"] {
 }
 
 /* 模态框 */
-.modal {
+.modal:not(.hidden) {
   position: fixed;
   top: 0;
   left: 0;

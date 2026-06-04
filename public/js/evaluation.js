@@ -97,6 +97,9 @@ function showResult(data) {
             <th>总分</th>
             <th>对话能力</th>
             <th>代码能力</th>
+            <th>工具调用</th>
+            <th>长上下文</th>
+            <th>多轮对话</th>
           </tr>
         </thead>
         <tbody>
@@ -118,6 +121,18 @@ function showResult(data) {
           <td>
             ${r.coding_score}
             <div class="score-bar"><div class="fill coding" style="width: ${r.coding_score}%;">${r.coding_score}</div></div>
+          </td>
+          <td>
+            ${r.function_calling_score}
+            <div class="score-bar"><div class="fill function-calling" style="width: ${r.function_calling_score}%;">${r.function_calling_score}</div></div>
+          </td>
+          <td>
+            ${r.long_context_score}
+            <div class="score-bar"><div class="fill long-context" style="width: ${r.long_context_score}%;">${r.long_context_score}</div></div>
+          </td>
+          <td>
+            ${r.multi_turn_score}
+            <div class="score-bar"><div class="fill multi-turn" style="width: ${r.multi_turn_score}%;">${r.multi_turn_score}</div></div>
           </td>
         </tr>
       `;
@@ -185,8 +200,11 @@ async function startEvaluation() {
 
   const dialogue = document.getElementById('dialogueCheck').checked;
   const coding = document.getElementById('codingCheck').checked;
+  const functionCalling = document.getElementById('functionCallingCheck')?.checked ?? false;
+  const longContext = document.getElementById('longContextCheck')?.checked ?? false;
+  const multiTurn = document.getElementById('multiTurnCheck')?.checked ?? false;
 
-  if (!dialogue && !coding) {
+  if (!dialogue && !coding && !functionCalling && !longContext && !multiTurn) {
     alert('请选择至少一种评测类型');
     return;
   }
@@ -197,7 +215,10 @@ async function startEvaluation() {
       body: JSON.stringify({
         config_ids: selectedIds,
         dialogue,
-        coding
+        coding,
+        function_calling: functionCalling,
+        long_context: longContext,
+        multi_turn: multiTurn
       })
     });
 

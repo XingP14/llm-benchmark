@@ -108,7 +108,10 @@ function updateDefaultEndpoint() {
   const defaults = {
     openai: 'https://api.openai.com/v1',
     anthropic: 'https://api.anthropic.com',
-    glm: 'https://open.bigmodel.cn/api/paas/v4'
+    glm: 'https://open.bigmodel.cn/api/paas/v4',
+    deepseek: 'https://api.deepseek.com/v1',
+    qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    ollama: 'http://localhost:11434/v1'
   };
   
   if (!endpointInput.value || Object.values(defaults).includes(endpointInput.value)) {
