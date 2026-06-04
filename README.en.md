@@ -279,7 +279,7 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 
 ## Evaluation dimensions
 
-### General Dialogue (12 questions)
+### General Dialogue (13 questions)
 | Sub-dimension | Description | Weight |
 |---------------|-------------|--------|
 | factual_accuracy | Factual accuracy | 1.0 |
@@ -288,7 +288,7 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 | context_awareness | Context consistency | 1.5 |
 | safety | Safety | 2.0 |
 
-### Coding (10 questions)
+### Coding (11 questions)
 | Sub-dimension | Description | Weight |
 |---------------|-------------|--------|
 | syntax | Syntax correctness | 1.0 |
@@ -382,8 +382,8 @@ npm run build
 ### v0.1.0 (2026-05-23)
 - 🎉 First release
 - ✅ OpenAI-compatible endpoint support
-- ✅ Dialogue evaluation (12 questions)
-- ✅ Coding evaluation (10 questions)
+- ✅ Dialogue evaluation (13 questions)
+- ✅ Coding evaluation (11 questions)
 - ✅ Report generation
 
 ## License
