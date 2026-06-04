@@ -106,6 +106,25 @@ describe('Reporter', () => {
       expect(md).toContain('Model B');
       expect(md).toContain('总体排名');
     });
+
+    it('should include all 5 dimensions in v0.4.0 markdown (regression: 漏更)', () => {
+      // 之前 reporter 只在 CSV 修了 5 维度，md/html 仍只展示 2 维度
+      const md = Reporter.generateMarkdown(mockResults);
+      // 表头含 5 维度
+      expect(md).toContain('对话能力');
+      expect(md).toContain('代码能力');
+      expect(md).toContain('工具调用');
+      expect(md).toContain('长上下文');
+      expect(md).toContain('多轮对话');
+      // 启用的维度有值（function_calling 在 mockResults 里: 65 / 70）
+      // 表格中 dimension 行类似: | 85.0 | 75.0 | 65.0 | - | - | 5.0s |
+      expect(md).toMatch(/\b(65|70)\.0\b/);
+      // 未启用的维度在表格行中以 `-` 出现
+      expect(md).toMatch(/\|\s+-\s+\|\s+-\s+\|/);
+      // 详情段：function_calling 分类
+      expect(md).toContain('**工具调用分类:**');
+      expect(md).toMatch(/\| test \| (65|70) \|/);
+    });
   });
 
   describe('generateHTML', () => {
@@ -114,6 +133,21 @@ describe('Reporter', () => {
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('Model A');
       expect(html).toContain('Model B');
+    });
+
+    it('should include all 5 dimensions in v0.4.0 HTML (regression: 漏更)', () => {
+      // 同上 — HTML 报告也应该 5 维度
+      const html = Reporter.generateHTML(mockResults);
+      // 表头含 5 维度
+      expect(html).toContain('>对话能力<');
+      expect(html).toContain('>代码能力<');
+      expect(html).toContain('>工具调用<');
+      expect(html).toContain('>长上下文<');
+      expect(html).toContain('>多轮对话<');
+      // 启用的维度有值
+      expect(html).toContain('65.0');
+      // 未启用的维度有 dim-na 标记
+      expect(html).toContain('class="dim-na">-</span>');
     });
 
     it('should generate CSV leaderboard', () => {
