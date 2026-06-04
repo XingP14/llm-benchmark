@@ -61,6 +61,7 @@
 - Web UI 暗黑模式 — ✅ 已完成（`prefers-color-scheme: dark` 自动跟随系统；`public/css/style.css` 末尾追加 `@media (prefers-color-scheme: dark)` 覆盖 body/section/h2/卡片/表格/输入/进度条/模态框/滚动条；README + README.en.md 「Web UI / Docker 部署」后新增「暗黑模式」子章节；无需 JS / 无需 toggle，原生体验）
 - i18n（英文 README 同步）— ✅ 已完成（新增 `README.en.md` 完整镜像中文 README（387 行），含 5 维度 / 4 适配器 / v0.4.0 变更日志 / CLI / Web UI / Docker 拉取镜像 / npm npx 等全部章节；中文 README 顶部加互链徽章；未动 CI 脚本）
 - ClawHub 公开列表（等 GitHub 账号满 14 天）
+- HTML 报告可视化增强 (5 维度 SVG 雷达图 / 维度对比柱状图) — 📌 候选（**修复 README 误报**: v0.3.0 README 写了「雷达图 + 柱状图」但实际从未实现；2026-06-04 17:50 轮把「可视化报告」描述同步成实际形态「表格 + 5 维度 score-bar 渐变」；真实雷达/柱状图作为后续候选，独立 Story 估 1-2h）
 
 ## 🩺 13:50 轮 — llm-benchmark (L→W 轮转命中 llm-benchmark, 上一轮 woclaw 13:40)
 
@@ -158,6 +159,8 @@
 - 下次轮转 → **woclaw** (L→W 序列)。候选池: RS-1 Step 2/3/4 父端阻塞 / /ready 部署 父端阻塞 / 视频演示 重活 / 官方托管 长期 — 父端阻塞持续, cron 范围狭小, 主动候选需临时找 (上次 15:10 命中"漏更扫描 npm 徽章", 模式可复用)
 
 ---
+
+_最近更新：2026-06-04 17:50 — **README 可视化误报漏更**：v0.3.0 README 特性行写「📈 **可视化报告**: 表格、雷达图、柱状图对比」+ README.en.md 写「Tables, radar charts, bar charts for comparison」+ `benchmark-xxx.html` 行写「visual HTML report (with charts)」，但实际 codebase 0 处实现 radar/chart/canvas/svg（`grep -rn "radar\|chart\|svg" src/ public/ 2>/dev/null` 0 命中），唯一「可视化」是 reporter.ts 的 `.score-bar` mini 渐变进度条（v0.4.0 后 5 维度各 1 色：dialogue 蓝 / coding 绿 / function-calling 橙 / long-context 紫 / multi-turn 红 / total 青绿）。本轮诚实同步：中文 README 改为「表格 + 5 维度彩色 score-bar 渐变进度条」+ README.en.md 同步 + 删「with charts」误报；候选池新增「HTML 报告可视化增强 (5 维度 SVG 雷达图 / 维度对比柱状图)」独立 Story 候选，估 1-2h（v0.5+ Sprint 候选）。3 files, +4/-3, 0 npm test / 0 lint / 0 tsc（纯文案修复）。源查: grep 「radar\|chart\|svg」src/public = 0 hit, src/core/reporter.ts 行 95-130 是 score-fill 渐变（CSS 5 色 linear-gradient）, 不是真 chart._
 
 _最近更新：2026-06-04 17:20 — **TESTING_STANDARD 漏更**：`docs/TESTING_STANDARD.md` 「### 当前版本覆盖详情 (v0.3.0)」节 header 仍写 v0.3.0，结尾「_Last updated: 2026-05-24 01:00 UTC_」也未更新；v0.4.0 已合并 3 个新 benchmark (`function-calling.ts` / `long-context.ts` / `multi-turn.ts`) + 3 个新 Scorer + 全链路接入，但本节覆盖率 (96.28% / 77.37% / 95.55% / 96.55%) 与测试数 (19 套件 / 129 用例) 仍是 v0.3.0 末次跑结果（2026-05-24 01:00 UTC），形成文档与代码脱节。修复：节 header 改 v0.3.0 → v0.4.0 并加「**覆盖率数据待刷新**」明确标记 + 数据状态说明段落（v0.4.0 应有更高基线 / 5min cron 跳过 npm test / 需父端空闲时刷）；所有数字加「v0.3.0 基线, 待 v0.4.0 刷新」尾标，明确"不可直接当 v0.4.0 真实数据用"；尾部时间戳拆为「_Last updated: 2026-06-04 09:20 UTC_」+「_Last coverage refresh: 2026-05-24 01:00 UTC_」两行，区分文档元时间 vs 覆盖率基线时间。1 commit, 2 段编辑 (header + 尾戳), 0 行真实数据改动 (诚实标记而非编造数字)。不动：覆盖率 4 个百分比 / 主要缺口 4 行（保留为 v0.3.0 真实基线, 标"待重新评估"）/ 待办 (v0.4.0) 段（未变）。源查: `grep -n "v0.3" docs/TESTING_STANDARD.md` 仅 1 处（已被本轮改）。_
 

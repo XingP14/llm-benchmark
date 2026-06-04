@@ -15,7 +15,7 @@
 - 🌐 **Multi-provider support**: OpenAI / Anthropic Claude / Zhipu GLM / DeepSeek / Qwen (DashScope) / Ollama (local)
 - 📊 **Unified evaluation**: 5 dimensions — General Dialogue, Coding, Function Calling, Long Context, Multi-Turn Consistency (since v0.4.0)
 - ⚡ **Fast local execution**: Batch-evaluate models with no cloud dependency
-- 📈 **Visual reports**: Tables, radar charts, bar charts for comparison
+- 📈 **Visual reports**: Table rankings + per-dimension coloured score-bar gradients (JSON / Markdown / HTML — missing dimensions rendered as `-`)
 - 🔄 **Multi-model comparison**: Run several models in parallel and produce a side-by-side report
 - 🐍 **Sandboxed execution**: Coding benchmarks automatically run test cases
 
@@ -332,7 +332,7 @@ After each evaluation run, three report files are produced:
 
 - `benchmark-xxx.json` — raw data
 - `benchmark-xxx.md` — Markdown report
-- `benchmark-xxx.html` — visual HTML report (with charts)
+- `benchmark-xxx.html` — visual HTML report (per-dimension score bars + detail cards)
 
 ## Development
 
