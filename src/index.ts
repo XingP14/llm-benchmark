@@ -136,9 +136,12 @@ function initConfig() {
   console.log(`✅ 配置文件已创建: ${configPath}`);
   console.log('请编辑配置文件添加你的模型 API Key');
   console.log('\n支持的适配器类型:');
-  console.log('  - openai: OpenAI 兼容接口');
-  console.log('  - anthropic: Anthropic Claude');
-  console.log('  - glm: 智谱 GLM');
+  console.log('  - openai: OpenAI 兼容接口 (GPT-4, GPT-3.5 等)');
+  console.log('  - anthropic: Anthropic Claude (Claude 3 Haiku/Opus 等)');
+  console.log('  - glm: 智谱 GLM (GLM-4 等)');
+  console.log('  - deepseek: DeepSeek (deepseek-chat, deepseek-reasoner 推理回退)');
+  console.log('  - qwen: 通义千问 / DashScope (qwen-turbo/plus/max/qwen3-max)');
+  console.log('  - ollama: Ollama 本地模型 (llama3.2, qwen2.5, mistral 等)');
 }
 
 async function compareModels(args: string[]) {
@@ -235,18 +238,36 @@ function listBenchmarks() {
 }
 
 function printSummary(results: any[]) {
+  // v0.4.0 起覆盖 5 维度：dialogue / coding / function_calling 必含，
+  // long_context / multi_turn 可选（未启用时填 -）。
+  // 顺序与中文标签与 src/core/reporter.ts 中 Reporter.DIM_HEADERS 保持一致。
+  const dimHeaders: Array<{ key: string; cn: string }> = [
+    { key: 'dialogue', cn: '对话' },
+    { key: 'coding', cn: '代码' },
+    { key: 'function_calling', cn: '工具调用' },
+    { key: 'long_context', cn: '长上下文' },
+    { key: 'multi_turn', cn: '多轮对话' },
+  ];
+
+  const getDimCell = (result: any, key: string): string => {
+    const dim = result.dimensions?.[key];
+    if (!dim || typeof dim.average !== 'number') return '-';
+    return Number(dim.average).toFixed(1);
+  };
+
   console.log('📊 评测结果:\n');
 
   const sorted = [...results].sort((a, b) => b.totalScore - a.totalScore);
 
-  console.log('| 排名 | 模型 | 总分 | 对话 | 代码 |');
-  console.log('|------|------|------|------|------|');
+  const header = ['| 排名 ', '| 模型 ', '| 总分 ', ...dimHeaders.map((d) => `| ${d.cn} `), '|'];
+  const sep = ['|------', '|------', '|------', ...dimHeaders.map(() => '|------'), '|'];
+  console.log(header.join('|') + '|');
+  console.log(sep.join('|') + '|');
 
   sorted.forEach((result, index) => {
     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
-    console.log(
-      `| ${medal} | ${result.modelName} | **${result.totalScore}** | ${result.dimensions.dialogue.average} | ${result.dimensions.coding.average} |`
-    );
+    const cells = [medal, result.modelName, `**${result.totalScore}**`, ...dimHeaders.map((d) => getDimCell(result, d.key))];
+    console.log('| ' + cells.join(' | ') + ' |');
   });
 }
 
@@ -295,9 +316,12 @@ function showHelp() {
   help                   显示帮助
 
 支持的模型类型:
-  openai    OpenAI 兼容接口 (GPT-4, GPT-3.5, etc.)
-  anthropic Anthropic Claude (Claude 3, etc.)
-  glm       智谱 GLM (GLM-4, etc.)
+  openai     OpenAI 兼容接口 (GPT-4, GPT-3.5, etc.)
+  anthropic  Anthropic Claude (Claude 3 Haiku/Opus, etc.)
+  glm        智谱 GLM (GLM-4, etc.)
+  deepseek   DeepSeek (deepseek-chat, deepseek-reasoner)
+  qwen       通义千问 / DashScope (qwen-turbo, qwen-plus, qwen-max, qwen3-max)
+  ollama     Ollama 本地模型 (llama3.2, qwen2.5, mistral, codellama, deepseek-r1)
 
 示例:
   # 初始化
@@ -325,6 +349,27 @@ function showHelp() {
         "apiKey": "sk-ant-xxx",
         "type": "anthropic",
         "model": "claude-3-haiku-20240307"
+      },
+      {
+        "name": "deepseek-chat",
+        "endpoint": "https://api.deepseek.com/v1",
+        "apiKey": "sk-your-deepseek-key",
+        "type": "deepseek",
+        "model": "deepseek-chat"
+      },
+      {
+        "name": "qwen-turbo",
+        "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "apiKey": "sk-your-qwen-key",
+        "type": "qwen",
+        "model": "qwen-turbo"
+      },
+      {
+        "name": "llama3-local",
+        "endpoint": "http://localhost:11434/v1",
+        "apiKey": "ollama",
+        "type": "ollama",
+        "model": "llama3.2"
       }
     ],
     "benchmarks": {
