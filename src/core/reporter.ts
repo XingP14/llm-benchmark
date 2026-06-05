@@ -9,9 +9,10 @@ import * as path from 'path';
  */
 export class Reporter {
   /**
-   * 维度顺序与中文标签（与 CSV 保持一致）
-   * - dialogue / coding / function_calling: 必含
-   * - long_context / multi_turn: 可选（启用对应 benchmark 时存在，否则填 `-`）
+   * 维度顺序与中文标签（与 src/index.ts printSummary 中 dimHeaders 保持一致）
+   * - dialogue / coding 默认开启 (true)
+   * - function_calling / long_context / multi_turn 可选 (默认 false，未启用时填 `-`)
+   * 实际默认行为见 initConfig() / config.example.json 中 benchmarks 段
    */
   private static readonly DIM_HEADERS: Array<{ key: keyof DimensionScore; label: string; cn: string }> = [
     { key: 'dialogue', label: 'dialogue', cn: '对话能力' },
@@ -67,7 +68,8 @@ export class Reporter {
     for (const result of results) {
       md += `### ${result.modelName}\n\n`;
       md += `- **总分**: ${result.totalScore}\n`;
-      // 5 维度概览（v0.4.0 起覆盖 5 维度：dialogue/coding/function_calling + 可选 long_context/multi_turn）
+      // 5 维度概览（v0.4.0 起覆盖 5 维度：dialogue / coding 默认开启，
+      // function_calling / long_context / multi_turn 可选，未启用时填 -）
       Reporter.DIM_HEADERS.forEach((d) => {
         md += `- **${d.cn}**: ${Reporter.getDimValue(result.dimensions, d.key)}\n`;
       });
@@ -247,7 +249,7 @@ export class Reporter {
   static generateCSV(results: EvaluationResult[]): string {
     const sorted = [...results].sort((a, b) => b.totalScore - a.totalScore);
 
-    // 维度列：固定 5 列（长上下文/多轮 可选，没有时填 -）
+    // 维度列：固定 5 列（function_calling / 长上下文 / 多轮 可选，没有时填 -）
     const dimHeaders: Array<{ key: keyof DimensionScore; label: string }> = [
       { key: 'dialogue', label: 'dialogue' },
       { key: 'coding', label: 'coding' },

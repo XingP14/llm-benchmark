@@ -542,3 +542,35 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 - 候选池: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / 官方托管 (WoClaw 长期) / HTML 雷达图 1-2h (超 5min) / TESTING_STANDARD 覆盖率刷新 (npm test 5+min) / 19 轮漏更扫收益递减弱化
 - 候选池耗尽预警: 19 轮 (woclaw 13 + llm-benchmark 6) 漏更扫 + 本轮「极低收益」收官, 下轮若无新候选可考虑: (a) 接受父端阻塞逐步推进, (b) 换新类型扫描 (CHANGELOG / CONTRIBUTING / CODE_OF_CONDUCT / SECURITY), (c) 跳轮 (本规则 4)
 - 下次轮转 → **woclaw** (L→W 序列)
+
+## 🩺 23:33 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 22:23)
+
+**轮转依据**: 上轮 picked=woclaw (22:23 d6f0a1e woclaw-vscode shippability 漏更), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean。woclaw d6f0a1e 距 4min < 1h hard rule 跳过 → llm-benchmark 91d7b79 距 66min UNLOCKED → 命中 llm-benchmark。
+
+**Hub /health**: 200 OK, uptime ~13.39d (与 22:43 轮 +~50min), agents 0 / topics 0 持续。
+
+**挑选 5min 项**: **`src/core/reporter.ts` 注释漏更 (「function_calling 必含」误标, 第 3 处同型漏更)** — 6af9f47 + 91d7b79 已修正 src/index.ts printSummary 同型注释, 但 src/core/reporter.ts 3 处 (JSDoc / markdown 模板注释 / CSV 注释) 仍把 `function_calling` 与 `dialogue/coding` 并列说「必含」(或漏列 function_calling 为可选)。3 路径交叉验证 (initConfig() / config.example.json / README) 确认 function_calling 默认 false。
+
+**漏更点**:
+- `src/core/reporter.ts:13-15` JSDoc 注释: `dialogue / coding / function_calling: 必含` ❌
+- `src/core/reporter.ts:70` 模板注释: `dialogue/coding/function_calling + 可选 long_context/multi_turn` ❌
+- `src/core/reporter.ts:250` CSV 注释: `长上下文/多轮 可选` ❌ (漏列 function_calling 可选)
+- 实际: `dialogue / coding` 默认 true, `function_calling / long_context / multi_turn` 默认 false
+- 影响: 3 处全在 src 注释, 用户不可见, 0 行为变更, 但形成 src 注释漏更长尾 (与 91d7b79 src/index.ts printSummary 注释同型)
+
+**修复**:
+- `src/core/reporter.ts:9-15` JSDoc 改 4 行: 引用 6af9f47 修正后的 src/index.ts printSummary dimHeaders, 明确「dialogue / coding 默认开启 (true)」+「function_calling / long_context / multi_turn 可选 (默认 false)」+ 1 行指 initConfig() / config.example.json 权威默认
+- `src/core/reporter.ts:70-71` 模板注释改 2 行: 同上
+- `src/core/reporter.ts:250` CSV 注释改 1 行: 把 `function_calling` 加入可选列
+- 不动: 实际逻辑 (注释 only)、Reporter.DIM_HEADERS 数组 (已对齐 5 维度)
+- `npx tsc --noEmit -p tsconfig.json` 0 错 0 告警
+- 0 npm test / 0 lint (cron 5min 硬上限禁)
+
+**src 注释漏更模式 3 路径收尾**:
+- 1. `src/index.ts:247-249` printSummary (6af9f47 + 91d7b79)
+- 2. `src/core/evaluator.ts` — 已查, 0 同型漏更 (无「function_calling 必含」字样)
+- 3. `src/core/reporter.ts:13-15 / 70-71 / 250` (本轮)
+- 4. `src/web/engine/evaluator.ts` — 已查, 0 同型漏更 (无 JSDoc 维度说明)
+- 候选池清空, 等待父端解锁: 3.1/3.2/3.3 / TESTING_STANDARD / HTML 雷达图 / 或新候选
+
+**commit**: (待 push)
