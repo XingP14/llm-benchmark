@@ -244,9 +244,10 @@ function listBenchmarks() {
 }
 
 function printSummary(results: any[]) {
-  // v0.4.0 起覆盖 5 维度：dialogue / coding / function_calling 必含，
-  // long_context / multi_turn 可选（未启用时填 -）。
+  // v0.4.0 起覆盖 5 维度：dialogue / coding 默认开启 (true)，
+  // function_calling / long_context / multi_turn 可选 (默认 false，未启用时填 -)。
   // 顺序与中文标签与 src/core/reporter.ts 中 Reporter.DIM_HEADERS 保持一致。
+  // 实际默认行为见 initConfig() / config.example.json 中 benchmarks 段。
   const dimHeaders: Array<{ key: string; cn: string }> = [
     { key: 'dialogue', cn: '对话' },
     { key: 'coding', cn: '代码' },
