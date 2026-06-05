@@ -1,5 +1,37 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 22:23 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 22:10)
+
+**轮转依据**: 上轮 picked=woclaw (22:10 6c6c0d1+69c314b LICENSE 漏发第 16 处), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 69c314b / llm-benchmark a6dcb8f)。woclaw 22:11 距 12min < 1h hard rule 跳过 → llm-benchmark 05:10 距 17h+ UNLOCKED → 命中 llm-benchmark。
+
+**Hub /health**: 200 OK, uptime ~12.85d (与 22:10 轮 +~13min), agents 0 / topics 0。
+
+**挑选 5min 项**: **`src/index.ts` line 247 printSummary 注释漏更 (「function_calling 必含」误标)** — 5 维度选型注释把 `function_calling` 与 `dialogue/coding` 并列说「必含」, 但实际 initConfig() line 132 + config.example.json line 12 都把 `function_calling` 默认设为 `false` (与 long_context/multi_turn 同), README line 308-310 工具调用段也明确说「需要 `benchmarks.function_calling: true` 开启」。3 路径验证确认 注释错。
+
+**漏更点**:
+- `src/index.ts:247` 注释: `dialogue / coding / function_calling 必含` ❌
+- 实际: `dialogue / coding` 默认 true, `function_calling / long_context / multi_turn` 默认 false
+- 影响: 唯一一处 (printSummary 上方注释, 用户不可见), 代码行为完全不受影响 (注释而已), 但 6af9f47 之前 cron 多次扫 README/CHANGELOG/config 都未触及 src/index.ts 注释, 形成 1 处长尾
+
+**修复**:
+- `src/index.ts:247-249` 注释改 2 行: 明确「dialogue / coding 默认开启 (true)」+「function_calling / long_context / multi_turn 可选 (默认 false)」+ 新增 1 行指 initConfig()/config.example.json 权威默认
+- 不动: 实际逻辑 (注释 only)、initConfig() 自身 (已对齐)、config.example.json (已对齐)、README (已对齐)
+- `npx tsc --noEmit -p tsconfig.json` 0 错 0 告警 (注释 only, 0 行为变更)
+- 0 npm test / 0 lint (cron 5min 硬上限禁)
+- diff: 1 file / +3 / -2
+
+**commit + push**:
+- `6af9f47` `fix(cli): correct printSummary comment on 5-dim defaults` (1 file, +3/-2)
+- push master 成功
+
+**耗时**: 候选扫描 1min (扫 src/index.ts + grep 路径对齐) + edit 30s + tsc 30s + ROADMAP 1min + commit/push 30s ≈ 3.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- 候选池同 22:10 轮: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天) / HTML 雷达图 1-2h (超 5min) / TESTING_STANDARD 覆盖率刷新 (npm test 5+min) / 19+ 轮漏更扫收益递减弱化
+- 这次命中「src 注释漏更」新视角: 之前 19+ 轮只扫 README/CHANGELOG/config, 未扫 src 注释. 未来可考虑按此模式扫其他 src/*.ts 注释
+- 下次轮转 → **woclaw** (L→W 序列), 候选池同 22:10 轮: 父端阻塞不变 / woclaw-vscode `.vscodeignore` (1 file, 极低收益) / 子包 README description 统一性 (6 包)
+
 ## 🩺 21:36 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 21:21)
 
 **轮转依据**: 上轮 picked=woclaw (21:21 b7846c8 opencode-woclaw npm badge 漏更 #12), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 3001906 / llm-benchmark 107eaa6), 按规则 4 轮转命中。
