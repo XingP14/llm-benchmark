@@ -1,5 +1,38 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 03:03 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 23:23)
+
+**轮转依据**: 上轮 picked=woclaw (23:23 bf3ee61 LICENSE 漏发第 18 处), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw bf3ee61 / llm-benchmark 6a03e86)。woclaw 23:23 距 1d5h > 1h 解锁; llm-benchmark 22:23 距 2d4h > 1h 解锁 → 轮转命中 llm-benchmark。
+
+**Hub /health**: 200 OK, uptime 1341557s ≈ 15.52 days (与 22:23 轮 +29h+), agents 0 / topics 0。
+
+**挑选 5min 项**: **`public/dashboard.html` 维度 checkbox 默认值错 (v0.4.0 后 漏更新)** — line 33 / 35 `functionCallingCheck` / `multiTurnCheck` 标 `checked`, 但 `config.example.json` line 8-10 / `src/web/routes/evaluations.ts` line 33-38 / `src/index.ts:247` 都明示默认 `false` (与 `longContextCheck` 同), README 308-310 / README.en.md 308-310 / CHANGELOG 0.4.0 段也明确「需要显式开启」。3 路径 + 2 文档验证确认 dashboard 默认值与权威默认不一致, 用户打开 dashboard 看到 function_calling / multi_turn 已勾, 误以为「默认开启」, 与 CLI 段 `initConfig()` 行为错位。
+
+**漏更点**:
+- `public/dashboard.html:33` `functionCallingCheck checked` ❌ (实际默认 false)
+- `public/dashboard.html:35` `multiTurnCheck checked` ❌ (实际默认 false)
+- 实际: `dialogueCheck / codingCheck` 应 checked, `functionCallingCheck / longContextCheck / multiTurnCheck` 应 unchecked
+- 验证: `grep -E "checked.*工具|checked.*多轮" public/dashboard.html` 现在 0 hit
+- 影响: 1 文件 2 行, 用户可见 (dashboard 一打开就错), 与 6af9f47 printSummary 注释错 同型 (用户不可见) 互补, 22:23 轮没扫到 public/
+
+**修复**:
+- `public/dashboard.html:33` 删 `checked` → `<input type="checkbox" id="functionCallingCheck"> 工具调用 / Function Calling (5题)`
+- `public/dashboard.html:35` 删 `checked` → `<input type="checkbox" id="multiTurnCheck"> 多轮对话一致性 (3题)`
+- 不动: dialogueCheck / codingCheck (默认 true 不变), longContextCheck (默认 false 不变), evaluation.js `?.checked ?? false` 兜底仍有效, 数字 13/11/5/3/3 与 `src/benchmarks/*` 题目数 13/11/5/3/3 一致
+- diff: 1 file / +2 / -2
+
+**commit + push**:
+- `fix(web): uncheck function_calling / multi_turn default checkboxes in dashboard`
+- push master 成功
+
+**耗时**: 候选扫描 1min (扫 public/dashboard.html + 3 路径 grep + 2 README 验证) + edit 30s + ROADMAP 1.5min + commit/push 30s ≈ 3.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 3.1/3.2/3.3 父端阻塞 (npm publish / docker run verify / CI #21) 不变
+- 候选池仍接近耗尽: 历史评测对比 (无数据) / ClawHub 14天 (等账号 36天+) / HTML 雷达图 1-2h (超 5min) / TESTING_STANDARD 覆盖率刷新 (npm test 5+min) / RS-1 (父端) / 视频 / 官方托管
+- 这次命中「public/ 漏更」新视角: 之前 19+ 轮只扫 src/ / README / CHANGELOG / config, 未扫 public/ HTML. 未来可考虑按此模式扫其他 public/*.html
+- 下次轮转 → **woclaw** (L→W 序列), 候选池同 22:23 轮: 父端阻塞不变 / woclaw-vscode `.vscodeignore` (1 file, 极低收益) / 子包 README description 统一性 (6 包)
+
 ## 🩺 22:23 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 22:10)
 
 **轮转依据**: 上轮 picked=woclaw (22:10 6c6c0d1+69c314b LICENSE 漏发第 16 处), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 69c314b / llm-benchmark a6dcb8f)。woclaw 22:11 距 12min < 1h hard rule 跳过 → llm-benchmark 05:10 距 17h+ UNLOCKED → 命中 llm-benchmark。
