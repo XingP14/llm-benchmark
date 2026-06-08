@@ -395,3 +395,11 @@ npm run build
 ## License
 
 MIT
+
+## Documentation
+
+- [SECURITY.md](./SECURITY.md) — Vulnerability reporting & security policy
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — Contributing guide (PR workflow / commits / dev setup)
+- [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) — Community code of conduct (Contributor Covenant v2.1)
+- [CHANGELOG.md](./CHANGELOG.md) — Versioned changelog (Keep a Changelog 1.1.0)
+- [ROADMAP.md](./ROADMAP.md) — Project roadmap & near-term plans

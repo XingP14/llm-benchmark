@@ -395,3 +395,11 @@ npm run build
 ## License
 
 MIT
+
+## 相关文档
+
+- [SECURITY.md](./SECURITY.md) — 漏洞报告与安全策略
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — 贡献指南（PR 流程 / 提交规范 / 开发环境）
+- [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) — 社区行为准则 (Contributor Covenant v2.1)
+- [CHANGELOG.md](./CHANGELOG.md) — 版本变更日志 (Keep a Changelog 1.1.0)
+- [ROADMAP.md](./ROADMAP.md) — 项目路线图与近期规划
