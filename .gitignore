@@ -29,3 +29,6 @@ config.json
 config-*.json
 config.local.json
 *.local.json
+
+# Local cron heartbeat logs (written by heartbeat job, not part of repo)
+memory/
