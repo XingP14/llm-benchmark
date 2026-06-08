@@ -1,5 +1,37 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 03:03 轮 (2026-06-09) — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 02:43 HEARTBEAT_OK)
+
+**轮转依据**: 上轮 picked=woclaw (02:43 HEARTBEAT_OK 候选池 0/5), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 83085f4 / llm-benchmark fe63ca0)。woclaw 00:12 距 2h51m > 1h UNLOCKED; llm-benchmark 06-08 03:10 距 23h53m > 1h UNLOCKED → 双 UNLOCKED, W→L 序列命中 llm-benchmark。
+
+**Hub /health** (vm153:8083): 200 OK, uptime ~16.54d (~1427957s), agents 0 / topics 0 持续 (与 02:43 轮 +20min, uptime 增长相符)。
+
+**挑选 5min 项**: **`package.json` npm tarball 漏发 4 个治理文档 (漏更模式第 21 处)** — `files` 白名单只列 `dist / public / README*.md / ROADMAP / LICENSE / config.example.json`, 但最近 22+ 轮陆续新增 4 个治理文档:
+- `SECURITY.md` (06-04 加)
+- `CONTRIBUTING.md` (06-04 加, 0c56965)
+- `CODE_OF_CONDUCT.md` (06-07 加, 5b163d7)
+- `CHANGELOG.md` (~06-07 加, 89277ce)
+
+`npm pack --dry-run` 验证: 129 文件 / 107 kB / 415.9 kB unpacked, `grep -iE "security|conduct|contributing|changelog"` 0 命中, **4 个文档全部漏发**。
+
+**根因**: 6 次「加治理文档」漏更每次只 `git add <file>` + commit, 没回头审 `package.json` 白名单。沿 06-08 22:43 woclaw `e487477` hub files whitelist 修复同型 (npm publish 时自动 include 几乎所有目录, 用户拿到错 tarball)。
+
+**修复**: `package.json` `files` 加 4 行: `CHANGELOG.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
+- 验证: `npm pack --dry-run` 133 文件 (+4 治理文档), grep 4 处全部命中
+
+**commit + push**:
+- `d77fc59` `fix(pkg): include 4 governance docs in npm tarball (漏更模式第 21 处)`
+- push master 成功 (fe63ca0..d77fc59)
+- diff: 1 file / +4 / -0
+
+**耗时**: 候选扫描 1min (npm pack dry-run + grep 验证) + edit 30s + 验证 30s + commit/push 30s ≈ 2.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 9 项不变 + 新增: @xingp14/llm-benchmark 0.4.0→0.4.1 patch 重发 (源已修, 待父端 npm OTP, 与 woclaw-hub 0.5.0→0.5.1 patch 重发同型)
+- 候选池延伸 (本类新视角可继续): 6 个 woclaw 子包 `files` 字段仍空 (plugin/ mcp-bridge/ woclaw-hooks/ opencode-woclaw-plugin/ woclaw-vscode/ + codex-woclaw), 下次轮转可按 5min/包节奏补齐, 父端需决策 (一次 1 包 vs 一次 6 包批量)
+- 候选池外扫描: src 注释漏更 (4 路径已收尾) / 子包 homepage-bugs (ROADMAP 外) / ClawHub 14d (账号 37d+ 等) / HTML 雷达图 1-2h (超 5min) / TESTING_STANDARD 刷新 (npm test 5+min) — 全部超 5min 或被阻塞
+- 下次轮转 → **woclaw** (L→W 序列), 6 子包 files 候选池预排首位
+
 ## 🩺 03:03 轮 — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 23:23)
 
 **轮转依据**: 上轮 picked=woclaw (23:23 bf3ee61 LICENSE 漏发第 18 处), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw bf3ee61 / llm-benchmark 6a03e86)。woclaw 23:23 距 1d5h > 1h 解锁; llm-benchmark 22:23 距 2d4h > 1h 解锁 → 轮转命中 llm-benchmark。
