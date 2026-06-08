@@ -15,7 +15,11 @@
     "README.md",
     "README.en.md",
     "ROADMAP.md",
+    "CHANGELOG.md",
     "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
     "config.example.json"
   ],
   "scripts": {
