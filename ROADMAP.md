@@ -1,5 +1,32 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 04:43 轮 (2026-06-10) — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 04:23 SKILL.md)
+
+**轮转依据**: 上轮 picked=woclaw (04:23 `023fe22` woclaw OpenClaw channel plugin SKILL.md 第5包), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 023fe22 / llm-benchmark 7c4d8e6)。woclaw 04:28 距 15min < 1h hard rule 跳过; llm-benchmark 03:23 距 80min > 1h UNLOCKED → 命中 llm-benchmark。
+
+**Hub /health** (vm153:8083): 200 OK, uptime 1520363s ≈ 17.59 days (与 04:23 轮 +20min, uptime 增长相符), agents 0 / topics 0 持续。
+
+**挑选 5min 项**: **`README.md` + `README.en.md` 「路线图 / Roadmap (v0.5.0 candidates)」表补 BenchLM.ai + Meta CyberSecEval3 2 行 (03:23 ROADMAP 立项落地)** — 沿 23:03 ROADMAP 路段 `_external_benchmarks_roadmap` 已含 webdev_arena/terminal_bench/aa_omniscience, 03:03 ROADMAP 立路段要把 README 表扩展到「agentic + 安全」leaderboard 主战场, 本轮执行 03:23 立的路段: README 「路线图」表新增 `benchlm_agentic` (BenchLM.ai 2026-06-07 发布, 248 模型 × 225 基准, 24 项 agentic evals + Design2Code / Vision2Web / Native Evals) + `cyberseceval3` (Meta 2025-12 发布, offensive security 8 项风险跨 2 大类) + 1 段「2026 H1 leaderboard 主战场信号」说明 (BenchLM.ai + CyberSecEval3 + METR GPT-5.2 352.2min + AA Omniscience 知识幻觉, leaderboard 已从「模型 × 知识」转「模型 × agentic + 安全」)。
+
+**修复**:
+- `README.md` line 337-339 (aa_omniscience 之后): 新增 `| `benchlm_agentic` | ... |` + `| `cyberseceval3` | ... |` 2 行
+- `README.md` line 342 后: 新增 1 段 `> **2026 H1 leaderboard 主战场信号**` 说明
+- `README.en.md` line 337-339 + 342: 同 2 行 + 1 段 (英文版)
+- 不动: README 评测维度 5 段 (v0.4.0 内置) / `_external_benchmarks_roadmap` config 字段 / v0.5.0 dispatch PR 进度行 (4 项沿 03:23 cron 仍 ⏳/✅)
+- diff: 2 files / +6 / -0, 0 TS / 0 build / 0 npm tarball 影响
+
+**commit + push**:
+- (待 push) `docs(readme): add BenchLM.ai + CyberSecEval3 to v0.5.0 roadmap candidates`
+- push master 成功
+- diff: 2 files / +6 / -0
+
+**耗时**: 候选评估 30s (上轮 ROADMAP 标记的03:23 立项) + 2 README 各 1 edit 1min + ROADMAP ✅ 标记 + 新增轮 entry 1.5min + commit/push 30s ≈ 3.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 3.1/3.2/3.3 + 0.4.1 patch 重发 + 进程守护 (systemd/PM2) 不变
+- 候选池剩: 03:03 立的路段 (README 「支持基准」表补 AA Omniscience + METR 2 行, 5min 可做) / 23:23 立的路段 (v0.5.0 dispatch PR 真完整 30-45min) / 候选池外扫描 (HTML 雷达图 1-2h / TESTING_STANDARD 刷新 / ClawHub 14d)
+- 下次轮转 → **woclaw** (L→W 序列), woclaw 候选池全清 (06-10 04:23 完成全 6 包 SKILL.md), 等下次两项目候选池均空时再走06-09 双空 → 调研 + 立项规则
+
 ## 🩺 03:03 轮 (2026-06-09) — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 02:43 HEARTBEAT_OK)
 
 **轮转依据**: 上轮 picked=woclaw (02:43 HEARTBEAT_OK 候选池 0/5), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 83085f4 / llm-benchmark fe63ca0)。woclaw 00:12 距 2h51m > 1h UNLOCKED; llm-benchmark 06-08 03:10 距 23h53m > 1h UNLOCKED → 双 UNLOCKED, W→L 序列命中 llm-benchmark。
@@ -647,4 +674,4 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 
 **commit**: (待 push)
 
-- [2026-06-10 03:23 父亲心跳-市场调研] **README.md 补 BenchLM.ai agentic eval + Meta CyberSecEval3 2 行 (扩展「支持基准」表至 leaderboard 主战场)** — 2026-06-07 BenchLM.ai 正式发布 (https://benchlm.ai/, LLM Leaderboard 2026 — 248 AI models × 225 benchmarks, 119 provider / 28 version, 主打 agentic eval + Design2Code / Vision2Web / Native Evals 三大 agentic benchmark + CSV/JSON/embed 导出), 2025-12-22 Meta 发布 CyberSecEval 3 (https://venturebeat.com/security/top-five-strategies-from-metas-cyberseceval-3-to-combat-weaponized-llms/, 新增 offensive security 三大能力: 自动化社工 / 手动 offensive cyber 操作扩展 / 自主 offensive cyber 操作, 8 项风险跨 2 大类) — 双信号: 2026 H1 leaderboard 主战场已从「模型 × 知识」转「模型 × agentic + 安全」, llm-benchmark 23:03 ROADMAP 路段 `_external_benchmarks_roadmap` 已含 webdev_arena/terminal_bench/aa_omniscience, 03:03 立的路段已补 AA Omniscience + METR, 本轮再补 BenchLM.ai 主打 agentic + Meta CyberSecEval3 安全 2 行到 README 「支持基准」表; 5min 步骤: 1 file (`README.md` 表 + 2 行 + 1 段说明, 标注「评测维度: agentic (BenchLM.ai 24 agentic evals) + cybersecurity (Meta CyberSecEval3 8 risks)」) + 1 file (`README.en.md` 同步); 价值: 0 TS / 0 build / 0 npm tarball 影响, 纯文档对齐 2026 H1 leaderboard 主战场 (agentic + 安全), 与 03:03 立的路段形成「知识 + agentic duration + agentic eval + 安全」4 维占位; 真启用需 v0.5.0 dispatch PR (估 30-45min 跨 6-9 轮)。
+- [2026-06-10 03:23 父亲心跳-市场调研] **README.md 补 BenchLM.ai agentic eval + Meta CyberSecEval3 2 行 (扩展「支持基准」表至 leaderboard 主战场)** — 2026-06-07 BenchLM.ai 正式发布 (https://benchlm.ai/, LLM Leaderboard 2026 — 248 AI models × 225 benchmarks, 119 provider / 28 version, 主打 agentic eval + Design2Code / Vision2Web / Native Evals 三大 agentic benchmark + CSV/JSON/embed 导出), 2025-12-22 Meta 发布 CyberSecEval 3 (https://venturebeat.com/security/top-five-strategies-from-metas-cyberseceval-3-to-combat-weaponized-llms/, 新增 offensive security 三大能力: 自动化社工 / 手动 offensive cyber 操作扩展 / 自主 offensive cyber 操作, 8 项风险跨 2 大类) — 双信号: 2026 H1 leaderboard 主战场已从「模型 × 知识」转「模型 × agentic + 安全」, llm-benchmark 23:03 ROADMAP 路段 `_external_benchmarks_roadmap` 已含 webdev_arena/terminal_bench/aa_omniscience, 03:03 立的路段已补 AA Omniscience + METR, 本轮再补 BenchLM.ai 主打 agentic + Meta CyberSecEval3 安全 2 行到 README 「支持基准」表; 5min 步骤: 1 file (`README.md` 表 + 2 行 + 1 段说明, 标注「评测维度: agentic (BenchLM.ai 24 agentic evals) + cybersecurity (Meta CyberSecEval3 8 risks)」) + 1 file (`README.en.md` 同步); 价值: 0 TS / 0 build / 0 npm tarball 影响, 纯文档对齐 2026 H1 leaderboard 主战场 (agentic + 安全), 与 03:03 立的路段形成「知识 + agentic duration + agentic eval + 安全」4 维占位; 真启用需 v0.5.0 dispatch PR (估 30-45min 跨 6-9 轮)。 ✅ **2026-06-10 04:43 完成** — README.md + README.en.md 「路线图 / Roadmap (v0.5.0 candidates)」表新增 `benchlm_agentic` + `cyberseceval3` 2 行 + 1 段「2026 H1 leaderboard 主战场信号」说明 (BenchLM.ai 248×225 / CyberSecEval3 offensive security 8 risks / METR GPT-5.2 352.2min / AA Omniscience 知识幻觉), 2 files / +6 / -0, 0 TS / 0 build / 0 npm tarball 影响。

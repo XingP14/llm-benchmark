@@ -336,8 +336,12 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 | `webdev_arena` | Full-stack code gen / ELO pairwise scoring | Candidate (v0.5.0) | [webdevarena.com](https://webdevarena.com) |
 | `terminal_bench` | Agentic coding / terminal tasks | Candidate (v0.5.0) | Terminal Bench 2.0 |
 | `aa_omniscience` | Hallucination + knowledge coverage | Candidate (v0.5.0) | Artificial Analysis |
+| `benchlm_agentic` | Agentic eval suite (Design2Code / Vision2Web / Native Evals, 24 evals) | Candidate (v0.5.0) | [BenchLM.ai](https://benchlm.ai/) (launched 2026-06-07, 248 models × 225 benchmarks) |
+| `cyberseceval3` | LLM security / 8 risks (offensive security) | Candidate (v0.5.0) | Meta CyberSecEval 3 (launched 2025-12) |
 
 > These are external / adversarial third-party benchmarks with different invocation patterns than the built-in question banks, so they are not toggled via the v0.4.0 `benchmarks: {true/false}` block. A skeleton `_external_benchmarks_roadmap` section (including `webdev_arena`) has been added to `config.example.json` / `config-batch2.json`. Enabling requires extending `src/types/index.ts BenchmarkConfig` and adding a dispatch branch in `src/core/evaluator.ts`.
+
+> **2026 H1 leaderboard signals**: BenchLM.ai's agentic eval suite (24 evals) + CyberSecEval3's expansion into offensive security (8 risks) join METR time horizons (GPT-5.2 agentic task duration 352.2min) and AA Omniscience (hallucination + knowledge) as leading indicators that leaderboards have shifted from "model × knowledge" to "model × agentic + security". Real enabling requires the v0.5.0 dispatch PR.
 
 ## Output reports
 
