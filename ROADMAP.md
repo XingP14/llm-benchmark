@@ -675,3 +675,33 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 **commit**: (待 push)
 
 - [2026-06-10 03:23 父亲心跳-市场调研] **README.md 补 BenchLM.ai agentic eval + Meta CyberSecEval3 2 行 (扩展「支持基准」表至 leaderboard 主战场)** — 2026-06-07 BenchLM.ai 正式发布 (https://benchlm.ai/, LLM Leaderboard 2026 — 248 AI models × 225 benchmarks, 119 provider / 28 version, 主打 agentic eval + Design2Code / Vision2Web / Native Evals 三大 agentic benchmark + CSV/JSON/embed 导出), 2025-12-22 Meta 发布 CyberSecEval 3 (https://venturebeat.com/security/top-five-strategies-from-metas-cyberseceval-3-to-combat-weaponized-llms/, 新增 offensive security 三大能力: 自动化社工 / 手动 offensive cyber 操作扩展 / 自主 offensive cyber 操作, 8 项风险跨 2 大类) — 双信号: 2026 H1 leaderboard 主战场已从「模型 × 知识」转「模型 × agentic + 安全」, llm-benchmark 23:03 ROADMAP 路段 `_external_benchmarks_roadmap` 已含 webdev_arena/terminal_bench/aa_omniscience, 03:03 立的路段已补 AA Omniscience + METR, 本轮再补 BenchLM.ai 主打 agentic + Meta CyberSecEval3 安全 2 行到 README 「支持基准」表; 5min 步骤: 1 file (`README.md` 表 + 2 行 + 1 段说明, 标注「评测维度: agentic (BenchLM.ai 24 agentic evals) + cybersecurity (Meta CyberSecEval3 8 risks)」) + 1 file (`README.en.md` 同步); 价值: 0 TS / 0 build / 0 npm tarball 影响, 纯文档对齐 2026 H1 leaderboard 主战场 (agentic + 安全), 与 03:03 立的路段形成「知识 + agentic duration + agentic eval + 安全」4 维占位; 真启用需 v0.5.0 dispatch PR (估 30-45min 跨 6-9 轮)。 ✅ **2026-06-10 04:43 完成** — README.md + README.en.md 「路线图 / Roadmap (v0.5.0 candidates)」表新增 `benchlm_agentic` + `cyberseceval3` 2 行 + 1 段「2026 H1 leaderboard 主战场信号」说明 (BenchLM.ai 248×225 / CyberSecEval3 offensive security 8 risks / METR GPT-5.2 352.2min / AA Omniscience 知识幻觉), 2 files / +6 / -0, 0 TS / 0 build / 0 npm tarball 影响。
+
+## 🩺 06:43 轮 (2026-06-10) — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 06:23)
+
+**轮转依据**: 上轮 picked=woclaw (06:23 2da63ee Microsoft Scout 引用), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 2da63ee / llm-benchmark 0deae7f)。按规则 4 轮转命中 (双候选池非空, 不走 06-09 调研立项规则)。距离上次 commit llm-benchmark 0deae7f ~1h40m > 1h UNLOCKED。
+
+**Hub /health** (vm153:8083): 200 OK, uptime 17.66d (~1527557s), agents 0 / topics 0。
+
+**挑选 5min 项**: **`src/types/index.ts` `ExternalBenchmarkRoadmap` 补 `benchlm_agentic` + `cyberseceval3` 2 个 type 段 (与 04:43 README 「支持基准」表已补的 2 行对齐; v0.5.0 dispatch PR type 段遗留)** — 0deae7f 立的 CyberSecEval3 type stub 候选 + 23:23 「v0.5.0 真启用」路段明确「PR 进度: type 段 ✅ / dispatch ⏳」, 04:43 完成 README 2 行后 type 段还缺 `benchlm_agentic` / `cyberseceval3` 2 项, 本轮补齐让 type 段 ↔ README「v0.5.0 candidates」表完全对齐 (5 项 = webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3)。
+
+**修复**:
+- `src/types/index.ts:177` 后插入 `benchlm_agentic?: { enabled; api_base?; model_id?; native_evals?: boolean }` (BenchLM.ai Native Evals 子集开关)
+- `src/types/index.ts:184` 后插入 `cyberseceval3?: { enabled; api_base?; model_id?; risk_categories?: Array<'automated_social_engineering' | 'manual_offensive_cyber' | 'autonomous_offensive_cyber'> }` (CyberSecEval3 offensive security 3 大类风险维度)
+- diff: 1 file / +20 / -0
+
+**验证**:
+- `npx tsc --noEmit -p tsconfig.json` 0 错 0 告警
+- `ExternalBenchmarkRoadmap` 现 5 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3), 与 README 「路线图」表 5 行对齐
+- 未跑 `npm test` / `npm run lint` (cron 5min 硬上限禁)
+- 0 dispatch 改动 (type only, 真启用仍待后续 PR)
+
+**commit + push**:
+- (待 push)
+- v0.5.0 dispatch PR 进度: type 段 ✅ 全 5 项 / dispatch ⏳ / route 接受 ⏳
+
+**耗时**: 候选评估 30s (上轮 ROADMAP 标记的 03:23 立项) + grep 验证 20s + edit 30s + tsc 验证 10s + ROADMAP 1min + commit/push 30s ≈ 3min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 3.1/3.2/3.3 + 0.4.1 patch 重发 + 进程守护 (systemd/PM2) 不变
+- 候选池: v0.5.0 dispatch 真完整 (估 30-45min 跨 6-9 轮) / v0.5.0 dispatch PR 拆分 (route 接受新 config 段) / HTML 雷达图 (1-2h 超 5min) / TESTING_STANDARD 覆盖率刷新 (npm test 5+min)
+- 下次轮转 → **woclaw** (L→W 序列)

@@ -175,6 +175,26 @@ export interface ExternalBenchmarkRoadmap {
     api_base?: string;
     model_id?: string;
   };
+  /** BenchLM.ai: agentic eval 24 项 (Design2Code / Vision2Web / Native Evals) — 2026-06-07 发布, 248 模型 × 225 基准 */
+  benchlm_agentic?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 是否启用 Native Evals 子集 (默认 false) */
+    native_evals?: boolean;
+  };
+  /** Meta CyberSecEval 3: LLM 安全 / 8 项风险 (offensive security: 自动化社工 / 手动 offensive cyber / 自主 offensive cyber) */
+  cyberseceval3?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测风险维度 (default: 全部 8 项) */
+    risk_categories?: Array<
+      | 'automated_social_engineering'
+      | 'manual_offensive_cyber'
+      | 'autonomous_offensive_cyber'
+    >;
+  };
 }
 
 /**
