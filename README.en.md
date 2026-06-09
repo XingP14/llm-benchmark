@@ -329,6 +329,16 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 
 > Scoring: base = `required` phrase hit ratio × 100; each `forbidden` phrase hit subtracts 20; clamped to [0, 100]. Enable in `config.json` under `benchmarks` with `"multi_turn": true` (defaults to `false`).
 
+### Roadmap (v0.5.0 candidates)
+
+| Benchmark | Type | Status | Source |
+|-----------|------|--------|--------|
+| `webdev_arena` | Full-stack code gen / ELO pairwise scoring | Candidate (v0.5.0) | [webdevarena.com](https://webdevarena.com) |
+| `terminal_bench` | Agentic coding / terminal tasks | Candidate (v0.5.0) | Terminal Bench 2.0 |
+| `aa_omniscience` | Hallucination + knowledge coverage | Candidate (v0.5.0) | Artificial Analysis |
+
+> These are external / adversarial third-party benchmarks with different invocation patterns than the built-in question banks, so they are not toggled via the v0.4.0 `benchmarks: {true/false}` block. A skeleton `_external_benchmarks_roadmap` section (including `webdev_arena`) has been added to `config.example.json` / `config-batch2.json`. Enabling requires extending `src/types/index.ts BenchmarkConfig` and adding a dispatch branch in `src/core/evaluator.ts`.
+
 ## Output reports
 
 After each evaluation run, three report files are produced:

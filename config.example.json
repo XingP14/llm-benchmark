@@ -15,5 +15,14 @@
     "long_context": false,
     "multi_turn": false
   },
+  "_external_benchmarks_roadmap": {
+    "_comment": "v0.5.0 路线图: 第三方/对抗式基准 (本段示例格式, 当前不消费, src/types/index.ts BenchmarkConfig 未声明, 启用需同步 PR type 扩展)",
+    "webdev_arena": {
+      "enabled": false,
+      "endpoint": "https://webdevarena.com/api/v1/evaluate",
+      "category": "fullstack_codegen",
+      "scoring": "elo_pairwise"
+    }
+  },
   "output": "./results"
 }
