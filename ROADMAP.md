@@ -28,7 +28,10 @@
 
 **遗留 & 下次轮转**:
 - 父端阻塞 9 项不变 + 新增: @xingp14/llm-benchmark 0.4.0→0.4.1 patch 重发 (源已修, 待父端 npm OTP, 与 woclaw-hub 0.5.0→0.5.1 patch 重发同型)
-- 候选池延伸 (本类新视角可继续): 6 个 woclaw 子包 `files` 字段仍空 (plugin/ mcp-bridge/ woclaw-hooks/ opencode-woclaw-plugin/ woclaw-vscode/ + codex-woclaw), 下次轮转可按 5min/包节奏补齐, 父端需决策 (一次 1 包 vs 一次 6 包批量)
+## 候选待推进项 (cron 调研池)
+
+- [2026-06-09 22:03 父亲心跳-市场调研] **config.example.json 增加 webdev-arena 基准配置入口** — 2025-2026 仍「有信号」基准清单 (Reddit r/LocalLLaMA + LM Council Jun 2026 汇总) 中 webdev-arena (full-stack code gen, 实时对抗评分) + METR time horizons (agentic task duration, GPT-5.2 352.2min) + AA Omniscience (幻觉 + 知识) + Terminal Bench 2.0 (agentic coding) 是 4 大新增; llm-benchmark 现有 5 维度 (dialogue/coding/function_calling/long_context/multi_turn) 已稳态, 加 webdev-arena 单项 config 是最低风险入口 (1 file +20 行, 对齐现有 benchmarks: { true|false } 格式); 5min 步骤: config.example.json + config-batch2.json + README 「支持基准」表格补 1 行; 下次轮转直接做。
+
 - 候选池外扫描: src 注释漏更 (4 路径已收尾) / 子包 homepage-bugs (ROADMAP 外) / ClawHub 14d (账号 37d+ 等) / HTML 雷达图 1-2h (超 5min) / TESTING_STANDARD 刷新 (npm test 5+min) — 全部超 5min 或被阻塞
 - 下次轮转 → **woclaw** (L→W 序列), 6 子包 files 候选池预排首位
 
