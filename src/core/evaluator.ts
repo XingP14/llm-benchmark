@@ -39,6 +39,27 @@ export class Evaluator {
    */
   async run(): Promise<EvaluationResult[]> {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
+
+    // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
+    // PR 进度: type ✅ / dispatch skeleton ✅ (本轮) / 真完整 PR 估 30-45min
+    // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
+    if (this.config._external_benchmarks_roadmap) {
+      const ext = this.config._external_benchmarks_roadmap;
+      const enabled: string[] = [];
+      if (ext.webdev_arena?.enabled) {
+        enabled.push(`webdev_arena(api_base=${ext.webdev_arena.api_base ?? '(unset)'}, model_id=${ext.webdev_arena.model_id ?? '(unset)'})`);
+      }
+      if (ext.terminal_bench?.enabled) {
+        enabled.push(`terminal_bench(api_base=${ext.terminal_bench.api_base ?? '(unset)'}, model_id=${ext.terminal_bench.model_id ?? '(unset)'})`);
+      }
+      if (ext.aa_omniscience?.enabled) {
+        enabled.push(`aa_omniscience(api_base=${ext.aa_omniscience.api_base ?? '(unset)'}, model_id=${ext.aa_omniscience.model_id ?? '(unset)'})`);
+      }
+      if (enabled.length > 0) {
+        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — actual invocation pending后续 cron 轮次累进)`);
+      }
+    }
+
     const results = await Promise.all(
       this.config.models.map((model, i) => {
         console.log(`\n启动评测: ${model.name}`);
