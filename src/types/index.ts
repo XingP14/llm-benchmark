@@ -40,6 +40,8 @@ export interface BenchmarkConfig {
   concurrency?: number;
   /** 评测次数 (默认 1) */
   runs?: number;
+  /** v0.5.0+ 外部基准路线图 (roadmap-only, 默认 undefined; PR 进度: type ✅ / dispatch ⏳) */
+  _external_benchmarks_roadmap?: ExternalBenchmarkRoadmap;
 }
 
 /**
@@ -147,6 +149,31 @@ export interface DimensionScore {
     count: number;
     average: number;
     details: Record<string, number>;
+  };
+}
+
+/**
+ * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
+ * PR 进度: type 段 ✅ / dispatch ⏳ / 真完整 PR 估 30-45min
+ */
+export interface ExternalBenchmarkRoadmap {
+  /** webdev-arena: 全栈代码生成 + 实时对抗评分 */
+  webdev_arena?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+  };
+  /** terminal-bench 2.0: agentic coding */
+  terminal_bench?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+  };
+  /** AA Omniscience: 幻觉 + 知识 */
+  aa_omniscience?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
   };
 }
 

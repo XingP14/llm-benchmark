@@ -88,6 +88,16 @@ async function runBenchmark(args: string[]) {
   try {
     const results = await evaluator.run();
 
+    // v0.5.0+ 外部基准路线图提示 (roadmap-only, PR 进度: type ✅ / dispatch ⏳)
+    if (config._external_benchmarks_roadmap) {
+      const enabled = Object.entries(config._external_benchmarks_roadmap)
+        .filter(([_, v]) => v?.enabled)
+        .map(([k]) => k);
+      if (enabled.length > 0) {
+        console.info(`\n🧪 v0.5.0+ external benchmark roadmap detected: ${enabled.join(', ')} (PR progress: type ✅ / dispatch ⏳ — full PR in 30-45min)`);
+      }
+    }
+
     console.log('\n\n✅ 评测完成!\n');
 
     printSummary(results);
