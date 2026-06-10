@@ -28,7 +28,8 @@ export interface BenchmarkConfig {
   benchmarks: {
     dialogue: boolean;
     coding: boolean;
-    function_calling: boolean;
+    /** v0.4.0+ 新增：工具调用（默认 false，未启用时 reporter 填 -） */
+    function_calling?: boolean;
     /** v0.4.0+ 新增：长上下文理解（默认 false，需 32k+ context 模型） */
     long_context?: boolean;
     /** v0.4.0+ 新增：多轮对话一致性（默认 false） */
@@ -130,7 +131,8 @@ export interface DimensionScore {
     average: number;
     details: Record<string, number>;
   };
-  function_calling: {
+  /** v0.4.0+ 新增：工具调用评分汇总（可选，启用 function_calling 评测时存在） */
+  function_calling?: {
     total: number;
     count: number;
     average: number;

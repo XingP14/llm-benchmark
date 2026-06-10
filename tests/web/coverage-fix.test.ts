@@ -210,10 +210,18 @@ describe('Coverage Fix - reporter.ts branches', () => {
   it('saveReport should create files', () => {
     const results = [makeResult('Test', 85, 80, 90)];
     const outDir = './test-report-coverage-fix';
-    Reporter.saveReport(results, outDir);
+    // 清空目录历史残留（之前失败跑会在目录里留下 benchmark-* 文件）
     const fs = require('fs');
+    if (fs.existsSync(outDir)) {
+      for (const f of fs.readdirSync(outDir)) {
+        fs.unlinkSync(`${outDir}/${f}`);
+      }
+    }
+    Reporter.saveReport(results, outDir);
     const files = fs.readdirSync(outDir);
-    expect(files.length).toBe(3);
+    // v0.3.0+: 生成 .json / .md / .html / .csv 四个文件
+    // (CSV 是 v0.3.0 加入的排行榜文件，可直接 Excel 打开)
+    expect(files.length).toBe(4);
     // cleanup
     files.forEach((f: string) => fs.unlinkSync(`${outDir}/${f}`));
     fs.rmdirSync(outDir);
