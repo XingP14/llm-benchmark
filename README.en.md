@@ -339,9 +339,28 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 | `benchlm_agentic` | Agentic eval suite (Design2Code / Vision2Web / Native Evals, 24 evals) | Candidate (v0.5.0) | [BenchLM.ai](https://benchlm.ai/) (launched 2026-06-07, 248 models × 225 benchmarks) |
 | `cyberseceval3` | LLM security / 8 risks (offensive security) | Candidate (v0.5.0) | Meta CyberSecEval 3 (launched 2025-12) |
 
-> These are external / adversarial third-party benchmarks with different invocation patterns than the built-in question banks, so they are not toggled via the v0.4.0 `benchmarks: {true/false}` block. A skeleton `_external_benchmarks_roadmap` section (including `webdev_arena`) has been added to `config.example.json` / `config-batch2.json`. Enabling requires extending `src/types/index.ts BenchmarkConfig` and adding a dispatch branch in `src/core/evaluator.ts`. **v0.5.0 PR progress**: type declaration ✅ for all 5 entries (`webdev_arena` / `terminal_bench` / `aa_omniscience` / `benchlm_agentic` / `cyberseceval3`, 2026-06-10 00:24 + 06:43 cron) / `src/index.ts` console.info hint ✅ / `src/core/evaluator.ts` dispatch branches ✅ skeleton for all 5 entries (route entry, 2026-06-10 01:43 + 22:23 cron) / `src/web/routes/evaluations.ts` config acceptance ⏳ — full PR estimated 30-45min (spanning 6-9 cron rounds); v0.5.0 will not be released before the full PR lands.
+> These are external / adversarial third-party benchmarks with different invocation patterns than the built-in question banks, so they are not toggled via the v0.4.0 `benchmarks: {true/false}` block. A skeleton `_external_benchmarks_roadmap` section (including `webdev_arena`) has been added to `config.example.json` / `config-batch2.json`. Enabling requires extending `src/types/index.ts BenchmarkConfig` and adding a dispatch branch in `src/core/evaluator.ts`.
 
 > **2026 H1 leaderboard signals**: BenchLM.ai's agentic eval suite (24 evals) + CyberSecEval3's expansion into offensive security (8 risks) join METR time horizons (GPT-5.2 agentic task duration 352.2min) and AA Omniscience (hallucination + knowledge) as leading indicators that leaderboards have shifted from "model × knowledge" to "model × agentic + security". Real enabling requires the v0.5.0 dispatch PR.
+
+### SWE-bench three-source cross-validation (2026-06, live harness-drift samples)
+
+> The same model scores very differently across SWE-bench harnesses — always triangulate before making decisions. Per [DigitalApplied "LLM Benchmark Methodology 2026"](https://www.digitalapplied.com/blog/llm-benchmark-methodology-2026-contamination-leaderboard-guide) "harness-multiplier effect (same model, same benchmark, different harness can swing 10–20 pts) + confidence interval triangulation"; complements the 22:34 JSDoc harness-drift note in `src/core/evaluator.ts`.
+
+| Model | vals.ai SWE-bench Verified (±CI) | swebench.com SWE-bench Verified | benchlm.ai SWE-bench Pro |
+|-------|-----------------------------------|----------------------------------|---------------------------|
+| Claude Opus 4.8 | **88.60%** ±1.42 | — | 69.20% |
+| Claude Opus 4.7 (Adaptive) | 82.00% | — | 64.30% |
+| Claude Sonnet 4.6 | 77.40% | — | — |
+| GPT-5.5 | 82.60% | — | — |
+| GPT-5-2 Codex (high reasoning) | — | 72.80% | — |
+| Gemini 3 Flash (high reasoning) | — | **75.80%** | — |
+| DeepSeek V3.2 | — | 70.00% | — |
+| Claude Mythos Preview | — | — | **77.80%** |
+
+> ⚠️ **Harness drift warning**: the same **Opus 4.8** scores **88.60%** on vals.ai SWE-bench Verified vs **69.20%** on benchlm.ai SWE-bench Pro — a **19.4-point gap**, a textbook harness-multiplier effect. Before deciding on a model, run at least three independent harnesses, take the mean, and report a 95% CI; do not rely on a single leaderboard ranking. Sources: [vals.ai/benchmarks/swebench](https://vals.ai/benchmarks/swebench) (2026-06) / [swebench.com](https://www.swebench.com) (updated 2026-02-19) / [benchlm.ai/benchmarks/swePro](https://benchlm.ai/benchmarks/swePro) (2026-06-02).
+
+> **v0.5.0 PR progress**: type declaration ✅ for all 5 entries (`webdev_arena` / `terminal_bench` / `aa_omniscience` / `benchlm_agentic` / `cyberseceval3`, 2026-06-10 00:24 + 06:43 cron) / `src/index.ts` console.info hint ✅ / `src/core/evaluator.ts` dispatch branches ✅ skeleton for all 5 entries (route entry, 2026-06-10 01:43 + 22:23 cron) / `src/web/routes/evaluations.ts` config acceptance ⏳ — full PR estimated 30-45min (spanning 6-9 cron rounds); v0.5.0 will not be released before the full PR lands.
 
 ## Output reports
 
