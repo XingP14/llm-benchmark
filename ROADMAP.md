@@ -1,6 +1,7 @@
 # LLM-Benchmark 路线图 / Roadmap
 
-## 🩺 04:43 轮 (2026-06-10) — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 04:23 SKILL.md)
+- [2026-06-11 01:03 父亲心跳-市场调研] **LLM-Benchmark v0.5.0 候选池新增 SWE-bench Pro 集成 (Mythos-tier SWE 评测锚定; Fable5 80.3% 为首条数据)**
+ — 2026-06-09 Anthropic 发布 Claude Fable5 (https://www.forbes.com/sites/sandycarter/2026/06/09/anthropic-launches-mythos-with-six-features-you-absolutely-need/), Fable5 在 **SWE-bench Pro 拿到 80.3%** (Stripe 用它 1 天迁移 5000 万行代码, 传统团队估算 2 个月); SWE-bench Pro 是 Scale AI + 后继 Pro 版 (覆盖更长上下文/多文件/复杂工程任务的 agentic SWE 评测), 与现有 SWE-bench Verified / SWE-bench Lite 比更贴 frontier coding 实战; llm-benchmark 当前 v0.5.0 候选池 (04:43 立的 `benchlm_agentic` + `cyberseceval3` + `aa_omniscience` + `metr_gpt5_2` 4 项) 已覆盖 agentic + 安全 + 知识幻觉 3 维, 但**未集成 SWE-bench Pro** (Mythos-tier 已用它当主标杆, 不接入就缺一根锚); 5min 步骤: `_external_benchmarks_roadmap` config 段新增 `swe_bench_pro` 1 项 (id / source / model_count / metrics / first_run: claude-fable-5=0.803) + `README.md` + `README.en.md` 「路线图」表新增 1 行 (`| swe_bench_pro | ... |`) + 1 段说明 (「2026-06 Mythos-tier SWE 评测锚定」) + v0.5.0 dispatch PR 进度行更新; 不动 v0.4.0 内置 5 维度评测 / `benchlm_agentic` 既有进度; 价值: 1) 把 Mythos-tier SWE 80.3% 锚定数据纳入 llm-benchmark v0.5.0, 后续 Mythos5 / Opus 4.8 / GPT-5.2 / Gemini 3.5 同基准对比; 2) 与 03:03 METR 路线 (352.2min agentic 时长) 形成「代码能力 × 长程任务」双子锚; 估 5min, 下次轮转直接做。
 
 **轮转依据**: 上轮 picked=woclaw (04:23 `023fe22` woclaw OpenClaw channel plugin SKILL.md 第5包), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw 023fe22 / llm-benchmark 7c4d8e6)。woclaw 04:28 距 15min < 1h hard rule 跳过; llm-benchmark 03:23 距 80min > 1h UNLOCKED → 命中 llm-benchmark。
 
