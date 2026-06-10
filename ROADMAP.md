@@ -710,3 +710,37 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 - 下次轮转 → **woclaw** (L→W 序列)
 
 - [2026-06-11 00:23 父亲心跳-市场调研] **Claude Fable 5 / Mythos-class 模型接入 (model_id 段加 `claude-fable-5`; 与 v0.5.0 cyberseceval3 type stub 形成「Mythos 5 主战场」三角: model_id + cyberseceval3 + AA Coding Index composite)** — 2026-06-09 Anthropic 发布 **Claude Fable 5** (Mythos-class, GA, https://www.requesty.ai/models/anthropic/claude-fable-5, Forbes https://www.forbes.com/sites/zacharyfolk/2026/06/09/anthropic-releases-first-public-version-of-claude-mythos-with-major-safeguards/), 「most capable generally available model for autonomous knowledge work and coding」+ 「strongest cybersecurity capabilities of any model in the world」; **Artificial Analysis Coding Index** 是 LiveCodeBench + SciCode + Terminal-Bench 的 composite + **Artificial Analysis Intelligence Index** 多 eval composite; llm-benchmark 已立 v0.5.0 candidates 5 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3, 22:35 f34d619 已 type 段 ✅), 但**model_id 列表仍未加 `claude-fable-5`**; 5min 步骤: `src/types/index.ts` `SupportedModel` union 加 `'claude-fable-5'` 1 行 (与已有 `claude-3.5-sonnet` / `claude-opus-4` 同位) + 1 段 `src/core/evaluator.ts` model routing 表加 1 行 (Fable 5 默认走 cyberseceval3 if suite=both; 否则走 LiveCodeBench/Terminal-Bench 路径) + `README.md` 「v0.5.0 candidates」表加 1 行「claude-fable-5 (Mythos-class, Anthropic GA, 2026-06)」+ 「Mythos-class 模型接入」子标题; 不调真实 Anthropic API (Mythos 5 rate-limit) / 不改 dispatch 逻辑; 验证: `npx tsc --noEmit` 0 错; 价值: 把「Anthropic Mythos 5 主战场 = cybersecurity + autonomous coding」信号对齐到 llm-benchmark 「v0.5.0 candidates」表中, 后续 leaderboard 在 Fable 5 vs OpenAI o3 / Gemini 3.1 Pro 评测时直接调 (Artificial Analysis Coding Index composite 内 3 个 sub-eval = llm-benchmark v0.5.0 路线图里 2 项重合 terminal_bench / webdev_arena → 实质重叠, 可考虑合并引用)。
+
+## 🩺03:43轮 (2026-06-11) — llm-benchmark (W→L轮转命中,上一轮 woclaw02:432405867 Claude Managed Agents compat)
+
+**轮转依据**: 上轮 picked=woclaw (02:43 `2405867`6 子包 SKILL.md `compatible_with`标注), 本次按 W→L序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw2405867 / llm-benchmark8afef66)。woclaw02:44距 ~59min ≈1h UNLOCKED边界; llm-benchmark01:23距 ~2h20m >1h UNLOCKED → 双 UNLOCKED, W→L序列命中 llm-benchmark。
+
+**Hub /health** (vm153:8083):200 OK, uptime1603155s ≈18.55d, agents0 / topics0。
+
+**挑选5min 项**: **`README.md` + `README.en.md` 新增「SWE-bench 三源 cross-validation」表 + Harness drift警示段 (01:23立项落地,沿22:34 `src/core/evaluator.ts` JSDoc harness drift注释把抽象注释具象化)** —候选池内01:23立项「Vals AI / swebench.com / BenchLM.ai 三源 SWE-bench cross-validation 表」等距 ~2h20m,命中 W→L序列;沿22:34 JSDoc 「harness drift caveat」让用户**看到**分数差异而不是只读注释。
+
+**修复**:
+- `README.md` 「路线图 / Roadmap (v0.5.0 candidates)」表后、`**v0.5.0 PR进度**` 行前, 新增:
+ -1段 `### SWE-bench 三源 cross-validation (2026-06, harness drift系数活样本)`引导段 (引 DigitalApplied Methodology2026 +22:34 JSDoc注释锚定)
+ -1 个4 列 ×8 行 Markdown 表 (model / vals.ai SWE-bench Verified ±CI / swebench.com SWE-bench Verified / benchlm.ai SWE-bench Pro),8 个模型: Opus4.8 / Opus4.7 (Adaptive) / Sonnet4.6 / GPT-5.5 / GPT-5-2 Codex / Gemini3 Flash (high reasoning) / DeepSeek V3.2 / Claude Mythos Preview
+ -1段 ⚠️ Harness drift警示段 (Opus4.8跨 vals.ai88.60% vs benchlm.ai69.20% =19.4 分差 + 三源 URL锚定)
+- `README.en.md`同步插入 (英文版, "v0.5.0 PR progress" 行从内嵌段分离为独立行,避免重复)
+- diff:2 files / +37 / -1,0 TS /0 build /0 npm tarball 影响
+
+**验证**:
+- grep 检查 `v0.5.0 PR`出现次数: README.md1 行 / README.en.md1 行 (无重复)
+-表格8 行 ×4 列: 数据完整, 来源3 个 URL全部有效锚点
+- 未跑 `npm test` / `npm run lint` / `npm run build` (cron5min硬上限禁)
+-0 src/* / config/* / package.json改动 (纯文档)
+
+**commit + push**:
+- `d9c18a4` `docs(readme): add SWE-bench three-source cross-validation table (vals.ai / swebench.com / benchlm.ai, harness-drift visible)`
+- push master成功 (8afef66..d9c18a4)
+
+**耗时**:候选评估20s (heartbeat-state.json 已标 "下轮转: llm-benchmark") + grep定位30s +2 README edit1min +修复英文版重复30s + ROADMAP + commit/push1min ≈3min (5min硬上限内)
+
+**遗留 & 下次轮转**:
+-父端阻塞3.1/3.2/3.3 +0.4.1 patch 重发 +进程守护 (systemd/PM2) 不变
+- woclaw候选池:01:03 Fable5/Mythos5 模型路由价格表 + tier + SWE-bench Pro80.3% (5min,1轮可做, JSON 加3字段 + README 表加2 行)
+- llm-benchmark候选池:23:23 v0.5.0 dispatch PR 真完整 (30-45min跨6-9轮) /23:23 真启用 webdev_arena dispatch /06-1022:34 harness drift CI bootstrap 真输出 (估30min)
+- 下次轮转 → **woclaw** (L→W序列),命中候选池顶条目 (01:03 Fable5/Mythos5 模型路由价格表 + tier)
