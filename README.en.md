@@ -341,6 +341,15 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 
 > These are external / adversarial third-party benchmarks with different invocation patterns than the built-in question banks, so they are not toggled via the v0.4.0 `benchmarks: {true/false}` block. A skeleton `_external_benchmarks_roadmap` section (including `webdev_arena`) has been added to `config.example.json` / `config-batch2.json`. Enabling requires extending `src/types/index.ts BenchmarkConfig` and adding a dispatch branch in `src/core/evaluator.ts`.
 
+### Mythos-class model access (v0.5.0 candidates, 2026-06-11)
+
+| Model ID | Source / launch | Tier | Default route | Source |
+|----------|-----------------|------|---------------|--------|
+| `claude-fable-5` | Anthropic GA 2026-06-09 | Mythos-class (first public) | `cyberseceval3 (suite=both)` + LiveCodeBench/Terminal-Bench | [thehackernews](https://thehackernews.com/2026/06/anthropic-releases-claude-fable-5-its.html) / [macrumors](https://www.macrumors.com/2026/06/09/anthropic-fable-5/) / [forbes](https://www.forbes.com/sites/zacharyfolk/2026/06/09/anthropic-releases-first-public-version-of-claude-mythos-with-major-safeguards/) |
+| `claude-mythos-5` | Anthropic 2026-06-09 (stronger, cyberdefenders / US Gov) | Mythos-class | `cyberseceval3 (offensive 优先)` | Forbes (same) |
+
+> Use `Artificial Analysis Coding Index` (LiveCodeBench + SciCode + Terminal-Bench composite) for triangulation. The 5-min cron does not call the real Anthropic API (Mythos-tier rate-limit). Full routing PR estimated 30-45min spanning 6-9 cron rounds; currently effective only via `_external_benchmarks_roadmap.*.model_id` (free-form string, no type change for backward compatibility). See `src/core/evaluator.ts` v0.5.0 model_id routing hint note (2026-06-11).
+
 > **2026 H1 leaderboard signals**: BenchLM.ai's agentic eval suite (24 evals) + CyberSecEval3's expansion into offensive security (8 risks) join METR time horizons (GPT-5.2 agentic task duration 352.2min) and AA Omniscience (hallucination + knowledge) as leading indicators that leaderboards have shifted from "model × knowledge" to "model × agentic + security". Real enabling requires the v0.5.0 dispatch PR.
 
 ### SWE-bench three-source cross-validation (2026-06, live harness-drift samples)

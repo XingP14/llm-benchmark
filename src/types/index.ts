@@ -1,6 +1,14 @@
 // src/types/index.ts - 类型定义
 
 /**
+ * v0.5.0+ Mythos-class 模型候选 (string free-form, 2026-06-11)
+ * - `claude-fable-5`  Anthropic GA 2026-06-09 (Mythos-class 首公开版, 默认路由 cyberseceval3 suite=both)
+ * - `claude-mythos-5` Anthropic 2026-06-09 (Mythos 5, cyberdefenders/US Gov, 路由 cyberseceval3 offensive 优先)
+ * 注: ModelConfig.model 是 string, 不改为 union 以保持向后兼容; 路由 hint 在 evaluator.ts v0.5.0 model_id routing hint 注释
+ * 见 README 「Mythos-class 模型接入」段
+ */
+
+/**
  * 模型配置
  */
 export interface ModelConfig {
