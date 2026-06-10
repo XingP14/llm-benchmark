@@ -41,7 +41,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度: type ✅ / dispatch skeleton ✅ (本轮) / 真完整 PR 估 30-45min
+    // PR 进度: type ✅ 5 项 / dispatch stub ✅ 5 项 (webdev_arena/terminal_bench/aa_omniscience/benchlm_agentic/cyberseceval3) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     if (this.config._external_benchmarks_roadmap) {
       const ext = this.config._external_benchmarks_roadmap;
@@ -54,6 +54,16 @@ export class Evaluator {
       }
       if (ext.aa_omniscience?.enabled) {
         enabled.push(`aa_omniscience(api_base=${ext.aa_omniscience.api_base ?? '(unset)'}, model_id=${ext.aa_omniscience.model_id ?? '(unset)'})`);
+      }
+      // v0.5.0 dispatch stub: BenchLM.ai agentic eval (2026-06-07 发布, 248 模型 × 225 基准, agentic 主战场)
+      if (ext.benchlm_agentic?.enabled) {
+        const native = ext.benchlm_agentic.native_evals ? ' + Native Evals' : '';
+        enabled.push(`benchlm_agentic(api_base=${ext.benchlm_agentic.api_base ?? '(unset)'}, model_id=${ext.benchlm_agentic.model_id ?? '(unset)'}${native})`);
+      }
+      // v0.5.0 dispatch stub: Meta CyberSecEval 3 (2025-12 发布, 8 项风险跨 offensive security 3 大类, Claude Mythos 5 主战场)
+      if (ext.cyberseceval3?.enabled) {
+        const cats = ext.cyberseceval3.risk_categories?.join('|') ?? 'all-8';
+        enabled.push(`cyberseceval3(api_base=${ext.cyberseceval3.api_base ?? '(unset)'}, model_id=${ext.cyberseceval3.model_id ?? '(unset)'}, risk_categories=${cats})`);
       }
       if (enabled.length > 0) {
         console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — actual invocation pending后续 cron 轮次累进)`);

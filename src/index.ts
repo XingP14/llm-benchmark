@@ -94,7 +94,7 @@ async function runBenchmark(args: string[]) {
         .filter(([_, v]) => v?.enabled)
         .map(([k]) => k);
       if (enabled.length > 0) {
-        console.info(`\n🧪 v0.5.0+ external benchmark roadmap detected: ${enabled.join(', ')} (PR progress: type ✅ / dispatch ⏳ — full PR in 30-45min)`);
+        console.info(`\n🧪 v0.5.0+ external benchmark roadmap detected: ${enabled.join(', ')} (PR progress: type ✅ / dispatch stub ✅ (webdev_arena/terminal_bench/aa_omniscience/benchlm_agentic/cyberseceval3 5 项) / 真连接 adapter ⏳ — full PR 估 30-45min)`);
       }
     }
 
