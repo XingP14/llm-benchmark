@@ -36,6 +36,33 @@ export class Evaluator {
 
   /**
    * 运行评测 - 所有模型并行执行
+   *
+   * ⚠️ **Harness drift caveat**: 本分数基于 11 题 5 维度自研 harness
+   *   (dialogue=3 / coding=2 / function_calling=2 / long_context=2 / multi_turn=2),
+   *   同一模型在 lm-evaluation-harness / LiveBench / BenchLM.ai / Vals AI
+   *   不同 harness 下可能差 ±10-20 分 (例: Opus 4.8 在 Vals AI SWE-bench
+   *   Verified 88.60% vs BenchLM.ai SWE-bench Pro 69.2% = 19.4 分差)。
+   *   跨平台对比请用 confidence interval 三角验证, 不要把单 harness 排名当绝对真理。
+   *   详见 README 「路线图 / Roadmap (v0.5.0 candidates)」表
+   *   "SWE-bench 三源 cross-validation (2026-06)" 段。
+   *
+   * 📊 **Confidence interval**: 当前 v0.4.0 输出为 mean, 未输出 std / 95% CI;
+   *   function_calling / multi_turn / long_context 维度仅 2 题, std 较大,
+   *   决策前建议至少跑 3 轮取均值 (3-run mean ± std)。
+   *   v0.5.0 真完整 PR (估 30-45min, 跨 6-9 轮 cron 累进)
+   *   可加 "bootstrap 95% CI" 真输出到 JSON / CSV 报告。
+   *
+   * 🔗 **Cross-validation**: 与以下 2026 主流 harness 三角交叉
+   *   - LiveBench (https://livebench.ai, frequently-updated 抗污染)
+   *   - BenchLM.ai (https://benchlm.ai, 248 models × 225 benchmarks, agentic 主战场)
+   *   - Vals AI (https://vals.ai/benchmarks/swebench, 06 月最新 SWE-bench Verified)
+   *   - lm-evaluation-harness v0.4.0 (2026-04, config-based + Jinja2 prompt + MPS)
+   *   - swebench.com 官方 leaderboard (2026-02-19 更新)
+   *   跨 harness 决策前务必查 3 源, 避免 harness-multiplier effect 误判。
+   *
+   * 参考:
+   *   - DigitalApplied "LLM Benchmark Methodology 2026: Reading Leaderboards"
+   *     https://www.digitalapplied.com/blog/llm-benchmark-methodology-2026-contamination-leaderboard-guide
    */
   async run(): Promise<EvaluationResult[]> {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
