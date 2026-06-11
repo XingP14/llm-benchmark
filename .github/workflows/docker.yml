@@ -1,5 +1,10 @@
 name: Docker
 
+# 避免同 branch 上多次 push 同时跑导致 cache 冲突（docker.io/tonistiigi/binfmt 共享 key）
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [master, main]
