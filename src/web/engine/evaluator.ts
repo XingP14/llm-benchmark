@@ -25,6 +25,21 @@ export class EvaluatorEngine {
 
   /**
    * 运行评测
+   *
+   * v0.5.0+ 外部基准 dispatch 钩子点 (沿 06-09 23:03 ROADMAP 段从示例到实现):
+   *   - CLI 路径 (src/core/evaluator.ts `run()`): type 段 ✅ 6 项 / dispatch skeleton ✅
+   *     (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro)
+   *   - Web 路径 (本类 `run()`): task model 当前仅含 5 维度布尔开关
+   *     (includeDialogue/Coding/FunctionCalling/LongContext/MultiTurn), **未**传递
+   *     `_external_benchmarks_roadmap` 段; 后续 cron 轮次需扩展:
+   *       (a) `src/web/engine/task.ts` `EvaluationTask` 加 `externalBenchmarks?:
+   *           ExternalBenchmarkRoadmap` 字段 + `startTask()` 增 1 参数
+   *       (b) `src/web/routes/evaluations.ts` POST `/` 接受 `req.body._external_benchmarks_roadmap`
+   *           透传到 `taskManager.startTask(...)`
+   *       (c) 本类 `run()` 顶部加与 CLI 端对称的 dispatch 入口
+   *           (console.info 列 enabled 列表, 0 真实 API 调用)
+   *     真完整 PR 估 30-45min (跨 6-9 轮 cron 累进), v0.5.0 不发版。
+   *   - 详见 README 「v0.5.0 PR 进度」段 + ROADMAP 「v0.5.0 dispatch PR 真启用」段
    */
   async run(evaluationId: string, sendWS: WSSender): Promise<void> {
     const db = getDatabase();
