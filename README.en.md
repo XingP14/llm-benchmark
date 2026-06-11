@@ -338,8 +338,11 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 | `aa_omniscience` | Hallucination + knowledge coverage | Candidate (v0.5.0) | Artificial Analysis |
 | `benchlm_agentic` | Agentic eval suite (Design2Code / Vision2Web / Native Evals, 24 evals) | Candidate (v0.5.0) | [BenchLM.ai](https://benchlm.ai/) (launched 2026-06-07, 248 models × 225 benchmarks) |
 | `cyberseceval3` | LLM security / 8 risks (offensive security) | Candidate (v0.5.0) | Meta CyberSecEval 3 (launched 2025-12) |
+| `swe_bench_pro` | Agentic SWE (multi-file / long-context / complex engineering) | Candidate (v0.5.0) | [benchlm.ai/benchmarks/swePro](https://benchlm.ai/benchmarks/swePro) (2026-06-02, Mythos-tier anchor) |
 
 > These are external / adversarial third-party benchmarks with different invocation patterns than the built-in question banks, so they are not toggled via the v0.4.0 `benchmarks: {true/false}` block. A skeleton `_external_benchmarks_roadmap` section (including `webdev_arena`) has been added to `config.example.json` / `config-batch2.json`. Enabling requires extending `src/types/index.ts BenchmarkConfig` and adding a dispatch branch in `src/core/evaluator.ts`.
+
+> **2026-06 Mythos-tier SWE anchor**: first data point for `swe_bench_pro` is **claude-fable-5 = 80.3%** (2026-06-09, Stripe migrated 50M lines in 1 day with it; a traditional team estimated 2 months), the Mythos-tier main yardstick. Together with the 03:43 `src/core/evaluator.ts` JSDoc harness-drift note and the SWE-bench three-source cross-validation table below, it forms a "type-segment + JSDoc explanation + user-visible live sample" three-dimensional signal mesh.
 
 ### Mythos-class model access (v0.5.0 candidates, 2026-06-11)
 

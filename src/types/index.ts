@@ -164,7 +164,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度: type 段 ✅ / dispatch ⏳ / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-11 22:43): type 段 ✅ 全 6 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro) / dispatch ⏳ / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 */
@@ -204,6 +204,19 @@ export interface ExternalBenchmarkRoadmap {
       | 'manual_offensive_cyber'
       | 'autonomous_offensive_cyber'
     >;
+  };
+  /** SWE-bench Pro: Scale AI / 后继 Pro 版 agentic SWE 评测 (更长上下文 + 多文件 + 复杂工程任务, Mythos-tier 主标杆)
+   * 首条数据: claude-fable-5 = 0.803 (2026-06-09, Stripe 1 天迁移 5000 万行代码) */
+  swe_bench_pro?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** Pro 子集选择: 'verified' (全量已验证) | 'lite' (轻量) | 'multilingual' (多语言) — default 'verified' */
+    subset?: 'verified' | 'lite' | 'multilingual';
+    /** 是否启用多文件 / agentic 模式 (default true) */
+    agentic_mode?: boolean;
+    /** 注入的锚定分数 (首条数据, 用作 sanity check) */
+    anchor_score?: number;
   };
 }
 
