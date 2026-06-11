@@ -164,7 +164,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-11 22:43): type 段 ✅ 全 6 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro) / dispatch ⏳ / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-12 02:43): type 段 ✅ 全 7 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / **long_context_cluster**) / dispatch ⏳ / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 */
@@ -216,6 +216,21 @@ export interface ExternalBenchmarkRoadmap {
     /** 是否启用多文件 / agentic 模式 (default true) */
     agentic_mode?: boolean;
     /** 注入的锚定分数 (首条数据, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** 长上下文评测 cluster (62 tasks, 4 基准): LongBench v2 (21) + Babilong (13) + InfiniteBench (18) + Phonebook (10)
+   * — 2026-Q2 EleutherAI/lm-evaluation-harness PR #3256 同源 (Mariani-code 提交, 0 从零开发)
+   * — 锚定: GPT-4-128k InfiniteBench KV Retrieval 89.0% / Llama-2-7B LongBench v2 2WikiMQA 32.8% F1 / Llama-2-7B Phonebook Middle 54.2%
+   * — 借力 harness 0.4.0 dispatch 集成, Mythos 1M+ / Fable 1M+ / GPT-5.4 1.05M 已商用, 评测必须跟上 */
+  long_context_cluster?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 选用子集: 'longbench_v2' (21 tasks) | 'babilong' (13 tasks) | 'infinitebench' (18 tasks) | 'phonebook' (10 tasks) | 'all' (62 tasks, default) */
+    subset?: 'longbench_v2' | 'babilong' | 'infinitebench' | 'phonebook' | 'all';
+    /** 任务总数 (默认 62) */
+    tasks_total?: number;
+    /** 注入的锚定分数 (Llama-2-7B LongBench v2 2WikiMQA 32.8% F1, 用作 sanity check) */
     anchor_score?: number;
   };
 }
