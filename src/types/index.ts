@@ -164,7 +164,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-12 03:23): type 段 ✅ 全 7 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / long_context_cluster) / dispatch stub ✅ 全 7 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-12 05:43): type 段 ✅ 全 12 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m — 2026-06-12 05:43 cron 扩 7→12, 5 顶级 Thinking + 2 1M-context Mythos 首批锚定) / dispatch stub ✅ 全 7 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster; 5+2 新增 segment 仅占位, 5min cron 不调真实 API) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 */
@@ -231,6 +231,66 @@ export interface ExternalBenchmarkRoadmap {
     /** 任务总数 (默认 62) */
     tasks_total?: number;
     /** 注入的锚定分数 (Llama-2-7B LongBench v2 2WikiMQA 32.8% F1, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** GPT-5.5 Thinking xHigh Effort (2026-06 LiveBench 综合分 80.71, 顶级 Thinking 档位首批锚定)
+   * — OpenAI 跨 5.4/5.5 双 xHigh 档, 与 Claude 4.6/4.5 Opus Thinking + Kimi K2.6 Thinking 形成 2026 Q2 顶级 Thinking 五强
+   * — 锚定: GPT-5.5 Thinking xHigh = 80.71 (LiveBench 6 月 leaderboard, 污染-free 综合) */
+  gpt_5_5_thinking_xhigh?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 思考档位: 'low' | 'medium' | 'high' | 'xhigh' (default 'xhigh') */
+    effort?: 'low' | 'medium' | 'high' | 'xhigh';
+    /** 注入的锚定分数 (LiveBench 综合 80.71, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** GPT-5.4 Thinking xHigh Effort (2026-06 LiveBench 综合分 80.28, 1.05M context 商用上下文)
+   * — 与 GPT-5.5 xHigh (80.71) 同源双档, OpenAI 顶级 Thinking 阶梯
+   * — 锚定: GPT-5.4 Thinking xHigh = 80.28 (LiveBench 6 月 leaderboard, 1.05M context) */
+  gpt_5_4_thinking_xhigh?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 思考档位: 'low' | 'medium' | 'high' | 'xhigh' (default 'xhigh') */
+    effort?: 'low' | 'medium' | 'high' | 'xhigh';
+    /** 注入的锚定分数 (LiveBench 综合 80.28, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** Claude 4.6 Opus Thinking High Effort (2026-06 LiveBench 综合分 76.33, 2026-05-29 新)
+   * — Anthropic 跨 4.5/4.6 Opus Thinking 双档, 与 4.5 Opus Thinking (75.96) 形成阶梯
+   * — 锚定: Claude 4.6 Opus Thinking High = 76.33 (LiveBench 6 月 leaderboard) */
+  claude_opus_4_6_thinking?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 思考档位: 'low' | 'medium' | 'high' (default 'high') */
+    effort?: 'low' | 'medium' | 'high';
+    /** 注入的锚定分数 (LiveBench 综合 76.33, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** Claude Mythos 5 1M context (2026-06 Vellum leaderboard, $10/$50 pricing)
+   * — Mythos-tier 顶配 1M context, 99% 召回, BenchLM.ai 商用上下文档位首批锚定
+   * — 配合 Claude Fable 5 1M+ (96%) + Claude Opus 4.8 1M (95%) 形成 Mythos 1M 三强 */
+  claude_mythos_5_1m?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 上下文窗口 (tokens, default 1_048_576 ≈ 1M) */
+    context_window?: number;
+    /** 注入的锚定分数 (Vellum 1M 综合, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** Claude Opus 4.8 1M context (2026-06 Vellum leaderboard, $5/$25 pricing)
+   * — Opus 4.8 1M context 商用档, 与 Mythos 5 1M (顶配) + Fable 5 1M (Mythos-class 首公开) 形成 1M 三档
+   * — 锚定: Vellum leaderboard 1M context 段 (具体分数见 Vellum) */
+  claude_opus_4_8_1m?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 上下文窗口 (tokens, default 1_048_576 ≈ 1M) */
+    context_window?: number;
+    /** 注入的锚定分数 (Vellum 1M 综合, 用作 sanity check) */
     anchor_score?: number;
   };
 }
