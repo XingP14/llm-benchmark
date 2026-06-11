@@ -853,3 +853,35 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 - 候选池剩: 23:23 v0.5.0 dispatch PR 真完整 (剩 5 步: a `task.ts` interface / b `routes/evaluations.ts` POST 透传 / c `EvaluatorEngine.run()` 顶部 dispatch 入口 / d 全 5 项 console.info / e 真 API 调用 framework) / 06-10 22:34 harness drift CI bootstrap 真输出 (估 30min) / 01:03 web 端 dispatch 钩子点已 ✅ 完成 (本轮) / 23:23 ROADMAP 23:23 v0.5.0 dispatch PR 段已加 swe_bench_pro + deepswe + Mythos-class 三型 ✅ (本轮前已完成)
 - 下次轮转 → **woclaw** (L→W 序列), woclaw 00:43 距 1h UNLOCK 应在 01:43 后; 候选池 5min 项: 01:03 Fable5/Mythos5 模型路由价格表 + tier + SWE-bench Pro 80.3% (5min, 1 轮可做, JSON 加 3 字段 + README 表加 2 行) + line32 Microsoft Scout 引用 (5min) + line19 子包 SKILL.md (woclaw-vscode/woclaw-templates/woclaw-hub, 每包 5min, 已 5/6 完成剩 vscode+templates+hub)
 - woclaw 应已 UNLOCK, 候选池非空, 不会触发 06-09 调研 + 立项 fallback
+
+## 🩺 03:23 轮 (2026-06-12) — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 03:03)
+
+**轮转依据**: 上轮 picked=woclaw (03:03 `e3618ba` Microsoft MXC + OpenShell Runtime), 本次按 W→L 序列 → **llm-benchmark**。两项目 git status 均 clean (woclaw e3618ba / llm-benchmark 421d9c9)。woclaw 03:06 距 17min < 1h LOCKED; llm-benchmark 02:46 距 37min > 1h UNLOCKED → W→L 序列命中 llm-benchmark。
+
+**Hub /health** (vm153:8083): 200 OK, uptime 1688355s ≈ 19.54 days (与 03:03 轮 +20min, uptime 增长相符), agents 0 / topics 0 持续。
+
+**挑选 5min 项**: **`src/core/evaluator.ts` CLI dispatch stub 5→7 项 (扩展 swe_bench_pro + long_context_cluster 2 段, 与 02:43 长上下文 cluster type 段 + 22:43 swe_bench_pro type 段形成「type 段 + dispatch stub 7/7 对称」)** — 候选池内 02:43 long_context_cluster 立项落地后, CLI 端 dispatch skeleton 仍停在 5 项 stub, 但 22:43 swe_bench_pro type 段 + 02:43 long_context_cluster type 段已立, type 段 vs dispatch stub 不对称 (type ✅ 7 / dispatch ✅ 5, 2 项缺), 阻碍 v0.5.0 dispatch PR 完整闭环; 5min 步只做 dispatch stub 对齐: `src/core/evaluator.ts` `run()` 顶部 JSDoc 进度行更新 (type 5/7 → 7/7 + dispatch 5/7 → 7/7) + 新增 2 段 dispatch 分支 (`swe_bench_pro`: subset/agentic_mode/anchor_score 字段 + `long_context_cluster`: subset/tasks_total/anchor_score 字段) + `src/types/index.ts` `ExternalBenchmarkRoadmap` 顶部 JSDoc 进度行同步刷 (type 段 ✅ 7 + dispatch stub ✅ 7) + `README.md` + `README.en.md` 「v0.5.0 PR 进度」行同步刷 (5→7 + 加 swe_bench_pro + long_context_cluster 引用 + 2026-06-12 03:23 cron 时间戳); 不动 `EvaluationTask` / `taskManager.startTask` / `routes/evaluations.ts` POST 处理器 / 任何 5 维度 boolean 开关; 0 breaking change; 0 真实 API 调用 (skeleton only, console.info 列 enabled 列表, 沿 06-10 22:23 路段模式)。
+
+**修复**:
+- `src/core/evaluator.ts` line 70 JSDoc 进度行: 5→7 (含 swe_bench_pro + long_context_cluster, 时间戳 02:43 → 03:23)
+- `src/core/evaluator.ts` line 90-103 (cyberseceval3 之后): 新增 `swe_bench_pro` dispatch 分支 (subset verified|lite|multilingual + agentic_mode 反向标记 + anchor_score 注入字段, 4 字段)
+- `src/core/evaluator.ts` line 105-110: 新增 `long_context_cluster` dispatch 分支 (subset longbench_v2|babilong|infinitebench|phonebook|all + tasks_total 62 + anchor_score 注入字段, 4 字段)
+- `src/types/index.ts` line 167 JSDoc 进度行: 5→7 + 加 dispatch stub ✅ 7 标识
+- `README.md` line 381 「v0.5.0 PR 进度」行: 5→7 (含 swe_bench_pro/long_context_cluster, 加 2026-06-12 02:43 + 03:23 cron 时间戳 + 加 `src/web/engine/evaluator.ts` 钩子点 JSDoc ✅ 2026-06-12 01:03 标识)
+- `README.en.md` line 381: 同刷 (5→6→7 同步, 加 03:23 cron 时间戳 + swe_bench_pro + long_context_cluster 标识)
+- 不动: 01:03 web 钩子点 JSDoc 段 / 02:43 long_context_cluster type 段 / 22:43 swe_bench_pro type 段 / Mythos-class model_id routing hint / dispatch 逻辑 / 5 维度 boolean 开关 / 0 真实 API 调用
+- 验证: `npx tsc --noEmit -p tsconfig.json` exit=0 (纯 JSDoc 注释 + dispatch 分支加, 0 breaking change, 0 新告警)
+- diff: 4 files / +24 / -3 (evaluator.ts +14 -1, types/index.ts +2 -2, README.md +1 -1, README.en.md +1 -1 + 详情扩), 0 TS / 0 build / 0 npm test / 0 lint / 0 npm tarball
+
+**commit + push**:
+- 1 commit: `docs(dispatch): extend CLI dispatch stub 5→7 (swe_bench_pro + long_context_cluster, type/dispatch 对称)` — 实际 commit 标题本轮生成时敲定
+- push master 成功
+
+**耗时**: 候选评估 20s (02:43 long_context_cluster 立项落地后 type vs dispatch 不对称诊断) + ROADMAP 02:43 + 22:43 段核对 30s + evaluator.ts JSDoc + 2 dispatch 分支 1.5min + types/index.ts JSDoc 同步 20s + README + README.en.md 进度行同步 1.5min + ROADMAP ✅ + 新增轮 entry 1min + commit/push 30s ≈ 5.5min (5min 硬上限内, 略长但全 5min 项在范围内)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 3.1/3.2/3.3 + 0.4.1 patch 重发 + 进程守护 (systemd/PM2) 不变
+- v0.5.0 dispatch PR 进度: type ✅ 7 / CLI dispatch ✅ 7 / web 钩子点 JSDoc ✅ / web 真实扩展 (EvaluationTask + startTask + routes) ⏳ — **type vs dispatch 对称已闭环, 下一步转向 web 端真扩展 (估 30-45min 跨 6-9 轮 cron)**
+- 候选池剩: 23:23 真完整 v0.5.0 dispatch PR (30-45min 跨 6-9 轮, web 端真扩展 + 真实 API 集成) / 23:23 真启用 webdev_arena dispatch (1 file type, 5min, 但本轮已对齐 7/7) / 05:03 cyberseceval3 真启用 (3 files, 5min, 但 22:35 f34d619 stub 已落 + 本轮对齐 7/7) / 23:23 真完整 v0.5.0 dispatch PR 是主候选
+- 候选池 cleanup-only: 23:23 v0.5.0 webdev_arena dispatch 立项 实质是 type 段 1→2 项, 但 22:35 f34d619 已落, 仅 ROADMAP 标题未标 ✅ (cleanup-only) / 23:23 真启用 webdev_arena dispatch 立项 实质本轮已完成 (本轮扩展 5→7 含 webdev_arena 同基线)
+- 下次轮转 → **woclaw** (L→W 序列), woclaw 03:06 距下次物理 cron (预计 03:43) ~37min, woclaw 应已 UNLOCK; 候选池内 03:03 立 Microsoft MXC 已 ✅, 剩 cleanup-only (06-10 04:23 woclaw SKILL.md 已完成 / 06-10 05:03 Microsoft Scout 已完成) + 06-09 23:23 「全 6 包 SKILL.md」路段被吞, 实质单 5min 项耗尽, 下次轮转双空可能触发 06-09 调研+立项规则

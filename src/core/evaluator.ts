@@ -68,7 +68,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度: type ✅ 5 项 / dispatch stub ✅ 5 项 (webdev_arena/terminal_bench/aa_omniscience/benchlm_agentic/cyberseceval3) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-12 03:23): type 段 ✅ 全 7 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / long_context_cluster) / dispatch stub ✅ 全 7 项 (本次扩展 swe_bench_pro + long_context_cluster, 2026-06-12 03:23 cron) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     if (this.config._external_benchmarks_roadmap) {
       const ext = this.config._external_benchmarks_roadmap;
@@ -91,6 +91,20 @@ export class Evaluator {
       if (ext.cyberseceval3?.enabled) {
         const cats = ext.cyberseceval3.risk_categories?.join('|') ?? 'all-8';
         enabled.push(`cyberseceval3(api_base=${ext.cyberseceval3.api_base ?? '(unset)'}, model_id=${ext.cyberseceval3.model_id ?? '(unset)'}, risk_categories=${cats})`);
+      }
+      // v0.5.0 dispatch stub: SWE-bench Pro (Scale AI, 2026-06-02, Mythos-tier 主标杆, 80.3% Fable-5)
+      if (ext.swe_bench_pro?.enabled) {
+        const subset = ext.swe_bench_pro.subset ?? 'verified';
+        const agentic = ext.swe_bench_pro.agentic_mode === false ? ' (non-agentic)' : '';
+        const anchor = ext.swe_bench_pro.anchor_score != null ? `, anchor=${ext.swe_bench_pro.anchor_score}` : '';
+        enabled.push(`swe_bench_pro(api_base=${ext.swe_bench_pro.api_base ?? '(unset)'}, model_id=${ext.swe_bench_pro.model_id ?? '(unset)'}, subset=${subset}${agentic}${anchor})`);
+      }
+      // v0.5.0 dispatch stub: long_context_cluster (62 tasks, 4 基准 LongBench v2 + Babilong + InfiniteBench + Phonebook; harness 0.4.0 PR #3256 同源)
+      if (ext.long_context_cluster?.enabled) {
+        const subset = ext.long_context_cluster.subset ?? 'all';
+        const tasks = ext.long_context_cluster.tasks_total ?? 62;
+        const anchor = ext.long_context_cluster.anchor_score != null ? `, anchor=${ext.long_context_cluster.anchor_score}` : '';
+        enabled.push(`long_context_cluster(api_base=${ext.long_context_cluster.api_base ?? '(unset)'}, model_id=${ext.long_context_cluster.model_id ?? '(unset)'}, subset=${subset}, tasks=${tasks}${anchor})`);
       }
       // v0.5.0 model_id routing hint (2026-06-11): Mythos-class 模型 `claude-fable-5` (Anthropic GA, 2026-06-09)
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`

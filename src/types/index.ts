@@ -164,7 +164,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-12 02:43): type 段 ✅ 全 7 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / **long_context_cluster**) / dispatch ⏳ / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-12 03:23): type 段 ✅ 全 7 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / long_context_cluster) / dispatch stub ✅ 全 7 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 */
