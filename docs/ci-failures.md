@@ -21,3 +21,10 @@
 ```
 826:Failed to save: Unable to reserve cache with key docker.io--tonistiigi--binfmt-latest-linux-x64, another job may be creating this cache.
 ```
+## CI Failure 2026-06-11 09:43:06 — llm-benchmark @ 6741027
+- run: https://github.com/XingP14/llm-benchmark/actions/runs/27317957563
+- failed jobs: Build & Push
+### Error excerpt
+```
+824:Failed to save: Unable to reserve cache with key docker.io--tonistiigi--binfmt-latest-linux-x64, another job may be creating this cache.
+```
