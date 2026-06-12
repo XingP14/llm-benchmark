@@ -164,7 +164,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-12 05:43): type 段 ✅ 全 12 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m — 2026-06-12 05:43 cron 扩 7→12, 5 顶级 Thinking + 2 1M-context Mythos 首批锚定) / dispatch stub ✅ 全 7 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster; 5+2 新增 segment 仅占位, 5min cron 不调真实 API) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-13 05:43): type 段 ✅ 全 13 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / deepswe / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m — 2026-06-12 05:43 cron 扩 7→12, 5 顶级 Thinking + 2 1M-context Mythos 首批锚定; 2026-06-13 05:43 cron 扩 12→13, vLLM serving benchmark 首批锚定) / dispatch stub ✅ 全 7 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster; 5+2 新增 segment 仅占位, 5min cron 不调真实 API) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 */
@@ -291,6 +291,26 @@ export interface ExternalBenchmarkRoadmap {
     /** 上下文窗口 (tokens, default 1_048_576 ≈ 1M) */
     context_window?: number;
     /** 注入的锚定分数 (Vellum 1M 综合, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** vLLM serving benchmark (2026-05-11 vLLM Tops AA Leaderboard + 2026-06-04 Nemotron 3 Ultra day-0)
+   * — 2026-05-11 vLLM 博客「vLLM Tops the Artificial Analysis Leaderboard」: vLLM serving 在 DeepSeek V3.2 / MiniMax-M2.5 / Qwen 3.5 397B 跨 12 provider 排名第一, TTFT < 1s @ 10K-token prompts
+   * — 2026-06-04 Nemotron 3 Ultra day-0: vLLM 仓库 /benchmarks/benchmark_serving.py — 推理吞吐量 + TTFT + token/s + GPU 利用率 4 维度
+   * — 锚定: DeepSeek V3.2 / MiniMax-M2.5 / Qwen 3.5 397B vLLM serving AA 跨 12 provider #1; TTFT < 1s @ 10K-token prompts; benchmark_serving.py 4 评测模式
+   * — 借力 vLLM benchmark_serving.py 0 从零开发, leaderboard 主战场已从「单模型推理分数」转「推理服务吞吐量 + GPU 利用率」 */
+  vllm_serving_bench?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测模式: 'ttft' (Time To First Token) | 'throughput' (tokens/s) | 'gpu_utilization' (GPU 利用率) | 'all' (4 维度, default) */
+    mode?: 'ttft' | 'throughput' | 'gpu_utilization' | 'all';
+    /** 输入 token 数 (default 10000, 对位 vLLM blog TTFT < 1s @ 10K-token prompts) */
+    input_tokens?: number;
+    /** 并发请求数 (default 8) */
+    concurrent_requests?: number;
+    /** 数据集: 'sharegpt' | 'sonnet' | 'custom' (default 'sharegpt', 对位 vLLM benchmark_serving.py 默认) */
+    dataset?: 'sharegpt' | 'sonnet' | 'custom';
+    /** 注入的锚定分数 (vLLM serving AA 跨 12 provider #1, 用作 sanity check) */
     anchor_score?: number;
   };
 }
