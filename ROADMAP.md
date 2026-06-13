@@ -1002,3 +1002,31 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 - 下次轮转 → **woclaw** (L→W 序列), woclaw 候选池历史项已接近耗尽 (6 维 Skill 范式对位全部完成), 若双空 → 06-09 调研 + 立项规则触发
 
 - [2026-06-14 04:03 父亲心跳-市场调研] **llm-benchmark `README.md` 加 vLLM-proj GuideLLM (2026-06-06) SLO-aware benchmark 对位段 (`slo_aware_benchmark` 字段; 推理服务可重复 sweep 范式首日锚定)** — 2026-06-06 vllm-project/guidellm 主仓 README 更新 (https://github.com/neuralmagic/guidellm/blob/main/README.md) — GuideLLM 是 **「SLO-aware Benchmarking and Evaluation Platform for Optimizing Real-World LLM Inference」**, 关键能力: (a) **端到端模拟 OpenAI-compatible + vLLM-native servers**, 真实负载与配置; (b) **生成 workload patterns 反映生产用法**, reproducibility sweep 找出 safe operating ranges; (c) **rate-based + concurrency + latency-targeted modes** 三类负载模式; (d) **real + synthetic multimodal datasets** 双数据集支持 (单框架内 controlled experiments + production-style eval); (e) **标准化 exportable reports** for dashboards — **核心信号**: LLM 评测已从「单跑一次模型打分」扩展到「推理服务 SLO-aware sweep」, 评测维度包含 TTFT (Time To First Token) + 吞吐 + 并发安全区间; llm-benchmark 当前定位「**模型质量评测**」(dialogue/coding/function_calling/long_context/multi_turn 5 维度 + v0.5.0 8 stub) **未覆盖「推理服务 SLO 评测」** — 与 GuideLLM 形成完美互补: llm-benchmark 评「模型本身」, GuideLLM 评「推理服务」, 互补不重叠; 但 llm-benchmark 用户在 production 部署前需要知道「这个模型在 vLLM serving 上 SLO 是否满足」, README 应明确「用 llm-benchmark 评质量 + GuideLLM 评 SLO」双工具链路径; 5min 步骤: (1) `README.md` 「路线图 / Roadmap (v0.5.0 candidates)」表前新增 1 段 `## 🛠️ Companion tooling (推理服务 SLO 评测, 与 llm-benchmark 互补)` (~25 行: GuideLLM 介绍 + 5 能力列表 + 「llm-benchmark 评**模型质量** vs GuideLLM 评**推理服务 SLO**」双工具链定位 + 「production deploy 前先跑 llm-benchmark 拿质量分, 再用 GuideLLM 拿 SLO sweep」workflow 3 步 + 1 张「评测维度对位表」(model quality / inference latency / throughput / SLO safe range / multimodal 五行 × llm-benchmark / GuideLLM 列) + 引用 vllm-project/guidellm GitHub URL); (2) 同步 `README.en.md` (翻译版); (3) `src/types/index.ts` `EvaluationConfig` 加 1 可选字段 `companion_tools?: { guidellm?: { installed: boolean; sweep_config?: string } }` (1 行 type 段, 不影响 default flow); 不动 evaluator.ts / route / 5 维度逻辑; 价值: 把 llm-benchmark 从「单点模型质量评测」升级为「**模型质量 + 推理服务 SLO 双工具链入口**」, 用户读 README 路线图段直接看到「用 llm-benchmark 拿质量分, 用 GuideLLM 拿 SLO sweep」workflow, 与 GuideLLM 形成生态互补而非竞争, 抢占 2026 推理服务可重复 sweep 范式首日入口; 估 5min, 下次轮转直接做 (1 README 段 + 1 README.en 翻译 + 1 type 字段, 1 轮可完成).
+
+  - **完成落地** (2026-06-14 05:23 cron, 04:03 立项执行): commit 2f74fa1 `docs(readme+types): add GuideLLM companion tooling section (vLLM-proj SLO-aware benchmark dual-toolchain entry)` (3 files / +89 / -0, push 949cc5d..2f74fa1 master ✅) — (1) `README.md` line 399-435 `## 🛠️ Companion tooling` 段 (GuideLLM 介绍 + 5 能力列表 + 3 步 dual-toolchain workflow + 5 维 × 2 工具对位表 + 配套 config 字段 + 生态关系), (2) `README.en.md` line 399-434 同步英文翻译, (3) `src/types/index.ts` line 56-66 `BenchmarkConfig.companion_tools?: { guidellm?: { installed?: boolean; sweep_config?: string } }` 1 可选字段 (roadmap-only, 0 default flow 影响); pre-existing tsc error in evaluator.ts(118) 无关本次改动 (process_aware_scoring type stub 漏 api_base/model_id 字段, 留待后续 dispatch PR 修); 0 breaking change / 0 真实 API 调用 / 0 npm test / 0 lint / 0 dispatch 逻辑改动; 价值兑现: llm-benchmark 从「单点模型质量评测」升级为「**模型质量 + 推理服务 SLO 双工具链入口**」, 与 04:03 vllm_serving_bench (推理服务) + 23:43 Nemotron 3 Ultra (hybrid MoE 推理) + 03:43 SWE-bench 三源 cross-val (harness drift) 形成「**模型质量 × 推理服务 SLO × harness drift**」三维信号网, 抢 2026 推理服务可重复 sweep 范式首日话语权。
+
+## 🩺 05:23 轮 (2026-06-14) — llm-benchmark (L→W 序列推后, 候选池内有 04:03 GuideLLM 新立项, 优先做 5min 内可完成)
+
+**轮转依据**: 上轮 picked=both-research-and-stage (04:03 cron 双空调研+立项, woclaw 4c2b537 + llm-benchmark 949cc5d), 双 UNLOCKED (>1h 自 04:05 起, 现 05:23 已 1h18m); 按 W→L 序列本应 woclaw, 但 woclaw 候选池 1 真 pending (Skill Creator 2.0) 历史项已接近耗尽 (6 维 Skill 范式对位全部完成), 仍 5min 区间; llm-benchmark 候选池 3 真 pending (含本轮新立项 04:03 GuideLLM SLO-aware 互补段, 1h20m 未做), **优先做本轮新立项**: 沿 04:03 立项 5min 步骤, 1 README 段 + 1 README.en 翻译 + 1 type 字段, 1 轮可完成。Hub /health 200 OK (vm153:8083)。
+
+**挑选 5min 项**: **`README.md` + `README.en.md` + `src/types/index.ts` 加 GuideLLM companion tooling 段 (04:03 立项落地, vLLM-proj SLO-aware benchmark 互补对位)** — 沿 04:03 立项 5min 步骤: 1 file `README.md` 「路线图」表 (v0.5.0 PR 进度行) 后新增 1 段 `## 🛠️ Companion tooling` (~37 行: GuideLLM 介绍 + 5 能力列表 + 3 步 dual-toolchain workflow + 5 维 × 2 工具对位表 + 配套 config 字段 + 生态关系) + 1 file `README.en.md` 同步英文翻译 + 1 file `src/types/index.ts` `BenchmarkConfig` 加 1 可选字段 `companion_tools?: { guidellm?: { installed?: boolean; sweep_config?: string } }` (roadmap-only, 0 default flow 影响)。
+
+**修复**:
+- `src/types/index.ts` line 56-66: `BenchmarkConfig` 接口尾部新增 `companion_tools?: { guidellm?: { installed?: boolean; sweep_config?: string } }` 1 段 (含 JSDoc 说明 GuideLLM 定位 + SLO sweep 范式)
+- `README.md` line 399-435: `## 🛠️ Companion tooling` 段 (37 行) 插入在「v0.5.0 PR 进度」行与 `## 输出报告` 标题之间
+- `README.en.md` line 399-434: 同步英文翻译段 (`Companion tooling (inference-service SLO evaluation, complementary to llm-benchmark)`)
+- 不动: 5 维度 / 22:34 harness drift JSDoc / dispatch 逻辑 / `routes/evaluations.ts` POST 处理器 / v0.5.0 candidates 进度行 (纯 type 段 + 文档, 0 breaking change)
+- pre-existing tsc error `src/core/evaluator.ts(118): Property 'api_base' does not exist on type 'process_aware_scoring'` 无关本次改动 (process_aware_scoring type stub 漏 api_base/model_id 字段, 留待后续 dispatch PR 修)
+- diff: 3 files / +89 / -0
+
+**commit + push**:
+- commit `2f74fa1` `docs(readme+types): add GuideLLM companion tooling section (vLLM-proj SLO-aware benchmark dual-toolchain entry)`
+- push master 成功 (949cc5d..2f74fa1)
+
+**耗时**: 候选评估 30s (04:03 立项 1h20m 未做, 仍 5min 区间) + types 段 edit 30s + README 中/英段 insert 1min + ROADMAP ✅ + 新增轮 entry 1.5min + commit/push 30s ≈ 4min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 3.1/3.2/3.3 + 0.4.1 patch 重发 + 进程守护 (systemd/PM2) 不变
+- 候选池剩: 23:23 v0.5.0 dispatch PR 真完整 (剩 7 项 stub → real fetch, 估 30-45min 跨 6-9 轮) / 05:03 cyberseceval3 真启用 (3 files, 5min) / 04:03 GuideLLM 立项已 ✅ 完成 (本轮) / 23:23 webdev_arena real fetch 立项 ✅ 完成 (03:23 cron)
+- v0.5.0 type 段 15 ✅ + companion_tools 字段 ✅ (本轮) + dispatch 8 stub + 1 real fetch (webdev_arena) — 离 v0.5.0 完整 PR 还差 6-9 轮 cron 累进
+- 下次轮转 → **woclaw** (L→W 序列), woclaw 候选池 1 真 pending (Skill Creator 2.0 verifiable + A/B + auto-optimize 对位, 5min 估), 应已 UNLOCK (距 1h+)
