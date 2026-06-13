@@ -164,7 +164,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-13 23:23): type 段 ✅ 全 14 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / deepswe / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m / vllm_serving_bench — 2026-06-12 05:43 cron 扩 7→12, 5 顶级 Thinking + 2 1M-context Mythos 首批锚定; 2026-06-13 05:43 cron 扩 12→13, vLLM serving benchmark 首批锚定; 2026-06-13 23:23 cron 扩 13→14, process_aware_scoring 首批锚定) / dispatch stub ✅ 全 8 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster; 5+2+1 新增 segment 仅占位, 5min cron 不调真实 API) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-14 02:03): type 段 ✅ 全 15 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / deepswe / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m / vllm_serving_bench / process_aware_scoring — 2026-06-12 05:43 cron 扩 7→12, 5 顶级 Thinking + 2 1M-context Mythos 首批锚定; 2026-06-13 05:43 cron 扩 12→13, vLLM serving benchmark 首批锚定; 2026-06-13 23:23 cron 扩 13→14, process_aware_scoring 首批锚定; 2026-06-14 02:03 cron 扩 14→15, lm_eval_harness_v4_config 首批锚定) / dispatch stub ✅ 全 8 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster; 5+2+1 新增 segment 仅占位, 5min cron 不调真实 API) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 */
@@ -330,6 +330,29 @@ export interface ExternalBenchmarkRoadmap {
     /** 过程信号权重 (default 0.3, 0-1, 与 pass_fail_weight 合计 1.0) */
     process_weight?: number;
     /** 注入的锚定分数 (Princeton SWE-Bench Pro 03-04 trajectory 维度, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** lm-eval-harness v0.4.0 config-compat (2026-04-23 EleutherAI release, config-based task creation + Jinja2 prompt + HF/vLLM/MPS/GPT-NeoX 4 backend)
+   * — 2026-04-23 EleutherAI lm-evaluation-harness v0.4.0: (a) Config-based task creation (YAML config 定义新 task, 无需写 Python src) + 跨项目复用
+   * — (b) Jinja2 prompt design + promptsource 互导; (c) 后处理 + 答案提取 + 多代 + few-shot 配; (d) HF/vLLM/MPS/GPT-NeoX 4 backend
+   * — (e) 减依赖体积 (Lighter install); (f) CoT BIG-Bench-Hard + Belebele + user-defined task groupings 三新 task
+   * — 锚定: HuggingFace Open LLM Leaderboard 6 基准 (HellaSwag 10-shot / MMLU 5-shot / TruthfulQA 0-shot / ARC / Winogrande / GSM8k) + CoT BBH + Belebele 多语言
+   * — 借力 lm-eval-harness v0.4.0 0 从零开发, harness 评测门槛降低 10×, 评测方法论主战场从「写 src/task.py」转「写 YAML config」 */
+  lm_eval_harness_v4_config?: {
+    enabled: boolean;
+    /** YAML config 文件路径 (用户自定义 task config, 沿 lm-eval-harness v0.4.0 config-driven 范式) */
+    config_path?: string;
+    /** 评测 backend: 'hf' (HuggingFace data-parallel) | 'vllm' (推理服务) | 'mps' (Apple Silicon) | 'gpt_neox' | 'all' (4 backend, default) */
+    backend?: 'hf' | 'vllm' | 'mps' | 'gpt_neox' | 'all';
+    /** Prompt 引擎: 'jinja2' (Jinja2 模板, default) | 'raw' (原始 prompt) | 'promptsource' (Promptsource 互导) */
+    prompt_engine?: 'jinja2' | 'raw' | 'promptsource';
+    /** Few-shot 配置 (default 5, 对位 HellaSwag 10-shot / MMLU 5-shot / TruthfulQA 0-shot 等 few-shot 范式) */
+    fewshot?: number;
+    /** 后处理: 'answer_extraction' (答案提取) | 'cot_strip' (CoT 剥离) | 'raw' (不后处理, default) */
+    post_process?: 'answer_extraction' | 'cot_strip' | 'raw';
+    /** 评测子集: 'arc' | 'hellaswag' | 'mmlu' | 'truthfulqa' | 'winogrande' | 'gsm8k' | 'bbh' | 'belebele' | 'all' (default 'all', 对位 HF OLM 6 基准 + CoT BBH + Belebele 多语言) */
+    subset?: 'arc' | 'hellaswag' | 'mmlu' | 'truthfulqa' | 'winogrande' | 'gsm8k' | 'bbh' | 'belebele' | 'all';
+    /** 注入的锚定分数 (HF OLM 综合, 用作 sanity check) */
     anchor_score?: number;
   };
 }
