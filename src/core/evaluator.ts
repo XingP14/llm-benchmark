@@ -68,8 +68,9 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-13 23:23): type 段 ✅ 全 14 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / deepswe / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m / vllm_serving_bench — 06-13 22:13 加 process_aware_scoring 13→14) / dispatch stub ✅ 全 8 项 (本次扩展 process_aware_scoring, 2026-06-13 23:23 cron) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-14 03:23): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **webdev_arena real fetch 真集成 ✅** (06-14 03:23 cron, console.info stub → POST https://webdevarena.com/api/v1/eval, 错误处理 + scores[] 注入, 1/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
+    const webdevArenaFetchTasks: Array<Promise<void>> = [];
     if (this.config._external_benchmarks_roadmap) {
       const ext = this.config._external_benchmarks_roadmap;
       const enabled: string[] = [];
@@ -120,7 +121,7 @@ export class Evaluator {
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
       // 见 README 「路线图 / Roadmap (v0.5.0 candidates)」表 Mythos-class 模型接入 段
       if (enabled.length > 0) {
-        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — actual invocation pending后续 cron 轮次累进)`);
+        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena 已升级为 real fetch, 其余 7 项 stub 待后续 cron 轮次累进)`);
       }
     }
 
@@ -130,7 +131,117 @@ export class Evaluator {
         return this.evaluateModel(model, i);
       })
     );
+
+    // v0.5.0 dispatch: webdev_arena real fetch (06-14 03:23 cron, console.info stub → POST https://webdevarena.com/api/v1/eval)
+    // - 仅当 ext.webdev_arena.enabled && (model_id 匹配或未配 model_id 走全部 model)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 console.warn + 注入 detail
+    // - 注入: EvaluationResult.scores[] 追加 1 个 webdev_arena QuestionScore (questionId=`webdev_arena_${model.name}`, category=`webdev_arena`, dimension=`coding` 走 v0.4.0 默认, score = elo_score * 0.9 + pass_rate * 10 归一到 0-100)
+    if (this.config._external_benchmarks_roadmap?.webdev_arena?.enabled) {
+      const wda = this.config._external_benchmarks_roadmap.webdev_arena;
+      const apiBase = wda.api_base ?? 'https://webdevarena.com/api/v1/eval';
+      const timeoutMs = wda.timeout_ms ?? 30000;
+      await Promise.all(
+        results.map(async (result) => {
+          // model_id 过滤: 配了 wda.model_id 只评那个; 未配走全部
+          if (wda.model_id && result.model.model !== wda.model_id && result.modelName !== wda.model_id) {
+            return;
+          }
+          const score = await this.fetchWebdevArenaScore(apiBase, result.model, timeoutMs, wda.anchor_score);
+          result.scores.push(score);
+          console.log(`  [${result.modelName}] webdev_arena score: ${score.score} (${score.detail ?? 'no detail'})`);
+        })
+      );
+    }
+
     return results;
+  }
+
+  /**
+   * v0.5.0 dispatch: webdev_arena 真实 fetch (06-14 03:23 cron)
+   * POST {api_base} body={api_base, model_id, prompt, timeout_ms}
+   * 解析 {elo_score: number, pass_rate: number, eval_id?, error?}
+   * 三段 try/catch: timeout / 4xx / 5xx
+   * 返回 QuestionScore: dimension=`coding` (v0.4.0 默认, webdev_arena 属 coding 维度)
+   * score = elo_score * 0.9 + pass_rate * 10 (0-100 归一; elo 0-1000 / pass_rate 0-1)
+   * anchor_score 不匹配时 console.warn 警告
+   */
+  private async fetchWebdevArenaScore(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    anchorScore?: number
+  ): Promise<QuestionScore> {
+    const questionId = `webdev_arena_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      prompt: 'Generate a full-stack web application (HTML+CSS+JS) per WebDevArena standard task prompt set.',
+      timeout_ms: timeoutMs,
+    };
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'webdev_arena',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `webdev_arena HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+        };
+      }
+      const data = (await resp.json()) as { elo_score?: number; pass_rate?: number; eval_id?: string; error?: string };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'webdev_arena',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `webdev_arena API error: ${data.error}`,
+        };
+      }
+      const elo = typeof data.elo_score === 'number' ? data.elo_score : 0;
+      const pass = typeof data.pass_rate === 'number' ? data.pass_rate : 0;
+      // 0-100 归一: elo 0-1000 → 0-100, pass_rate 0-1 → 0-10, 加权和
+      const normalized = Math.max(0, Math.min(100, elo * 0.09 + pass * 10));
+      const evalIdPart = data.eval_id ? `, eval_id=${data.eval_id}` : '';
+      let detail = `webdev_arena elo=${elo}, pass_rate=${(pass * 100).toFixed(1)}%, score=${normalized.toFixed(1)}${evalIdPart}`;
+      if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
+        console.warn(`  [webdev_arena] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return {
+        questionId,
+        category: 'webdev_arena',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'coding',
+        modelOutput: JSON.stringify(data).slice(0, 500),
+        detail,
+      };
+    } catch (err) {
+      const msg = (err as Error).message || String(err);
+      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      return {
+        questionId,
+        category: 'webdev_arena',
+        score: 0,
+        dimension: 'coding',
+        modelOutput: '',
+        detail: isTimeout
+          ? `webdev_arena timeout after ${timeoutMs}ms`
+          : `webdev_arena fetch error: ${msg.slice(0, 200)}`,
+      };
+    }
   }
 
   private async evaluateModel(

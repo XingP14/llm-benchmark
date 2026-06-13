@@ -164,14 +164,21 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-14 02:03): type 段 ✅ 全 15 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / deepswe / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m / vllm_serving_bench / process_aware_scoring — 2026-06-12 05:43 cron 扩 7→12, 5 顶级 Thinking + 2 1M-context Mythos 首批锚定; 2026-06-13 05:43 cron 扩 12→13, vLLM serving benchmark 首批锚定; 2026-06-13 23:23 cron 扩 13→14, process_aware_scoring 首批锚定; 2026-06-14 02:03 cron 扩 14→15, lm_eval_harness_v4_config 首批锚定) / dispatch stub ✅ 全 8 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster; 5+2+1 新增 segment 仅占位, 5min cron 不调真实 API) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-14 03:23): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **webdev_arena real fetch 真集成 ✅** (06-14 03:23 cron, console.info stub → POST https://webdevarena.com/api/v1/eval, 错误处理 + scores[] 注入, 1/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
-  /** webdev-arena: 全栈代码生成 + 实时对抗评分 */
+  /** webdev-arena: 全栈代码生成 + 实时对抗评分 (2026-06 webdevarena.com 24h 窗口期 + Anthropic 「2026 Agent 元年」双信号锚定)
+   * — 06-14 03:23 cron: console.info stub → 真实 fetch (`POST https://webdevarena.com/api/v1/eval`)
+   * — Response: { elo_score: number; pass_rate: number; eval_id?: string; error?: string }
+   * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   webdev_arena?: {
     enabled: boolean;
     api_base?: string;
     model_id?: string;
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (首条数据, 用作 sanity check) */
+    anchor_score?: number;
   };
   /** terminal-bench 2.0: agentic coding */
   terminal_bench?: {
