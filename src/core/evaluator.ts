@@ -68,7 +68,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-12 03:23): type 段 ✅ 全 7 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / long_context_cluster) / dispatch stub ✅ 全 7 项 (本次扩展 swe_bench_pro + long_context_cluster, 2026-06-12 03:23 cron) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-13 23:23): type 段 ✅ 全 14 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / deepswe / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m / vllm_serving_bench — 06-13 22:13 加 process_aware_scoring 13→14) / dispatch stub ✅ 全 8 项 (本次扩展 process_aware_scoring, 2026-06-13 23:23 cron) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     if (this.config._external_benchmarks_roadmap) {
       const ext = this.config._external_benchmarks_roadmap;
@@ -105,6 +105,16 @@ export class Evaluator {
         const tasks = ext.long_context_cluster.tasks_total ?? 62;
         const anchor = ext.long_context_cluster.anchor_score != null ? `, anchor=${ext.long_context_cluster.anchor_score}` : '';
         enabled.push(`long_context_cluster(api_base=${ext.long_context_cluster.api_base ?? '(unset)'}, model_id=${ext.long_context_cluster.model_id ?? '(unset)'}, subset=${subset}, tasks=${tasks}${anchor})`);
+      }
+      // v0.5.0 dispatch stub: process_aware_scoring (2026-06-13 22:13 立项 — Princeton SWE-Bench Pro 03-04 + Anthropic 06 「2026 Agent 元年」18 页报告)
+      // 评测方法论从「结果分数」转「过程+结果」双轨: 5 过程信号 (commit_count / test_run_count / retry_count / file_coverage / trajectory_score) + pass/fail 双权重
+      if (ext.process_aware_scoring?.enabled) {
+        const mode = ext.process_aware_scoring.mode ?? 'all';
+        const bench = ext.process_aware_scoring.agentic_benchmark ?? 'swe_bench_pro';
+        const passWeight = ext.process_aware_scoring.pass_fail_weight ?? 0.7;
+        const procWeight = ext.process_aware_scoring.process_weight ?? 0.3;
+        const anchor = ext.process_aware_scoring.anchor_score != null ? `, anchor=${ext.process_aware_scoring.anchor_score}` : '';
+        enabled.push(`process_aware_scoring(api_base=${ext.process_aware_scoring.api_base ?? '(unset)'}, model_id=${ext.process_aware_scoring.model_id ?? '(unset)'}, mode=${mode}, agentic_benchmark=${bench}, weights=${passWeight}/${procWeight}${anchor})`);
       }
       // v0.5.0 model_id routing hint (2026-06-11): Mythos-class 模型 `claude-fable-5` (Anthropic GA, 2026-06-09)
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`

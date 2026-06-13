@@ -164,7 +164,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-13 05:43): type 段 ✅ 全 13 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / deepswe / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m — 2026-06-12 05:43 cron 扩 7→12, 5 顶级 Thinking + 2 1M-context Mythos 首批锚定; 2026-06-13 05:43 cron 扩 12→13, vLLM serving benchmark 首批锚定) / dispatch stub ✅ 全 7 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster; 5+2 新增 segment 仅占位, 5min cron 不调真实 API) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-13 23:23): type 段 ✅ 全 14 项 (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / deepswe / long_context_cluster / gpt_5_5_thinking_xhigh / gpt_5_4_thinking_xhigh / claude_opus_4_6_thinking / claude_mythos_5_1m / claude_opus_4_8_1m / vllm_serving_bench — 2026-06-12 05:43 cron 扩 7→12, 5 顶级 Thinking + 2 1M-context Mythos 首批锚定; 2026-06-13 05:43 cron 扩 12→13, vLLM serving benchmark 首批锚定; 2026-06-13 23:23 cron 扩 13→14, process_aware_scoring 首批锚定) / dispatch stub ✅ 全 8 项 (2026-06-12 03:23 cron 扩展 swe_bench_pro + long_context_cluster; 5+2+1 新增 segment 仅占位, 5min cron 不调真实 API) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 */
@@ -311,6 +311,25 @@ export interface ExternalBenchmarkRoadmap {
     /** 数据集: 'sharegpt' | 'sonnet' | 'custom' (default 'sharegpt', 对位 vLLM benchmark_serving.py 默认) */
     dataset?: 'sharegpt' | 'sonnet' | 'custom';
     /** 注入的锚定分数 (vLLM serving AA 跨 12 provider #1, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** process-aware scoring (2026-06-13 22:13 立项 — Princeton SWE-Bench Pro 03-04 + Anthropic 06「2026 Agent 元年」)
+   * — 2026-03-04 Princeton SWE-Bench Pro 发布: agentic coding 评测从「修 bug (pass/fail)」走向「复杂 feature 交付 (过程感知)」
+   * — 2026-01-16 业内讨论「Coding Agent 评测终于开始关注过程」+ 华泰证券 02-09「Agentic Coding 加速迭代」研报
+   * — 2026-06 Anthropic 18 页报告「2026 是 Agent 元年」: 评测必须捕获自主 agent 全过程行为
+   * — 锚定: Princeton SWE-Bench Pro trajectory-level + 4 过程信号 (commit count / test run count / retry count / file coverage)
+   * — 借力 Princeton SWE-Bench Pro 0 从零开发, 评测方法论话语权已从「结果分数」转「过程+结果」双轨 */
+  process_aware_scoring?: {
+    enabled: boolean;
+    /** 评测模式: 'commit_count' (commit 数量) | 'test_run_count' (测试运行次数) | 'retry_count' (重试次数) | 'file_coverage' (文件覆盖率) | 'trajectory_score' (agentic 轨迹综合分) | 'all' (5 维度, default) */
+    mode?: 'commit_count' | 'test_run_count' | 'retry_count' | 'file_coverage' | 'trajectory_score' | 'all';
+    /** 关联的 agentic 基准: 'swe_bench_pro' (Princeton 默认) | 'terminal_bench' (agentic coding) | 'webdev_arena' (全栈 web dev) */
+    agentic_benchmark?: 'swe_bench_pro' | 'terminal_bench' | 'webdev_arena';
+    /** pass/fail 权重 (default 0.7, 0-1) */
+    pass_fail_weight?: number;
+    /** 过程信号权重 (default 0.3, 0-1, 与 pass_fail_weight 合计 1.0) */
+    process_weight?: number;
+    /** 注入的锚定分数 (Princeton SWE-Bench Pro 03-04 trajectory 维度, 用作 sanity check) */
     anchor_score?: number;
   };
 }
