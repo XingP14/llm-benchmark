@@ -336,6 +336,7 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 | `webdev_arena` | Full-stack code gen / ELO pairwise scoring | Candidate (v0.5.0) | [webdevarena.com](https://webdevarena.com) |
 | `terminal_bench` | Agentic coding / terminal tasks | Candidate (v0.5.0) | Terminal Bench 2.0 |
 | `aa_omniscience` | Hallucination + knowledge coverage | Candidate (v0.5.0) | Artificial Analysis |
+| `metr_time_horizons` | Agentic task duration (GPT-5.2 352.2min anchor) | Candidate (v0.5.0) | [METR](https://metr.org/) (2026-H1 agentic duration leaderboard main battlefield) |
 | `benchlm_agentic` | Agentic eval suite (Design2Code / Vision2Web / Native Evals, 24 evals) | Candidate (v0.5.0) | [BenchLM.ai](https://benchlm.ai/) (launched 2026-06-07, 248 models × 225 benchmarks) |
 | `cyberseceval3` | LLM security / 8 risks (offensive security) | Candidate (v0.5.0) | Meta CyberSecEval 3 (launched 2025-12) |
 | `swe_bench_pro` | Agentic SWE (multi-file / long-context / complex engineering) | Candidate (v0.5.0) | [benchlm.ai/benchmarks/swePro](https://benchlm.ai/benchmarks/swePro) (2026-06-02, Mythos-tier anchor) |
