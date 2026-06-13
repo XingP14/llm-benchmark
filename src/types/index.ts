@@ -51,6 +51,20 @@ export interface BenchmarkConfig {
   runs?: number;
   /** v0.5.0+ 外部基准路线图 (roadmap-only, 默认 undefined; PR 进度: type ✅ / dispatch ⏳) */
   _external_benchmarks_roadmap?: ExternalBenchmarkRoadmap;
+  /**
+   * v0.5.0+ 配套工具 (companion tooling, roadmap-only, 默认 undefined)
+   * - guidellm: vLLM-proj SLO-aware benchmark (https://github.com/neuralmagic/guidellm)
+   *   用于在 llm-benchmark 评出「模型质量」后, 跑推理服务 SLO sweep (TTFT + 吞吐 + 并发安全区间)
+   *   llm-benchmark 评「模型质量」, GuideLLM 评「推理服务 SLO」, 互补不重叠
+   */
+  companion_tools?: {
+    guidellm?: {
+      /** GuideLLM 是否已安装 (`guidellm --version` 可用) */
+      installed?: boolean;
+      /** SLO sweep 配置文件路径 (YAML/JSON; 可选, 缺省用 GuideLLM 默认 sweep) */
+      sweep_config?: string;
+    };
+  };
 }
 
 /**

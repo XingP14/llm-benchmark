@@ -396,6 +396,43 @@ Minimal config (OpenAI / Anthropic / Zhipu GLM):
 
 > **v0.5.0 PR progress**: type declaration ✅ for all 15 entries (`webdev_arena` / `terminal_bench` / `aa_omniscience` / `benchlm_agentic` / `cyberseceval3` / `swe_bench_pro` / `deepswe` / `long_context_cluster` / `gpt_5_5_thinking_xhigh` / `gpt_5_4_thinking_xhigh` / `claude_opus_4_6_thinking` / `claude_mythos_5_1m` / `claude_opus_4_8_1m` / `vllm_serving_bench` / `process_aware_scoring` / **`lm_eval_harness_v4_config`**, 2026-06-10 00:24 + 06:43 + 2026-06-11 22:43 + 2026-06-12 02:43 + 2026-06-13 05:43 + 06-13 23:23 + 2026-06-14 02:03 cron, this round extends 14→15 anchoring lm-evaluation-harness v0.4.0 config-driven paradigm) / `src/index.ts` console.info hint ✅ / `src/core/evaluator.ts` dispatch branches ✅ skeleton for 8 entries + **1 real fetch** (`webdev_arena` real integration: POST https://webdevarena.com/api/v1/eval + timeout / 4xx / 5xx three-tier try/catch + scores[] injection, 2026-06-14 03:23 cron, 1/8 real-ified) / `src/web/engine/evaluator.ts` v0.5.0 dispatch hook point JSDoc annotation ✅ (2026-06-12 01:03 cron, hook point documented, real task-model extension pending 6 cron rounds) / `src/web/routes/evaluations.ts` config acceptance ⏳ — full PR estimated 30-45min (spanning 6-9 cron rounds); v0.5.0 will not be released before the full PR lands.
 
+
+## 🛠️ Companion tooling (inference-service SLO evaluation, complementary to llm-benchmark)
+
+llm-benchmark focuses on **model quality evaluation** (dialogue / coding / function_calling / long_context / multi_turn 5 dimensions + v0.5.0 15 candidate benchmarks), and does **not** cover **inference-service SLO evaluation**. Users who want to production-deploy a model need to know "does this model meet SLO on vLLM serving?" — and that is exactly what the complementary tool below provides:
+
+### GuideLLM — SLO-aware Benchmarking for Real-World LLM Inference
+
+- **GitHub**: [vllm-project/guidellm](https://github.com/neuralmagic/guidellm) (2026-06-06 README update)
+- **Positioning**: **SLO-aware Benchmarking and Evaluation Platform for Optimizing Real-World LLM Inference**
+
+**5 key capabilities**:
+- (a) **End-to-end simulation** of OpenAI-compatible + vLLM-native servers, with real workloads and configs
+- (b) **Generated workload patterns** reflecting production usage, with **reproducibility sweep** to find safe operating ranges
+- (c) **3 load modes**: `rate-based` / `concurrency` / `latency-targeted`
+- (d) **Dual dataset support**: real + synthetic multimodal datasets (controlled experiments + production-style eval)
+- (e) **Standardized exportable reports** for dashboards
+
+**Dual-toolchain workflow** (before production deploy):
+1. Use **llm-benchmark** to get **model quality scores** (dialogue / coding / function_calling / long_context / multi_turn 5 dimensions)
+2. Use **GuideLLM** to get **inference-service SLO sweep** (TTFT + throughput + concurrency-safe range)
+3. Cross-reference both scores to make the production deploy decision
+
+**Evaluation-dimension mapping table** (complementary, not overlapping):
+
+| Evaluation dimension | llm-benchmark | GuideLLM |
+|---------|---------------|----------|
+| Model quality (dialogue / coding / function_calling / multi_turn) | ✅ Primary | ❌ |
+| Long-context (32k+ / 1M context) | ✅ `long_context` dimension + `long_context_cluster` 62 tasks | ❌ |
+| Inference latency (TTFT) | ❌ | ✅ Primary |
+| Inference throughput (token/s) | ❌ | ✅ Primary |
+| SLO safe operating range | ❌ | ✅ Primary (reproducibility sweep) |
+| Multimodal datasets | ❌ | ✅ (real + synthetic) |
+| Cross-harness triangulation (LiveBench / Vals / BenchLM) | ✅ `src/core/evaluator.ts` JSDoc | ❌ |
+
+**Companion config**: `BenchmarkConfig.companion_tools.guidellm?: { installed?: boolean; sweep_config?: string }` (roadmap-only, defaults to `undefined`, 5min cron does NOT call real GuideLLM endpoint)
+
+**Ecosystem relationship**: llm-benchmark and GuideLLM are **complementary**, not competitive — llm-benchmark evaluates the **model itself**, GuideLLM evaluates the **inference service**. Combined with [vLLM serving bench (`vllm_serving_bench`)](https://vllm.ai/blog/2026-05-11-vllm-tops-artificial-analysis) + [vLLM 06-04 Nemotron 3 Ultra day-0 blog](https://vllm.ai/blog/2026-06-04-nemotron-3-ultra-vllm), this forms a **model-quality × inference-service SLO** dual-toolchain entry point, securing first-day voice in the 2026 reproducible inference-service sweep paradigm.
 ## Output reports
 
 After each evaluation run, three report files are produced:
