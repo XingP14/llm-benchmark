@@ -161,3 +161,17 @@
 1130:##[error]buildx failed with: ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 2
 1159:Failed to save: Unable to reserve cache with key docker.io--tonistiigi--binfmt-latest-linux-x64, another job may be creating this cache.
 ```
+## CI Failure 2026-06-14 10:03:06 — llm-benchmark @ c5d5cb1
+- run: https://github.com/XingP14/llm-benchmark/actions/runs/27485017345
+- failed jobs: Build & Push
+### Error excerpt
+```
+1134:#15 2.586 src/core/evaluator.ts(118,82): error TS2339: Property 'api_base' does not exist on type '{ enabled: boolean; mode?: "all" | "commit_count" | "test_run_count" | "retry_count" | "file_coverage" | "trajectory_score" | undefined; agentic_benchmark?: "swe_bench_pro" | "terminal_bench" | "webdev_arena" | undefined; pass_fail_weight?: number | undefined; process_weight?: number | undefined; anchor_score?: numb...'.
+1135:#15 2.587 src/core/evaluator.ts(118,143): error TS2339: Property 'model_id' does not exist on type '{ enabled: boolean; mode?: "all" | "commit_count" | "test_run_count" | "retry_count" | "file_coverage" | "trajectory_score" | undefined; agentic_benchmark?: "swe_bench_pro" | "terminal_bench" | "webdev_arena" | undefined; pass_fail_weight?: number | undefined; process_weight?: number | undefined; anchor_score?: numb...'.
+1136:#15 ERROR: process "/bin/sh -c npm run build" did not complete successfully: exit code: 2
+1143:2.586 src/core/evaluator.ts(118,82): error TS2339: Property 'api_base' does not exist on type '{ enabled: boolean; mode?: "all" | "commit_count" | "test_run_count" | "retry_count" | "file_coverage" | "trajectory_score" | undefined; agentic_benchmark?: "swe_bench_pro" | "terminal_bench" | "webdev_arena" | undefined; pass_fail_weight?: number | undefined; process_weight?: number | undefined; anchor_score?: numb...'.
+1144:2.587 src/core/evaluator.ts(118,143): error TS2339: Property 'model_id' does not exist on type '{ enabled: boolean; mode?: "all" | "commit_count" | "test_run_count" | "retry_count" | "file_coverage" | "trajectory_score" | undefined; agentic_benchmark?: "swe_bench_pro" | "terminal_bench" | "webdev_arena" | undefined; pass_fail_weight?: number | undefined; process_weight?: number | undefined; anchor_score?: numb...'.
+1154:ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 2
+1155:##[error]buildx failed with: ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 2
+1184:Failed to save: Unable to reserve cache with key docker.io--tonistiigi--binfmt-latest-linux-x64, another job may be creating this cache.
+```
