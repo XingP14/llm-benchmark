@@ -68,7 +68,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-15 00:03): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **3 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 3/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-15 03:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **4 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + **terminal_bench 06-15 03:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 4/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     const webdevArenaFetchTasks: Array<Promise<void>> = [];
     if (this.config._external_benchmarks_roadmap) {
@@ -78,7 +78,8 @@ export class Evaluator {
         enabled.push(`webdev_arena(api_base=${ext.webdev_arena.api_base ?? '(unset)'}, model_id=${ext.webdev_arena.model_id ?? '(unset)'})`);
       }
       if (ext.terminal_bench?.enabled) {
-        enabled.push(`terminal_bench(api_base=${ext.terminal_bench.api_base ?? '(unset)'}, model_id=${ext.terminal_bench.model_id ?? '(unset)'})`);
+        const anchor = ext.terminal_bench.anchor_score != null ? `, anchor=${ext.terminal_bench.anchor_score}` : '';
+        enabled.push(`terminal_bench(api_base=${ext.terminal_bench.api_base ?? '(unset)'}, model_id=${ext.terminal_bench.model_id ?? '(unset)'}${anchor})`);
       }
       if (ext.aa_omniscience?.enabled) {
         const anchor = ext.aa_omniscience.anchor_score != null ? `, anchor=${ext.aa_omniscience.anchor_score}` : '';
@@ -122,7 +123,7 @@ export class Evaluator {
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
       // 见 README 「路线图 / Roadmap (v0.5.0 candidates)」表 Mythos-class 模型接入 段
       if (enabled.length > 0) {
-        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience 已升级为 real fetch, 其余 5 项 stub 待后续 cron 轮次累进)`);
+        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench 已升级为 real fetch, 其余 4 项 stub 待后续 cron 轮次累进)`);
       }
     }
 
@@ -196,6 +197,29 @@ export class Evaluator {
           const score = await this.fetchAAOmniscienceScore(apiBase, result.model, timeoutMs, anchorScore);
           result.scores.push(score);
           console.log(`  [${result.modelName}] aa_omniscience score: ${score.score} (${score.detail ?? 'no detail'})`);
+        })
+      );
+    }
+
+    // v0.5.0 dispatch: terminal_bench real fetch (06-15 03:03 cron, console.info stub → POST https://llm-benchmark.local/api/v1/terminal_bench/v2)
+    // - 仅当 ext.terminal_bench.enabled && (model_id 匹配或未配 model_id 走全部 model)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 console.warn + 注入 detail
+    // - 注入: EvaluationResult.scores[] 追加 1 个 terminal_bench QuestionScore (questionId=`terminal_bench_${model.name}`, category=`terminal_bench`, dimension=`coding` 走 v0.4.0 默认, score = task_pass_rate * 70 + (1 - avg_duration_s/3600) * 30 归一到 0-100)
+    // - 注: Terminal-Bench 2.0 (tbench.ai, 2026-06 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 tbench.ai 真实 API
+    if (this.config._external_benchmarks_roadmap?.terminal_bench?.enabled) {
+      const tb = this.config._external_benchmarks_roadmap.terminal_bench;
+      const apiBase = tb.api_base ?? 'https://llm-benchmark.local/api/v1/terminal_bench/v2';
+      const timeoutMs = tb.timeout_ms ?? 30000;
+      const anchorScore = tb.anchor_score;
+      await Promise.all(
+        results.map(async (result) => {
+          // model_id 过滤: 配了 tb.model_id 只评那个; 未配走全部
+          if (tb.model_id && result.model.model !== tb.model_id && result.modelName !== tb.model_id) {
+            return;
+          }
+          const score = await this.fetchTerminalBenchScore(apiBase, result.model, timeoutMs, anchorScore);
+          result.scores.push(score);
+          console.log(`  [${result.modelName}] terminal_bench score: ${score.score} (${score.detail ?? 'no detail'})`);
         })
       );
     }
@@ -458,6 +482,92 @@ export class Evaluator {
         detail: isTimeout
           ? `aa_omniscience timeout after ${timeoutMs}ms`
           : `aa_omniscience fetch error: ${msg.slice(0, 200)}`,
+      };
+    }
+  }
+
+  /**
+   * v0.5.0 dispatch: terminal_bench 真实 fetch (06-15 03:03 cron, 沿 06-14 03:23 webdev_arena 模式)
+   * POST {api_base} body={api_base, model_id, timeout_ms}
+   * 解析 {task_pass_rate: number (0-1), avg_duration_s: number (秒), trajectory_id?: string, error?: string}
+   * 三段 try/catch: timeout / 4xx / 5xx
+   * 返回 QuestionScore: dimension=`coding` (v0.4.0 默认, terminal_bench 属 coding 维度)
+   * score = task_pass_rate * 70 + (1 - min(avg_duration_s, 3600) / 3600) * 30 (0-100 归一; 速度惩罚: 1h 满 cap)
+   * Terminal-Bench 2.0 (tbench.ai, 2026-06) 无 public hosted API, 默认端点为本仓库 stub, 部署者可接自托管适配层
+   */
+  private async fetchTerminalBenchScore(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    anchorScore?: number
+  ): Promise<QuestionScore> {
+    const questionId = `terminal_bench_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      timeout_ms: timeoutMs,
+    };
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'terminal_bench',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `terminal_bench HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+        };
+      }
+      const data = (await resp.json()) as { task_pass_rate?: number; avg_duration_s?: number; trajectory_id?: string; error?: string };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'terminal_bench',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `terminal_bench API error: ${data.error}`,
+        };
+      }
+      const passRate = typeof data.task_pass_rate === 'number' ? data.task_pass_rate : 0;
+      const durSec = typeof data.avg_duration_s === 'number' ? Math.min(data.avg_duration_s, 3600) : 3600;
+      // 0-100 归一: pass_rate 0-1 → 0-70, 速度 1 - dur/3600 → 0-30 (1h 满 cap, 越快分越高)
+      const normalized = Math.max(0, Math.min(100, passRate * 70 + (1 - durSec / 3600) * 30));
+      const trajPart = data.trajectory_id ? `, trajectory_id=${data.trajectory_id}` : '';
+      const detail = `terminal_bench pass_rate=${(passRate * 100).toFixed(1)}%, avg_duration=${durSec.toFixed(0)}s, score=${normalized.toFixed(1)}${trajPart}`;
+      if (anchorScore != null && Math.abs(normalized - anchorScore) > 5) {
+        console.warn(`  [terminal_bench] anchor mismatch: model=${model.name} score=${normalized.toFixed(1)} anchor=${anchorScore} (diff > 5)`);
+      }
+      return {
+        questionId,
+        category: 'terminal_bench',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'coding',
+        modelOutput: JSON.stringify(data).slice(0, 500),
+        detail,
+      };
+    } catch (err) {
+      const msg = (err as Error).message || String(err);
+      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      return {
+        questionId,
+        category: 'terminal_bench',
+        score: 0,
+        dimension: 'coding',
+        modelOutput: '',
+        detail: isTimeout
+          ? `terminal_bench timeout after ${timeoutMs}ms`
+          : `terminal_bench fetch error: ${msg.slice(0, 200)}`,
       };
     }
   }

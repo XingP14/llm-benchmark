@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-15 01:23): type 段 ✅ 全 18 项 (15→18 新增 healthbench/medqa/rcq_clinical 3 医学 leaderboard 锚定, 2026-06-12 Nature Medicine s41591-026-04431-5 通用 LLM > 专科 AI 证据) / dispatch stub ✅ 8 项 / **3 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + **aa_omniscience 06-15 00:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 3/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-15 03:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **4 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + **terminal_bench 06-15 03:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 4/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 (2026-06 webdevarena.com 24h 窗口期 + Anthropic 「2026 Agent 元年」双信号锚定)
@@ -194,11 +194,18 @@ export interface ExternalBenchmarkRoadmap {
     /** 注入的锚定分数 (首条数据, 用作 sanity check) */
     anchor_score?: number;
   };
-  /** terminal-bench 2.0: agentic coding */
+  /** terminal-bench 2.0: agentic coding (2026-06 tbench.ai 2.0 发布, 100+ 终端任务 / 长程 shell agent 评测, Frontier coding 主战场)
+   * — 06-15 03:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/terminal_bench/v2`)
+   * — Response: { task_pass_rate: number; avg_duration_s: number; trajectory_id?: string; error?: string }
+   * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   terminal_bench?: {
     enabled: boolean;
     api_base?: string;
     model_id?: string;
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (首条数据, 用作 sanity check) */
+    anchor_score?: number;
   };
   /** AA Omniscience: 知识 + 幻觉评测 (Artificial Analysis 2026-05-25 发布, 200 题目长上下文知识检索 + 幻觉率)
    * — 06-15 00:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/aa_omniscience/v1`)
