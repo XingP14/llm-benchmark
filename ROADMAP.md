@@ -1,5 +1,38 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 03:03 轮 (2026-06-15) — llm-benchmark (1h 规则跳轮命中, 上一轮 llm-benchmark 01:43)
+
+**轮转依据**: 上一轮 llm-benchmark 01:43 picked (`9c34d55` healthbench/medqa/rcq_clinical 3 医学 leaderboard 锚定), 距今 1h20m > 1h UNLOCKED; woclaw 02:10 picked (`9341b65` Varonis Pinchy 7 SKILL.md sed 完成), 距今 53min < 1h hard rule 仍 LOCK (UNLOCK 03:10) → L→W 序列本应 woclaw, woclaw 锁, 命中 llm-benchmark。两项目 git status 均 clean (woclaw 9341b65 / llm-benchmark 9c34d55)。
+
+**Hub /health** (vm153:8083): 200 OK, uptime 1946367s ≈ 22.5 days (与 02:43 轮 +20min, uptime 增长相符), agents 0 / topics 0 持续。
+
+**挑选 5min 项**: **`src/core/evaluator.ts` + `src/types/index.ts` + README × 2 把 terminal_bench dispatch 分支从 console.info stub 升级为真实 `fetch()` (沿 06-14 03:23 webdev_arena + 22:23 cyberseceval3 + 06-15 00:03 aa_omniscience real fetch 模式; v0.5.0 dispatch PR 4/8 真实化)** — 候选池内 23:23 v0.5.0 dispatch PR 真完整剩 5 stub (terminal_bench / benchlm_agentic / swe_bench_pro / long_context_cluster / process_aware_scoring), 选 terminal_bench 优先 — Terminal-Bench 2.0 (tbench.ai 2026-06 发布) type 段最简 (3 字段: enabled / api_base / model_id), 沿 webdev_arena 模式 5min 内最高效推进: 1 file `src/types/index.ts` `terminal_bench` 段加 `timeout_ms?: number` + `anchor_score?: number` 2 字段 + JSDoc doc comment 补「POST + Response + Timeout/4xx/5xx 三段 try/catch」三信号 + 顶部 JSDoc 进度行更新 (3/8 → 4/8) + 1 file `src/core/evaluator.ts` 4 处 edit (PR 进度行 + enabled listing 加 anchor + console.info 骨架消息 + 新增 dispatch 分支 + 新增 fetchTerminalBenchScore 92 行) + 2 files `README.md` + `README.en.md` v0.5.0 PR 进度行更新 (3 项 → 4 项 real fetch, 3/8 → 4/8 真实化, 补 2026-06-15 03:03 cron 标注); 不动 v0.4.0 内置 5 维度 / `routes/evaluations.ts` POST 处理器 / 其余 4 项 dispatch stub; tsc: 0 错 (4 files / +124 / -7); 价值: 把 v0.5.0 dispatch PR 从「5 项 stub + 3 项 real fetch」推进为「4 项 stub + 4 项 real fetch」, 真实可用性从 37.5% 提升到 50% (4/8 真实化), 抢 Terminal-Bench 2.0 agentic coding leaderboard 话语权 (tbench.ai 2026-06 已发布, frontier coding 主战场, Claude Fable 5 / GPT-5.5 / Mythos 5 同基准对比), 部署者可接自托管适配层后即调真实 Terminal-Bench 2.0 API。
+
+**修复**:
+- `src/types/index.ts` line 181 JSDoc 进度行: 3 项 → 4 项 real fetch (新增 `terminal_bench 06-15 03:03 cron`, `3/8 真实化` → `4/8 真实化`)
+- `src/types/index.ts` line 198-209 `terminal_bench` 段: 加 `timeout_ms?: number` + `anchor_score?: number` 2 字段 + doc comment 补「POST + Response + Timeout/4xx/5xx 三段 try/catch」三信号 (沿 aa_omniscience 模式)
+- `src/core/evaluator.ts` line 71 JSDoc 进度行: 同 types 同步更新 (3/8 → 4/8)
+- `src/core/evaluator.ts` line 80-83 enabled listing: terminal_bench 行加 `anchor` 字段输出 (沿 swe_bench_pro / long_context_cluster / aa_omniscience 模式)
+- `src/core/evaluator.ts` line 125 console.info 骨架消息: 5 项 → 4 项 stub, 加 terminal_bench 已升级
+- `src/core/evaluator.ts` line 200-222 新增 terminal_bench dispatch 分支: run() 后置, Promise.all 包裹, model_id 过滤 (配 tb.model_id 只评那个, 未配走全部), 调 fetchTerminalBenchScore 注入 result.scores.push + console.log
+- `src/core/evaluator.ts` line 466-560 新增 `fetchTerminalBenchScore()` private async 方法 (沿 fetchAAOmniscienceScore 模式, 92 行): AbortController + setTimeout 控制 timeout_ms 默认 30000; POST body = {api_base, model_id, timeout_ms}; Response 解析 {task_pass_rate 0-1, avg_duration_s 秒, trajectory_id?, error?}; 0-100 归一 `pass_rate*70 + (1 - min(dur,3600)/3600)*30` (1h 满 cap 速度惩罚, 越快分越高); anchor_score 校验 if mismatch > 5 触发 console.warn; QuestionScore dimension=`coding` (Terminal-Bench 2.0 属 agentic coding 长程 shell 任务)
+- `README.md` line 401: v0.5.0 PR 进度行加 `terminal_bench` real fetch 标注 + `4/8 真实化` + `2026-06-15 03:03 cron`
+- `README.en.md` line 401: 同英文翻译同步
+- 不动: v0.4.0 内置 5 维度 (dialogue/coding/function_calling/long_context/multi_turn) / `routes/evaluations.ts` POST 处理器 / 4 项 dispatch stub (benchlm_agentic / swe_bench_pro / long_context_cluster / process_aware_scoring) / 其余 type 段 / npm test / npm lint / CI
+- 验证: `npx tsc --noEmit -p tsconfig.json` exit=0 (0 预存错, 0 新增错)
+
+**commit + push**:
+- 1 commit: `ff1bcd9` `feat(dispatch): terminal_bench real fetch (POST + timeout/4xx/5xx try/catch + coding dimension + 1h speed penalty, v0.5.0 4/8 真实化)` — 4 files / +124 / -7
+- push master 成功: `9c34d55..ff1bcd9`
+
+**耗时**: 候选评估 30s (heartbeat-state.json 预计本轮命中 llm-benchmark, 候选池 23:23 v0.5.0 dispatch PR 真完整剩 5 stub, 选 terminal_bench 优先 — type 段最简 3 字段, 沿 06-15 00:03 aa_omniscience real fetch 模式最高效) + ROADMAP 候选池核对 30s + types/index.ts edit 30s + evaluator.ts 4 处 edit (PR 进度行 + enabled listing + console.info 骨架消息 + dispatch 分支 + fetchTerminalBenchScore 92 行) 2.5min + README.md + README.en.md 各 1 edit 30s + tsc 30s + commit/push 30s ≈ 4.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 3.1/3.2/3.3 + 0.4.1 patch 重发 + 进程守护 (systemd/PM2) 不变
+- 候选池剩: 23:23 v0.5.0 dispatch PR 真完整 (剩 **4** 项 stub → real fetch, 估 20-32min 跨 4-7 轮 cron 累进, 剩 benchlm_agentic / swe_bench_pro / long_context_cluster / process_aware_scoring) / 04:03 hub README Mythos-tier 表 (4-03 立项待推)
+- v0.5.0 type 段 18 ✅ + dispatch 4 stub + **4 项 real fetch** (webdev_arena + cyberseceval3 + aa_omniscience + **terminal_bench**) — 离 v0.5.0 完整 PR 还差 4 项 stub → real fetch, 估 4-7 轮 cron 累进
+- 下次轮转 → **woclaw** (L→W 序列), woclaw 03:10 应 UNLOCK, 候选池有 5min 历史项 (mcp-bridge Skill Creator 2.0 6 包剩 4 包: woclaw-hooks / woclaw-vscode / codex-woclaw / opencode-woclaw-plugin 各 5min 估, 跨 4 轮 cron); 若 woclaw 候选池空, 双空 → 06-09 调研 + 立项规则
+
 ## 🩺 00:03 轮 (2026-06-15) — llm-benchmark (W→L 轮转命中, 上一轮 woclaw 23:26)
 
 **轮转依据**: 上轮 picked=woclaw (23:26 commit `24dbbce` 立案 mcp-bridge SKILL.md), 距今 37min < 1h hard rule 仍 cooldown (UNLOCK 00:26); llm-benchmark 22:47 commit `2fb572a` 距今 1h16m > 1h UNLOCKED → W→L 序列本应 woclaw, woclaw 锁, 命中 llm-benchmark。两项目 git status 均 clean (woclaw 24dbbce / llm-benchmark 2fb572a)。
