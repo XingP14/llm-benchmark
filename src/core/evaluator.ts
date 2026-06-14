@@ -68,7 +68,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-15 03:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **4 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + **terminal_bench 06-15 03:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 4/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-15 04:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **5 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + **benchlm_agentic 06-15 04:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 5/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     const webdevArenaFetchTasks: Array<Promise<void>> = [];
     if (this.config._external_benchmarks_roadmap) {
@@ -88,7 +88,8 @@ export class Evaluator {
       // v0.5.0 dispatch stub: BenchLM.ai agentic eval (2026-06-07 发布, 248 模型 × 225 基准, agentic 主战场)
       if (ext.benchlm_agentic?.enabled) {
         const native = ext.benchlm_agentic.native_evals ? ' + Native Evals' : '';
-        enabled.push(`benchlm_agentic(api_base=${ext.benchlm_agentic.api_base ?? '(unset)'}, model_id=${ext.benchlm_agentic.model_id ?? '(unset)'}${native})`);
+        const anchor = ext.benchlm_agentic.anchor_score != null ? `, anchor=${ext.benchlm_agentic.anchor_score}` : '';
+        enabled.push(`benchlm_agentic(api_base=${ext.benchlm_agentic.api_base ?? '(unset)'}, model_id=${ext.benchlm_agentic.model_id ?? '(unset)'}${anchor}${native})`);
       }
       // v0.5.0 dispatch stub: Meta CyberSecEval 3 (2025-12 发布, 8 项风险跨 offensive security 3 大类, Claude Mythos 5 主战场)
       if (ext.cyberseceval3?.enabled) {
@@ -123,7 +124,7 @@ export class Evaluator {
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
       // 见 README 「路线图 / Roadmap (v0.5.0 candidates)」表 Mythos-class 模型接入 段
       if (enabled.length > 0) {
-        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench 已升级为 real fetch, 其余 4 项 stub 待后续 cron 轮次累进)`);
+        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic 已升级为 real fetch, 其余 3 项 stub 待后续 cron 轮次累进)`);
       }
     }
 
@@ -220,6 +221,30 @@ export class Evaluator {
           const score = await this.fetchTerminalBenchScore(apiBase, result.model, timeoutMs, anchorScore);
           result.scores.push(score);
           console.log(`  [${result.modelName}] terminal_bench score: ${score.score} (${score.detail ?? 'no detail'})`);
+        })
+      );
+    }
+
+    // v0.5.0 dispatch: benchlm_agentic real fetch (06-15 04:03 cron, console.info stub → POST https://llm-benchmark.local/api/v1/benchlm_agentic/v1)
+    // - 仅当 ext.benchlm_agentic.enabled && (model_id 匹配或未配 model_id 走全部 model)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 console.warn + 注入 detail
+    // - 注入: EvaluationResult.scores[] 追加 1 个 benchlm_agentic QuestionScore (questionId=`benchlm_agentic_${model.name}`, category=`benchlm_agentic`, dimension=`coding` 走 v0.4.0 默认, score = agentic_pass_rate * 50 + design2code_score * 0.25 + vision2web_score * 0.25 归一到 0-100; native_evals 启用时附加 +5 奖励)
+    // - 注: BenchLM.ai (benchlm.ai, 2026-06-07 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 BenchLM.ai 真实 API
+    if (this.config._external_benchmarks_roadmap?.benchlm_agentic?.enabled) {
+      const bla = this.config._external_benchmarks_roadmap.benchlm_agentic;
+      const apiBase = bla.api_base ?? 'https://llm-benchmark.local/api/v1/benchlm_agentic/v1';
+      const timeoutMs = bla.timeout_ms ?? 30000;
+      const anchorScore = bla.anchor_score;
+      const nativeEvals = bla.native_evals ?? false;
+      await Promise.all(
+        results.map(async (result) => {
+          // model_id 过滤: 配了 bla.model_id 只评那个; 未配走全部
+          if (bla.model_id && result.model.model !== bla.model_id && result.modelName !== bla.model_id) {
+            return;
+          }
+          const score = await this.fetchBenchlmAgenticScore(apiBase, result.model, timeoutMs, anchorScore, nativeEvals);
+          result.scores.push(score);
+          console.log(`  [${result.modelName}] benchlm_agentic score: ${score.score} (${score.detail ?? 'no detail'})`);
         })
       );
     }
@@ -568,6 +593,102 @@ export class Evaluator {
         detail: isTimeout
           ? `terminal_bench timeout after ${timeoutMs}ms`
           : `terminal_bench fetch error: ${msg.slice(0, 200)}`,
+      };
+    }
+  }
+
+  /**
+   * v0.5.0 dispatch: benchlm_agentic 真实 fetch (06-15 04:03 cron, 沿 06-15 03:03 terminal_bench 模式)
+   * POST {api_base} body={api_base, model_id, timeout_ms, native_evals}
+   * 解析 {agentic_pass_rate: number (0-1), design2code_score: number (0-100), vision2web_score: number (0-100), native_evals_score?: number (0-100), eval_id?: string, error?: string}
+   * 三段 try/catch: timeout / 4xx / 5xx
+   * 返回 QuestionScore: dimension=`coding` (v0.4.0 默认, benchlm_agentic 属 coding 维度)
+   * score = agentic_pass_rate * 50 + design2code_score * 0.25 + vision2web_score * 0.25 (0-100 归一; native_evals 启用时附加 +5 奖励)
+   * BenchLM.ai (benchlm.ai, 2026-06-07, 248 models × 225 benchmarks, agentic 主战场) 无 public hosted API, 默认端点为本仓库 stub, 部署者可接自托管适配层
+   */
+  private async fetchBenchlmAgenticScore(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    anchorScore?: number,
+    nativeEvals: boolean = false
+  ): Promise<QuestionScore> {
+    const questionId = `benchlm_agentic_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      timeout_ms: timeoutMs,
+      native_evals: nativeEvals,
+    };
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'benchlm_agentic',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `benchlm_agentic HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+        };
+      }
+      const data = (await resp.json()) as { agentic_pass_rate?: number; design2code_score?: number; vision2web_score?: number; native_evals_score?: number; eval_id?: string; error?: string };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'benchlm_agentic',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `benchlm_agentic API error: ${data.error}`,
+        };
+      }
+      const passRate = typeof data.agentic_pass_rate === 'number' ? data.agentic_pass_rate : 0;
+      const d2c = typeof data.design2code_score === 'number' ? data.design2code_score : 0;
+      const v2w = typeof data.vision2web_score === 'number' ? data.vision2web_score : 0;
+      // 0-100 归一: pass_rate 0-1 → 0-50, d2c 0-100 → 0-25, v2w 0-100 → 0-25, 加权和
+      let normalized = Math.max(0, Math.min(100, passRate * 50 + d2c * 0.25 + v2w * 0.25));
+      const nativePart = nativeEvals && typeof data.native_evals_score === 'number'
+        ? `, native_evals=${data.native_evals_score.toFixed(1)} (启用+5)`
+        : '';
+      if (nativeEvals && typeof data.native_evals_score === 'number') {
+        normalized = Math.min(100, normalized + 5);
+      }
+      const evalIdPart = data.eval_id ? `, eval_id=${data.eval_id}` : '';
+      let detail = `benchlm_agentic pass_rate=${(passRate * 100).toFixed(1)}%, d2c=${d2c.toFixed(1)}, v2w=${v2w.toFixed(1)}, score=${normalized.toFixed(1)}${nativePart}${evalIdPart}`;
+      if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
+        console.warn(`  [benchlm_agentic] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return {
+        questionId,
+        category: 'benchlm_agentic',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'coding',
+        modelOutput: JSON.stringify(data).slice(0, 500),
+        detail,
+      };
+    } catch (err) {
+      const msg = (err as Error).message || String(err);
+      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      return {
+        questionId,
+        category: 'benchlm_agentic',
+        score: 0,
+        dimension: 'coding',
+        modelOutput: '',
+        detail: isTimeout
+          ? `benchlm_agentic timeout after ${timeoutMs}ms`
+          : `benchlm_agentic fetch error: ${msg.slice(0, 200)}`,
       };
     }
   }

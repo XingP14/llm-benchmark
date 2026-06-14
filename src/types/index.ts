@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-15 03:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **4 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + **terminal_bench 06-15 03:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 4/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-15 04:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **5 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + **benchlm_agentic 06-15 04:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 5/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 (2026-06 webdevarena.com 24h 窗口期 + Anthropic 「2026 Agent 元年」双信号锚定)
@@ -220,11 +220,18 @@ export interface ExternalBenchmarkRoadmap {
     /** 注入的锚定分数 (首条数据, 用作 sanity check) */
     anchor_score?: number;
   };
-  /** BenchLM.ai: agentic eval 24 项 (Design2Code / Vision2Web / Native Evals) — 2026-06-07 发布, 248 模型 × 225 基准 */
+  /** BenchLM.ai: agentic eval 24 项 (Design2Code / Vision2Web / Native Evals) — 2026-06-07 发布, 248 模型 × 225 基准
+   * — 06-15 04:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/benchlm_agentic/v1`)
+   * — Response: { agentic_pass_rate: number; design2code_score: number; vision2web_score: number; native_evals_score?: number; eval_id?: string; error?: string }
+   * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   benchlm_agentic?: {
     enabled: boolean;
     api_base?: string;
     model_id?: string;
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (首条数据, 用作 sanity check) */
+    anchor_score?: number;
     /** 是否启用 Native Evals 子集 (默认 false) */
     native_evals?: boolean;
   };
