@@ -68,7 +68,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-15 04:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **5 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + **benchlm_agentic 06-15 04:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 5/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-15 05:23): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **6 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + **swe_bench_pro 06-15 05:23 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 6/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     const webdevArenaFetchTasks: Array<Promise<void>> = [];
     if (this.config._external_benchmarks_roadmap) {
@@ -96,12 +96,13 @@ export class Evaluator {
         const cats = ext.cyberseceval3.risk_categories?.join('|') ?? 'all-8';
         enabled.push(`cyberseceval3(api_base=${ext.cyberseceval3.api_base ?? '(unset)'}, model_id=${ext.cyberseceval3.model_id ?? '(unset)'}, risk_categories=${cats})`);
       }
-      // v0.5.0 dispatch stub: SWE-bench Pro (Scale AI, 2026-06-02, Mythos-tier 主标杆, 80.3% Fable-5)
+      // v0.5.0 dispatch stub → real fetch (06-15 05:23 cron): SWE-bench Pro (Scale AI, 2026-06-02, Mythos-tier 主标杆, 80.3% Fable-5)
       if (ext.swe_bench_pro?.enabled) {
         const subset = ext.swe_bench_pro.subset ?? 'verified';
         const agentic = ext.swe_bench_pro.agentic_mode === false ? ' (non-agentic)' : '';
+        const timeout = ext.swe_bench_pro.timeout_ms != null ? `, timeout=${ext.swe_bench_pro.timeout_ms}ms` : '';
         const anchor = ext.swe_bench_pro.anchor_score != null ? `, anchor=${ext.swe_bench_pro.anchor_score}` : '';
-        enabled.push(`swe_bench_pro(api_base=${ext.swe_bench_pro.api_base ?? '(unset)'}, model_id=${ext.swe_bench_pro.model_id ?? '(unset)'}, subset=${subset}${agentic}${anchor})`);
+        enabled.push(`swe_bench_pro(api_base=${ext.swe_bench_pro.api_base ?? '(unset)'}, model_id=${ext.swe_bench_pro.model_id ?? '(unset)'}, subset=${subset}${agentic}${timeout}${anchor})`);
       }
       // v0.5.0 dispatch stub: long_context_cluster (62 tasks, 4 基准 LongBench v2 + Babilong + InfiniteBench + Phonebook; harness 0.4.0 PR #3256 同源)
       if (ext.long_context_cluster?.enabled) {
@@ -124,7 +125,7 @@ export class Evaluator {
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
       // 见 README 「路线图 / Roadmap (v0.5.0 candidates)」表 Mythos-class 模型接入 段
       if (enabled.length > 0) {
-        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic 已升级为 real fetch, 其余 3 项 stub 待后续 cron 轮次累进)`);
+        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic + swe_bench_pro 已升级为 real fetch, 其余 2 项 stub 待后续 cron 轮次累进)`);
       }
     }
 
@@ -245,6 +246,31 @@ export class Evaluator {
           const score = await this.fetchBenchlmAgenticScore(apiBase, result.model, timeoutMs, anchorScore, nativeEvals);
           result.scores.push(score);
           console.log(`  [${result.modelName}] benchlm_agentic score: ${score.score} (${score.detail ?? 'no detail'})`);
+        })
+      );
+    }
+
+    // v0.5.0 dispatch: swe_bench_pro real fetch (06-15 05:23 cron, console.info stub → POST https://llm-benchmark.local/api/v1/swe_bench_pro/v1)
+    // - 仅当 ext.swe_bench_pro.enabled && (model_id 匹配或未配 model_id 走全部 model)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 console.warn + 注入 detail
+    // - 注入: EvaluationResult.scores[] 追加 1 个 swe_bench_pro QuestionScore (questionId=`swe_bench_pro_${model.name}`, category=`swe_bench_pro`, dimension=`coding` 走 v0.4.0 默认, score = pass_rate * 0.7 + patch_score * 0.2 + files_modified_normalized * 0.1 归一到 0-100; agentic_mode 关闭时纯 pass_rate)
+    // - 注: SWE-bench Pro (Scale AI, 2026-06-02, claude-fable-5 首条数据 80.3%) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Scale AI 真实 API
+    if (this.config._external_benchmarks_roadmap?.swe_bench_pro?.enabled) {
+      const sbp = this.config._external_benchmarks_roadmap.swe_bench_pro;
+      const apiBase = sbp.api_base ?? 'https://llm-benchmark.local/api/v1/swe_bench_pro/v1';
+      const timeoutMs = sbp.timeout_ms ?? 30000;
+      const anchorScore = sbp.anchor_score;
+      const subset = sbp.subset ?? 'verified';
+      const agenticMode = sbp.agentic_mode !== false;
+      await Promise.all(
+        results.map(async (result) => {
+          // model_id 过滤: 配了 sbp.model_id 只评那个; 未配走全部
+          if (sbp.model_id && result.model.model !== sbp.model_id && result.modelName !== sbp.model_id) {
+            return;
+          }
+          const score = await this.fetchSweBenchProScore(apiBase, result.model, timeoutMs, anchorScore, subset, agenticMode);
+          result.scores.push(score);
+          console.log(`  [${result.modelName}] swe_bench_pro score: ${score.score} (${score.detail ?? 'no detail'})`);
         })
       );
     }
@@ -689,6 +715,106 @@ export class Evaluator {
         detail: isTimeout
           ? `benchlm_agentic timeout after ${timeoutMs}ms`
           : `benchlm_agentic fetch error: ${msg.slice(0, 200)}`,
+      };
+    }
+  }
+
+  /**
+   * v0.5.0 dispatch: swe_bench_pro 真实 fetch (06-15 05:23 cron, 沿 06-15 04:03 benchlm_agentic 模式)
+   * POST {api_base} body={api_base, model_id, timeout_ms, subset, agentic_mode}
+   * 解析 {pass_rate: number (0-1), patch_score: number (0-100), files_modified: number, eval_id?: string, error?: string}
+   * 三段 try/catch: timeout / 4xx / 5xx
+   * 返回 QuestionScore: dimension=`coding` (v0.4.0 默认, swe_bench_pro 属 coding 维度)
+   * score = pass_rate * 70 + patch_score * 0.2 + min(files_modified/50, 1) * 10 (0-100 归一; agentic_mode 关闭时纯 pass_rate * 100)
+   * SWE-bench Pro (Scale AI, 2026-06-02, claude-fable-5 首条数据 80.3%, Mythos-tier 主标杆) 无 public hosted API, 默认端点为本仓库 stub, 部署者可接自托管适配层
+   */
+  private async fetchSweBenchProScore(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    anchorScore?: number,
+    subset: string = 'verified',
+    agenticMode: boolean = true
+  ): Promise<QuestionScore> {
+    const questionId = `swe_bench_pro_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      timeout_ms: timeoutMs,
+      subset,
+      agentic_mode: agenticMode,
+    };
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'swe_bench_pro',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `swe_bench_pro HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+        };
+      }
+      const data = (await resp.json()) as { pass_rate?: number; patch_score?: number; files_modified?: number; eval_id?: string; error?: string };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'swe_bench_pro',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `swe_bench_pro API error: ${data.error}`,
+        };
+      }
+      const passRate = typeof data.pass_rate === 'number' ? data.pass_rate : 0;
+      const patchScore = typeof data.patch_score === 'number' ? data.patch_score : 0;
+      const filesMod = typeof data.files_modified === 'number' ? Math.min(data.files_modified, 50) : 0;
+      // 0-100 归一:
+      //   agentic_mode 关闭时: 纯 pass_rate * 100
+      //   agentic_mode 开启时: pass_rate * 70 + patch_score * 0.2 + (filesMod/50) * 10 (3 维复合)
+      let normalized: number;
+      if (!agenticMode) {
+        normalized = Math.max(0, Math.min(100, passRate * 100));
+      } else {
+        normalized = Math.max(0, Math.min(100, passRate * 70 + patchScore * 0.2 + filesMod * 0.2));
+      }
+      const evalIdPart = data.eval_id ? `, eval_id=${data.eval_id}` : '';
+      const modePart = agenticMode ? '' : ' (non-agentic)';
+      let detail = `swe_bench_pro[${subset}${modePart}] pass_rate=${(passRate * 100).toFixed(1)}%, patch=${patchScore.toFixed(1)}, files_modified=${filesMod}, score=${normalized.toFixed(1)}${evalIdPart}`;
+      if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
+        console.warn(`  [swe_bench_pro] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return {
+        questionId,
+        category: 'swe_bench_pro',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'coding',
+        modelOutput: JSON.stringify(data).slice(0, 500),
+        detail,
+      };
+    } catch (err) {
+      const msg = (err as Error).message || String(err);
+      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      return {
+        questionId,
+        category: 'swe_bench_pro',
+        score: 0,
+        dimension: 'coding',
+        modelOutput: '',
+        detail: isTimeout
+          ? `swe_bench_pro timeout after ${timeoutMs}ms`
+          : `swe_bench_pro fetch error: ${msg.slice(0, 200)}`,
       };
     }
   }
