@@ -342,6 +342,10 @@ export interface ExternalBenchmarkRoadmap {
    * — 借力 Princeton SWE-Bench Pro 0 从零开发, 评测方法论话语权已从「结果分数」转「过程+结果」双轨 */
   process_aware_scoring?: {
     enabled: boolean;
+    /** API endpoint (沿 webdev_arena / cyberseceval3 同模式, 06-14 22:43 cron 补 2 字段对齐 v0.5.0 dispatch 模式) */
+    api_base?: string;
+    /** 模型 id (沿 webdev_arena / cyberseceval3 同模式, 06-14 22:43 cron 补 2 字段对齐 v0.5.0 dispatch 模式) */
+    model_id?: string;
     /** 评测模式: 'commit_count' (commit 数量) | 'test_run_count' (测试运行次数) | 'retry_count' (重试次数) | 'file_coverage' (文件覆盖率) | 'trajectory_score' (agentic 轨迹综合分) | 'all' (5 维度, default) */
     mode?: 'commit_count' | 'test_run_count' | 'retry_count' | 'file_coverage' | 'trajectory_score' | 'all';
     /** 关联的 agentic 基准: 'swe_bench_pro' (Princeton 默认) | 'terminal_bench' (agentic coding) | 'webdev_arena' (全栈 web dev) */

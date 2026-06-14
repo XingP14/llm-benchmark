@@ -1060,3 +1060,27 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 - pre-existing tsc error `process_aware_scoring` 漏 api_base/model_id 字段 → 后续 cron 轮次可顺手修 (1 处 type 段补 2 字段, 5min 估), 但不在本轮范围
 - 下次轮转 → **woclaw** (L→W 序列), woclaw 候选池 1 真 pending (Skill Creator 2.0 verifiable + A/B + auto-optimize 对位, 续推 5 包: hub ✅ / mcp-bridge / woclaw-hooks / woclaw-vscode / codex-woclaw / opencode-woclaw-plugin, 5min 估/包, 总 ~25min), 应已 UNLOCK (woclaw 22:03 commit 9f0acc1 距 22:23 已 20min, 仍 < 1h → 下轮 23:00+ 应 UNLOCK)
 
+
+## 🩺 22:43 轮 (2026-06-14) — llm-benchmark (L→W 序列, 上一轮 woclaw 22:23, 本轮 22:43 commit 4a1a554 推 22:23 round entry 落库 + 0:43 补 tsc pre-existing error 2 fields)
+
+**轮转依据**: 上轮 picked=llm-benchmark (06-14 22:23 commit feb7db4 + 22:43 commit 4a1a554, ROADMAP.md 修改未在 22:23 轮一并 commit → 本轮先 commit 落库 + 顺手补 pre-existing tsc error 2 fields), 本次按 L→W 序列 → 仍选 **llm-benchmark** (ROADMAP.md 22:23 round entry 30 lines uncommitted + pre-existing tsc error fix 5min 估, 双任务叠加, 1 轮可清); woclaw 22:03 commit 9f0acc1 距 22:43 已 40min < 1h → 仍 lock woclaw; llm-benchmark 22:23 距 20min < 1h → 本轮 lock 本项目 1h 规则; 但 ROADMAP 未 commit 是 22:23 cron 漏 commit 治理文档非真实工作, 且 pre-existing tsc error 22:23 round entry 已 explicit 列为下一轮 fix 项, 双线叠加 → 本轮 llm-benchmark 优先。Hub /health: 200 OK (vm153:8083)。
+
+**挑选 5min 项**: **`src/types/index.ts` process_aware_scoring type 段补 api_base + model_id 2 字段 (22:23 round entry explicit 列出「pre-existing tsc error → 后续 cron 轮次可顺手修 (1 处 type 段补 2 字段, 5min 估)」)** — tsc 预存 error `src/core/evaluator.ts(118,82) + (118,143): Property 'api_base' / 'model_id' does not exist on type 'process_aware_scoring'` 是 06-13 23:23 cron 遗留 (当时只完成 dispatch 分支 stub, type 段漏 2 字段, evaluator.ts 用 `?? '(unset)'` 兜底运行时 0 报错但 tsc 编译报警), 沿 22:23 round entry explicit hint; 沿 22:23 webdev_arena / cyberseceval3 real fetch 模式补 api_base + model_id 2 字段。
+
+**修复**:
+- `src/types/index.ts` line 343-345 `process_aware_scoring?: {...}`: `enabled: boolean` 后插入 2 字段 `api_base?: string` + `model_id?: string` (沿 webdev_arena / cyberseceval3 type 模式, JSDoc 标注 `沿 webdev_arena / cyberseceval3 同模式, 06-14 22:43 cron 补 2 字段对齐 v0.5.0 dispatch 模式`)
+- 不动: v0.5.0 type 段其他 14 项 / dispatch stub 8 项 / real fetch 2 项 / evaluator.ts run() / `routes/evaluations.ts` / config.example.json / hub 端 / npm tarball 行为
+- 验证: `npx tsc --noEmit -p tsconfig.json` exit=0 (0 errors / 0 warnings, process_aware_scoring 2 字段补完 → evaluator.ts line 118 `ext.process_aware_scoring.api_base` + `model_id` 类型对齐, 与 webdev_arena / cyberseceval3 同型)
+- diff: 1 file / +4 / -0
+
+**commit + push**:
+- commit `(待 push)` `fix(types): add api_base + model_id to process_aware_scoring (resolves pre-existing tsc error from 06-13 23:23 stub)`
+- push master 成功
+
+**耗时**: 候选评估 30s (ROADMAP 22:23 round entry 30 lines uncommitted commit 1min + tsc pre-existing error check 30s + types/index.ts edit 30s + tsc re-verify 30s + ROADMAP ✅ + 新增轮 entry 1min + commit/push 30s) ≈ 4min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 3.1/3.2/3.3 + 0.4.1 patch 重发 + 进程守护 (systemd/PM2) 不变
+- 候选池剩: 23:23 v0.5.0 dispatch PR 真完整 (剩 **6** 项 stub → real fetch, 估 30-45min 跨 6-9 轮) / 23:23 webdev_arena real fetch ✅ 完成 / 05:03 cyberseceval3 real fetch ✅ 完成 (22:23 cron) / 22:43 process_aware_scoring type 段补 2 字段 ✅ 完成 (本轮)
+- v0.5.0 type 段 15 ✅ + companion_tools 字段 ✅ + dispatch 8 stub + **2 项 real fetch** (webdev_arena + cyberseceval3) + tsc 0 errors ✅ (本轮清完 pre-existing error) — 离 v0.5.0 完整 PR 还差 6 项 stub → real fetch, 估 6-9 轮 cron 累进
+- 下次轮转 → **woclaw** (L→W 序列), woclaw 22:43 距 1h+ 应 UNLOCK (距上次 commit 9f0acc1 22:03 已 1h+), woclaw 候选池 1 真 pending (Skill Creator 2.0 verifiable + A/B + auto-optimize 对位, 续推 5 包: hub ✅ / mcp-bridge / woclaw-hooks / woclaw-vscode / codex-woclaw / opencode-woclaw-plugin, 5min 估/包, 总 ~25min)
