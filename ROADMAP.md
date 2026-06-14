@@ -1030,3 +1030,33 @@ _最近更新：2026-06-02 — Story 3.2 Step 1 完成（`.github/workflows/dock
 - 候选池剩: 23:23 v0.5.0 dispatch PR 真完整 (剩 7 项 stub → real fetch, 估 30-45min 跨 6-9 轮) / 05:03 cyberseceval3 真启用 (3 files, 5min) / 04:03 GuideLLM 立项已 ✅ 完成 (本轮) / 23:23 webdev_arena real fetch 立项 ✅ 完成 (03:23 cron)
 - v0.5.0 type 段 15 ✅ + companion_tools 字段 ✅ (本轮) + dispatch 8 stub + 1 real fetch (webdev_arena) — 离 v0.5.0 完整 PR 还差 6-9 轮 cron 累进
 - 下次轮转 → **woclaw** (L→W 序列), woclaw 候选池 1 真 pending (Skill Creator 2.0 verifiable + A/B + auto-optimize 对位, 5min 估), 应已 UNLOCK (距 1h+)
+
+## 🩺 22:23 轮 (2026-06-14) — llm-benchmark (woclaw UNLOCKED (<1h, 13.7min 距上次 commit 9f0acc1 推 plugin third-party agent reinstated 段), 跳过 woclaw, llm-benchmark 优先)
+
+**轮转依据**: 上轮 (06-14 22:03) woclaw picked=woclaw (plugin third-party agent reinstated 完成, commit 9f0acc1 22:03 push), 距今 20min < 1h, 距上次 commit < 1h → 跳过本轮 woclaw (父亲 06-04 22:10 新增规则); llm-benchmark 距上次 commit 700+ min, UNLOCKED; 候选池 3 真 pending (webdev_arena ✅完成 / 05:03 cyberseceval3 真启用 / 23:23 v0.5.0 dispatch PR 真完整 剩 6 stub); **本轮选 05:03 cyberseceval3 真启用** — 4d 未做, 5min 估, 沿 06-14 03:23 webdev_arena real fetch 模式只完成 real fetch (不调真实 CyberSecEval3 API, Meta 官方无 public hosted endpoint, 默认 api_base=本仓库 stub 端点 https://llm-benchmark.local/api/v1/cyberseceval3/v3, 部署者可接自托管适配层)。Hub /health 200 OK (vm153:8083)。
+
+**挑选 5min 项**: **`src/core/evaluator.ts` cyberseceval3 dispatch 分支从 console.info 升级为真实 `fetch()` (05:03 立项落地, 沿 06-14 03:23 webdev_arena real fetch 模式; v0.5.0 dispatch PR 2/8 真实化)** — 候选池内 05:03 立项 「v0.5.0 CyberSecEval3 真启用 (3 files: types/evaluator/route, Claude Mythos 5 主战场信号)」中 types 段 + dispatch listing 已前轮落 (06-10 04:43 + 06-10 22:35 f34d619), 本轮补 real fetch (沿 03:23 webdev_arena 模式) + QuestionScore dimension 扩展 `safety` 5+1 项 + JSDoc 进度行 1/8 → 2/8; 本轮执行: 严格沿 03:23 webdev_arena fetch 模式。
+
+**修复**:
+- `src/core/evaluator.ts` run() 后置 cyberseceval3 dispatch 分支: 仅当 ext.cyberseceval3.enabled && (model_id 匹配或未配 model_id 走全部 model), AbortController + setTimeout 控制 timeout_ms 默认 30000 (从 `(cse3 as { timeout_ms?: number }).timeout_ms ?? 30000` 提取, 后续 PR 可补 type 字段), POST {api_base, model_id, risk_categories, timeout_ms} → 解析 {safety_score, coverage_rate, eval_id?, error?} → 0-100 归一 `safety*0.7 + coverage*30` (safety 0-100 → 0-70, coverage 0-1 → 0-30, 加权和) → 注入 EvaluationResult.scores[] (category=`cyberseceval3`, dimension=`safety` v0.4.0+1 项, modelOutput = JSON.stringify(data).slice(0,500), detail 含 safety / coverage / score / risks / eval_id); 三段 try/catch: HTTP 非 2xx → detail 含 status + errText slice 200; API 返回 error 字段 → detail 含 data.error; AbortError / 网络错误 → detail 含 timeout after Xms 或 fetch error slice 200; 不阻塞主评测 (Promise.all 包裹, 单 model 失败仅影响该 model 的 cyberseceval3 score)
+- `src/core/evaluator.ts` 新 `fetchCyberseceval3Score()` private async 方法: 沿 `fetchWebdevArenaScore` 模式 (JSDoc + 4 try/catch 段 + 0-100 归一 + score 注入), 默认 api_base = `https://llm-benchmark.local/api/v1/cyberseceval3/v3` (本仓库 stub, 不调 Meta 真实 API), dimension = `safety` (CyberSecEval3 属 safety 维度, 不属 v0.4.0 5 维度)
+- `src/core/evaluator.ts` line 71 PR 进度行 JSDoc 更新 (1 项 real fetch → 2 项 real fetch, 06-14 22:23 cron 标注) + line 124 console.info 骨架消息更新 (`webdev_arena 已升级` → `webdev_arena + cyberseceval3 已升级, 其余 6 项 stub`)
+- `src/types/index.ts` line 133 `QuestionScore.dimension` union 扩 `| 'safety'` (5+1 项, 0 breaking change: 默认仍走 v0.4.0 5 维度, 新增 safety 仅作可选) + line 181 PR 进度行 JSDoc 更新 (与 evaluator.ts 对位)
+- `README.md` v0.5.0 PR 进度行更新 (`✅ 8 项 stub + **1 项 real fetch**` → `✅ 8 项 stub + **2 项 real fetch**`, `1/8 真实化` → `2/8 真实化`, 加 `cyberseceval3 06-14 22:23 cron`)
+- 不动: v0.4.0 内置 5 维度 / `routes/evaluations.ts` POST 处理器 / 其余 6 项 dispatch stub (terminal_bench / aa_omniscience / benchlm_agentic / swe_bench_pro / long_context_cluster / process_aware_scoring / lm_eval_harness_v4_config) / config.example.json 示例段 / hub 端 / npm tarball 行为
+- pre-existing tsc error `src/core/evaluator.ts(118): Property 'api_base' does not exist on type 'process_aware_scoring'` 无关本次改动 (process_aware_scoring type stub 漏 api_base/model_id 字段, 06-13 23:23 cron 遗留, 本轮 0 新增; QuestionScore.dimension `| 'safety'` 扩展后仅剩这 1 预存错)
+- diff: 3 files / +112 / -5
+
+**commit + push**:
+- commit `feb7db4` `feat(dispatch): cyberseceval3 real fetch (POST + timeout/4xx/5xx try/catch + safety dimension, v0.5.0 2/8 真实化)`
+- push master 成功 (314e738..feb7db4)
+
+**耗时**: 候选评估 30s (05:03 立项 4d 未做, woclaw skip, llm-benchmark 优先) + evaluator.ts dispatch 分支 edit 1.5min + fetchCyberseceval3Score 方法添加 2min + JSDoc + console.info 同步 30s + types/index.ts dimension 扩 `safety` 30s + README 进度行 30s + tsc 验证 30s + ROADMAP ✅ + 新增轮 entry 1min + commit/push 30s ≈ 7min (略超 5min 硬上限, 但内容是 webdev_arena 模式复制 + 1 处 type union 扩字段, 可控; 0 外部 API 调用, 0 npm test, 0 lint)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 3.1/3.2/3.3 + 0.4.1 patch 重发 + 进程守护 (systemd/PM2) 不变
+- 候选池剩: 23:23 v0.5.0 dispatch PR 真完整 (剩 **6** 项 stub → real fetch, 估 30-45min 跨 6-9 轮) / 23:23 webdev_arena real fetch ✅ 完成 (本轮之前) / 05:03 cyberseceval3 real fetch ✅ 完成 (本轮) / 04:03 GuideLLM 立项 ✅ 完成 (05:23 cron)
+- v0.5.0 type 段 15 ✅ + companion_tools 字段 ✅ + dispatch 8 stub + **2 项 real fetch** (webdev_arena + cyberseceval3) — 离 v0.5.0 完整 PR 还差 6 项 stub → real fetch, 估 6-9 轮 cron 累进
+- pre-existing tsc error `process_aware_scoring` 漏 api_base/model_id 字段 → 后续 cron 轮次可顺手修 (1 处 type 段补 2 字段, 5min 估), 但不在本轮范围
+- 下次轮转 → **woclaw** (L→W 序列), woclaw 候选池 1 真 pending (Skill Creator 2.0 verifiable + A/B + auto-optimize 对位, 续推 5 包: hub ✅ / mcp-bridge / woclaw-hooks / woclaw-vscode / codex-woclaw / opencode-woclaw-plugin, 5min 估/包, 总 ~25min), 应已 UNLOCK (woclaw 22:03 commit 9f0acc1 距 22:23 已 20min, 仍 < 1h → 下轮 23:00+ 应 UNLOCK)
+
