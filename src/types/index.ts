@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-15 05:23): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **6 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + **swe_bench_pro 06-15 05:23 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 6/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-15 06:43): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **7 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + **process_aware_scoring 06-15 06:43 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 7/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 (2026-06 webdevarena.com 24h 窗口期 + Anthropic 「2026 Agent 元年」双信号锚定)
@@ -366,6 +366,12 @@ export interface ExternalBenchmarkRoadmap {
    * — 2026-06 Anthropic 18 页报告「2026 是 Agent 元年」: 评测必须捕获自主 agent 全过程行为
    * — 锚定: Princeton SWE-Bench Pro trajectory-level + 4 过程信号 (commit count / test run count / retry count / file coverage)
    * — 借力 Princeton SWE-Bench Pro 0 从零开发, 评测方法论话语权已从「结果分数」转「过程+结果」双轨 */
+  /** 过程感知评测: agentic 任务「过程+结果」双轨打分 (Princeton SWE-Bench Pro 03-04 trajectory + Anthropic 06 「2026 Agent 元年」18 页报告)
+   * 5 过程信号 (commit_count / test_run_count / retry_count / file_coverage / trajectory_score) + pass/fail 双权重
+   * 评测方法论从「结果分数」转「过程+结果」双轨: agent 行为全过程 (commit/测试/重试/覆盖率/轨迹) 都被打分
+   * — 06-15 06:43 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/process_aware_scoring/v1`)
+   * — Response: { process_score: number; pass_rate: number; commit_count?: number; test_run_count?: number; retry_count?: number; file_coverage?: number; trajectory_score?: number; eval_id?: string; error?: string }
+   * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   process_aware_scoring?: {
     enabled: boolean;
     /** API endpoint (沿 webdev_arena / cyberseceval3 同模式, 06-14 22:43 cron 补 2 字段对齐 v0.5.0 dispatch 模式) */
@@ -382,6 +388,8 @@ export interface ExternalBenchmarkRoadmap {
     process_weight?: number;
     /** 注入的锚定分数 (Princeton SWE-Bench Pro 03-04 trajectory 维度, 用作 sanity check) */
     anchor_score?: number;
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
   };
   /** lm-eval-harness v0.4.0 config-compat (2026-04-23 EleutherAI release, config-based task creation + Jinja2 prompt + HF/vLLM/MPS/GPT-NeoX 4 backend)
    * — 2026-04-23 EleutherAI lm-evaluation-harness v0.4.0: (a) Config-based task creation (YAML config 定义新 task, 无需写 Python src) + 跨项目复用

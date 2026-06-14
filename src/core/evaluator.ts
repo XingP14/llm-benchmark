@@ -68,7 +68,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-15 05:23): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **6 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + **swe_bench_pro 06-15 05:23 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 6/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-15 06:43): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **7 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + **process_aware_scoring 06-15 06:43 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 7/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     const webdevArenaFetchTasks: Array<Promise<void>> = [];
     if (this.config._external_benchmarks_roadmap) {
@@ -125,7 +125,7 @@ export class Evaluator {
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
       // 见 README 「路线图 / Roadmap (v0.5.0 candidates)」表 Mythos-class 模型接入 段
       if (enabled.length > 0) {
-        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic + swe_bench_pro 已升级为 real fetch, 其余 2 项 stub 待后续 cron 轮次累进)`);
+        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic + swe_bench_pro + process_aware_scoring 已升级为 real fetch, 其余 1 项 stub 待后续 cron 轮次累进)`);
       }
     }
 
@@ -271,6 +271,33 @@ export class Evaluator {
           const score = await this.fetchSweBenchProScore(apiBase, result.model, timeoutMs, anchorScore, subset, agenticMode);
           result.scores.push(score);
           console.log(`  [${result.modelName}] swe_bench_pro score: ${score.score} (${score.detail ?? 'no detail'})`);
+        })
+      );
+    }
+
+    // v0.5.0 dispatch: process_aware_scoring real fetch (06-15 06:43 cron, console.info stub → POST https://llm-benchmark.local/api/v1/process_aware_scoring/v1)
+    // - 仅当 ext.process_aware_scoring.enabled && (model_id 匹配或未配 model_id 走全部 model)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 console.warn + 注入 detail
+    // - 注入: EvaluationResult.scores[] 追加 1 个 process_aware_scoring QuestionScore (questionId=`process_aware_scoring_${model.name}`, category=`process_aware_scoring`, dimension=`coding` 走 v0.4.0 默认, score = process_score 0-100 (过程维度综合分) 复合 pass_fail_weight + process_weight)
+    // - 注: Process-Aware Scoring (Princeton SWE-Bench Pro 03-04 trajectory + Anthropic 「2026 Agent 元年」18 页报告) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Princeton/Anthropic 真实 API
+    if (this.config._external_benchmarks_roadmap?.process_aware_scoring?.enabled) {
+      const pas = this.config._external_benchmarks_roadmap.process_aware_scoring;
+      const apiBase = pas.api_base ?? 'https://llm-benchmark.local/api/v1/process_aware_scoring/v1';
+      const timeoutMs = pas.timeout_ms ?? 30000;
+      const anchorScore = pas.anchor_score;
+      const mode = pas.mode ?? 'all';
+      const agenticBench = pas.agentic_benchmark ?? 'swe_bench_pro';
+      const passWeight = pas.pass_fail_weight ?? 0.7;
+      const procWeight = pas.process_weight ?? 0.3;
+      await Promise.all(
+        results.map(async (result) => {
+          // model_id 过滤: 配了 pas.model_id 只评那个; 未配走全部
+          if (pas.model_id && result.model.model !== pas.model_id && result.modelName !== pas.model_id) {
+            return;
+          }
+          const score = await this.fetchProcessAwareScoringScore(apiBase, result.model, timeoutMs, anchorScore, mode, agenticBench, passWeight, procWeight);
+          result.scores.push(score);
+          console.log(`  [${result.modelName}] process_aware_scoring score: ${score.score} (${score.detail ?? 'no detail'})`);
         })
       );
     }
@@ -815,6 +842,115 @@ export class Evaluator {
         detail: isTimeout
           ? `swe_bench_pro timeout after ${timeoutMs}ms`
           : `swe_bench_pro fetch error: ${msg.slice(0, 200)}`,
+      };
+    }
+  }
+
+  /**
+   * v0.5.0 dispatch: process_aware_scoring 真实 fetch (06-15 06:43 cron, 沿 05:23 swe_bench_pro 模式)
+   * POST {api_base} body={api_base, model_id, mode, agentic_benchmark, pass_fail_weight, process_weight, timeout_ms}
+   * 解析 {process_score: number (0-100), pass_rate: number (0-1), commit_count?, test_run_count?, retry_count?, file_coverage? (0-1), trajectory_score? (0-100), eval_id?, error?}
+   * 三段 try/catch: timeout / 4xx / 5xx
+   * 返回 QuestionScore: dimension=`coding` (v0.4.0 默认, process_aware_scoring 属 agentic coding 维度, 2026 Agent 元年主战场)
+   * score = process_score (server 端已按 pass_fail_weight + process_weight 复合); fallback: pass_rate*100*passWeight + trajectory_score*procWeight (client-side 复合)
+   * 锺定: Princeton SWE-Bench Pro 03-04 trajectory-level + 4 过程信号 (commit/test/retry/coverage)
+   * 官方未提供 public hosted API, 默认端点为本仓库 stub, 部署者可接自托管适配层
+   */
+  private async fetchProcessAwareScoringScore(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    anchorScore?: number,
+    mode: string = 'all',
+    agenticBenchmark: string = 'swe_bench_pro',
+    passFailWeight: number = 0.7,
+    processWeight: number = 0.3
+  ): Promise<QuestionScore> {
+    const questionId = `process_aware_scoring_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      mode,
+      agentic_benchmark: agenticBenchmark,
+      pass_fail_weight: passFailWeight,
+      process_weight: processWeight,
+      timeout_ms: timeoutMs,
+    };
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'process_aware_scoring',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `process_aware_scoring HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+        };
+      }
+      const data = (await resp.json()) as { process_score?: number; pass_rate?: number; commit_count?: number; test_run_count?: number; retry_count?: number; file_coverage?: number; trajectory_score?: number; eval_id?: string; error?: string };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'process_aware_scoring',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `process_aware_scoring API error: ${data.error}`,
+        };
+      }
+      // 优先采用 server 端 process_score (0-100, 已复合 pass_fail_weight + process_weight); 缺失时 client-side 复合
+      let normalized: number;
+      if (typeof data.process_score === 'number') {
+        normalized = Math.max(0, Math.min(100, data.process_score));
+      } else {
+        const passRate = typeof data.pass_rate === 'number' ? data.pass_rate : 0;
+        const traj = typeof data.trajectory_score === 'number' ? data.trajectory_score : 0;
+        normalized = Math.max(0, Math.min(100, passRate * 100 * passFailWeight + traj * processWeight));
+      }
+      const evalIdPart = data.eval_id ? `, eval_id=${data.eval_id}` : '';
+      // 补充过程信号报告 (4 维: commit/test/retry/coverage) + trajectory 综合分
+      const sigParts: string[] = [];
+      if (typeof data.commit_count === 'number') sigParts.push(`commit=${data.commit_count}`);
+      if (typeof data.test_run_count === 'number') sigParts.push(`tests=${data.test_run_count}`);
+      if (typeof data.retry_count === 'number') sigParts.push(`retries=${data.retry_count}`);
+      if (typeof data.file_coverage === 'number') sigParts.push(`cov=${(data.file_coverage * 100).toFixed(1)}%`);
+      if (typeof data.trajectory_score === 'number') sigParts.push(`traj=${data.trajectory_score.toFixed(1)}`);
+      const sigStr = sigParts.length > 0 ? `, ${sigParts.join('/')}` : '';
+      let detail = `process_aware_scoring[${mode}@${agenticBenchmark}] score=${normalized.toFixed(1)}${sigStr}${evalIdPart}`;
+      if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
+        console.warn(`  [process_aware_scoring] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return {
+        questionId,
+        category: 'process_aware_scoring',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'coding',
+        modelOutput: JSON.stringify(data).slice(0, 500),
+        detail,
+      };
+    } catch (err) {
+      const msg = (err as Error).message || String(err);
+      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      return {
+        questionId,
+        category: 'process_aware_scoring',
+        score: 0,
+        dimension: 'coding',
+        modelOutput: '',
+        detail: isTimeout
+          ? `process_aware_scoring timeout after ${timeoutMs}ms`
+          : `process_aware_scoring fetch error: ${msg.slice(0, 200)}`,
       };
     }
   }

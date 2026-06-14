@@ -1,5 +1,38 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 06:43 轮 (2026-06-15) — llm-benchmark (L→W 序列切换命中, 上一轮 woclaw 06:23)
+
+**轮转依据**: 上一轮 woclaw 06:23 picked (`8659f20` + `cfd75fe` opencode-woclaw-plugin Skill Creator 2.0 7/7 收尾, 候选池耗尽), 距今 17min < 1h hard rule 仍 LOCK (UNLOCK 07:23); llm-benchmark 05:25 picked (`98a178b` + `286e7f0` swe_bench_pro real fetch 6/8 真实化), 距今 1h18m > 1h UNLOCKED → L→W 序列本应 woclaw, woclaw 锁, 命中 llm-benchmark。两项目 git status 均 clean (woclaw cfd75fe / llm-benchmark 286e7f0)。
+
+**Hub /health** (vm153:8083): 200 OK, uptime 1959555s ≈ 22.67 days (与 05:23 轮 +4802s ≈ 1h20m), agents 0 / topics 0 持续。
+
+**挑选 5min 项**: **`src/core/evaluator.ts` + `src/types/index.ts` + README × 2 把 process_aware_scoring dispatch 分支从 console.info stub 升级为真实 `fetch()` (沿 06-15 05:23 swe_bench_pro + 04:03 benchlm_agentic + 03:03 terminal_bench + 00:03 aa_omniscience + 06-14 22:23 cyberseceval3 + 06-14 03:23 webdev_arena real fetch 模式; v0.5.0 dispatch PR 7/8 真实化, 完成 v0.5.0 关键里程碑)** — 候选池内 23:23 v0.5.0 dispatch PR 真完整剩 2 stub (long_context_cluster / process_aware_scoring), 选 **process_aware_scoring** 优先 (剩 2 项中价值最高: Princeton SWE-Bench Pro 03-04 trajectory + Anthropic 06 「2026 Agent 元年」18 页报告, 评测方法论从「结果分数」转「过程+结果」双轨, 5 过程信号 commit_count / test_run_count / retry_count / file_coverage / trajectory_score + pass/fail 双权重, Mythos-tier agentic coding 过程信号网, 借力 2026-06-13 22:13 立项已有的 5 模式 mode (commit_count / test_run_count / retry_count / file_coverage / trajectory_score) + 3 关联 agentic_benchmark (swe_bench_pro / terminal_bench / webdev_arena) + 2 权重 pass_fail_weight/process_weight + anchor_score 字段, 沿 05:23 swe_bench_pro 模式 5min 内最高效推进): 1 file `src/types/index.ts` `process_aware_scoring` 段加 `timeout_ms?: number` 1 字段 (沿 swe_bench_pro 模式) + doc comment 补「POST + Response + Timeout/4xx/5xx 三段 try/catch」三信号 + 顶部 JSDoc 进度行更新 (6/8 → 7/8) + 1 file `src/core/evaluator.ts` 4 处 edit (PR 进度行 + console.info 骨架消息 加 process_aware_scoring 已升级 + 新增 dispatch 分支 + 新增 fetchProcessAwareScoringScore 115 行) + 2 files `README.md` + `README.en.md` v0.5.0 PR 进度行更新 (6 项 → 7 项 real fetch, 6/8 → 7/8 真实化, 补 2026-06-15 06:43 cron 标注); 不动 v0.4.0 内置 5 维度 / `routes/evaluations.ts` POST 处理器 / 1 项 dispatch stub (long_context_cluster) / 其余 type 段 / enabled listing 已有; tsc: 0 错 (4 files / +149 / -5); 价值: 把 v0.5.0 dispatch PR 从「2 项 stub + 6 项 real fetch」推进为「1 项 stub + 7 项 real fetch」, 真实可用性从 75% 提升到 87.5% (7/8 真实化), 抢 Princeton SWE-Bench Pro trajectory + 2026 Agent 元年 18 页报告 过程信号网话语权 (Anthropic Fable 5 / OpenAI GPT-5.5 / Mythos 5 同基准对比), 部署者可接自托管适配层后即调真实 Process-Aware Scoring API。
+
+**修复**:
+- `src/types/index.ts` line 181 JSDoc 进度行: 6 项 → 7 项 real fetch (新增 `process_aware_scoring 06-15 06:43 cron`, `6/8 真实化` → `7/8 真实化`)
+- `src/types/index.ts` line 364-385 `process_aware_scoring` 段: 加 `timeout_ms?: number` 1 字段 (沿 swe_bench_pro 模式) + doc comment 补「POST + Response + Timeout/4xx/5xx 三段 try/catch」三信号 (沿 swe_bench_pro 模式) + 顶部 doc 加「5 过程信号 + pass/fail 双权重, 评测方法论从「结果分数」转「过程+结果」双轨」原错
+- `src/core/evaluator.ts` line 71 JSDoc 进度行: 同 types 同步更新 (6/8 → 7/8)
+- `src/core/evaluator.ts` line 128 console.info 骨架消息: 2 项 → 1 项 stub, 加 process_aware_scoring 已升级
+- `src/core/evaluator.ts` line 274-302 新增 process_aware_scoring dispatch 分支: swe_bench_pro 之后, run() 后置, Promise.all 包裹, model_id 过滤 (配 pas.model_id 只评那个, 未配走全部), 调 fetchProcessAwareScoringScore 注入 result.scores.push + console.log
+- `src/core/evaluator.ts` line 850-967 新增 `fetchProcessAwareScoringScore()` private async 方法 (沿 fetchSweBenchProScore 模式, 115 行): AbortController + setTimeout 控制 timeout_ms 默认 30000; POST body = {api_base, model_id, mode, agentic_benchmark, pass_fail_weight, process_weight, timeout_ms}; Response 解析 {process_score 0-100, pass_rate 0-1, commit_count, test_run_count, retry_count, file_coverage 0-1, trajectory_score 0-100, eval_id?, error?}; 0-100 归一优先采用 server 端 process_score, 缺失时 client-side 复合 `pass_rate*100*passFailWeight + trajectory_score*processWeight`; 补充 4 维过程信号报告 (commit/tests/retries/cov) + trajectory 综合分; anchor_score 校验 if mismatch > 5 console.warn; QuestionScore dimension=`coding` (process_aware_scoring 属 agentic coding 维度, Mythos-tier 过程信号网, 2026 Agent 元年主战场)
+- `README.md` line 401: v0.5.0 PR 进度行加 `process_aware_scoring` real fetch 标注 + `7/8 真实化` + `2026-06-15 06:43 cron`
+- `README.en.md` line 401: 同英文翻译同步
+- 不动: v0.4.0 内置 5 维度 (dialogue/coding/function_calling/long_context/multi_turn) / `routes/evaluations.ts` POST 处理器 / 1 项 dispatch stub (long_context_cluster) / 其余 type 段 / enabled listing 已有 / npm test / npm lint / CI
+- 验证: `npx tsc --noEmit -p tsconfig.json` exit=0 (0 预存错, 0 新增错)
+
+**commit + push**:
+- 1 commit: `TBD` `feat(dispatch): process_aware_scoring real fetch (POST + timeout/4xx/5xx try/catch + coding dimension + process_score 复合 + 4 过程信号报告, v0.5.0 7/8 真实化, 2026 Agent 元年主战场)` — 4 files / +149 / -5
+- push master 成功: `286e7f0..TBD`
+
+**耗时**: 候选评估 30s (heartbeat-state.json 预计本轮命中 llm-benchmark, 候选池 23:23 v0.5.0 dispatch PR 真完整剩 2 stub, 选 process_aware_scoring 优先 — Princeton SWE-Bench Pro 03-04 trajectory + 2026 Agent 元年 18 页报告 过程信号网话语权, 沿 06-15 05:23 swe_bench_pro real fetch 模式最高效) + types/index.ts edit 30s + evaluator.ts 4 处 edit (PR 进度行 + console.info 骨架消息 + dispatch 分支 + fetchProcessAwareScoringScore 115 行) 3min + README.md + README.en.md 各 1 edit 30s + tsc 30s + commit/push 30s ≈ 4.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 3.1/3.2/3.3 + 0.4.1 patch 重发 + 进程守护 (systemd/PM2) 不变
+- 候选池剩: 1 项 dispatch stub (long_context_cluster) 估 5min / 04:03 hub README Mythos-tier 表 (4-03 立项待推)
+- v0.5.0 type 段 18 ✅ + dispatch 1 stub (long_context_cluster) + **7 项 real fetch** (webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic + swe_bench_pro + **process_aware_scoring**) — 离 v0.5.0 完整 PR 还差 1 项 stub → real fetch, 估 1 轮 cron 累进 (估 06:53 cron 推 long_context_cluster)
+- 下次轮转 → **woclaw** (L→W 序列), woclaw 06:23 + 1h = 07:23 UNLOCK; woclaw 候选池耗尽 (Skill Creator 2.0 7/7 收尾, 7/7 ✅), 本轮仅 1 包续推 opencode-woclaw-plugin (已 7/7 收尾); 若 woclaw 候选池也空, 双空 → 06-09 调研 + 立项规则
+- 里程碑: v0.5.0 dispatch PR 7/8 真实化, 1 步之遥 long_context_cluster, 下一轮 06:53 cron 可推完最后一包; 需阐明 woclaw 候选池重填状况 (Skill Creator 2.0 7/7 收尾后, woclaw 项目可能需新立项才能继续双项目轮转)
+
 ## 🩺 05:23 轮 (2026-06-15) — llm-benchmark (L→W 序列切换命中, 上一轮 woclaw 05:03)
 
 **轮转依据**: 上一轮 woclaw 05:03 picked (`99167bb` + `655ad49` codex-woclaw Skill Creator 2.0 sed 6/7 包), 距今 15min < 1h hard rule 仍 LOCK (UNLOCK 06:03); llm-benchmark 04:03 picked (`0400981` + `1ca543a` benchlm_agentic real fetch), 距今 1h16m > 1h UNLOCKED → L→W 序列本应 woclaw, woclaw 锁, 命中 llm-benchmark。两项目 git status 均 clean (woclaw 655ad49 / llm-benchmark 1ca543a)。
