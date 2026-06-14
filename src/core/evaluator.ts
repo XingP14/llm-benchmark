@@ -68,7 +68,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-14 22:23): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **2 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 2/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-15 00:03): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **3 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 3/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     const webdevArenaFetchTasks: Array<Promise<void>> = [];
     if (this.config._external_benchmarks_roadmap) {
@@ -81,7 +81,8 @@ export class Evaluator {
         enabled.push(`terminal_bench(api_base=${ext.terminal_bench.api_base ?? '(unset)'}, model_id=${ext.terminal_bench.model_id ?? '(unset)'})`);
       }
       if (ext.aa_omniscience?.enabled) {
-        enabled.push(`aa_omniscience(api_base=${ext.aa_omniscience.api_base ?? '(unset)'}, model_id=${ext.aa_omniscience.model_id ?? '(unset)'})`);
+        const anchor = ext.aa_omniscience.anchor_score != null ? `, anchor=${ext.aa_omniscience.anchor_score}` : '';
+        enabled.push(`aa_omniscience(api_base=${ext.aa_omniscience.api_base ?? '(unset)'}, model_id=${ext.aa_omniscience.model_id ?? '(unset)'}${anchor})`);
       }
       // v0.5.0 dispatch stub: BenchLM.ai agentic eval (2026-06-07 发布, 248 模型 × 225 基准, agentic 主战场)
       if (ext.benchlm_agentic?.enabled) {
@@ -121,7 +122,7 @@ export class Evaluator {
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
       // 见 README 「路线图 / Roadmap (v0.5.0 candidates)」表 Mythos-class 模型接入 段
       if (enabled.length > 0) {
-        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 已升级为 real fetch, 其余 6 项 stub 待后续 cron 轮次累进)`);
+        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience 已升级为 real fetch, 其余 5 项 stub 待后续 cron 轮次累进)`);
       }
     }
 
@@ -172,6 +173,29 @@ export class Evaluator {
           const score = await this.fetchCyberseceval3Score(apiBase, result.model, timeoutMs, cats);
           result.scores.push(score);
           console.log(`  [${result.modelName}] cyberseceval3 score: ${score.score} (${score.detail ?? 'no detail'})`);
+        })
+      );
+    }
+
+    // v0.5.0 dispatch: aa_omniscience real fetch (06-15 00:03 cron, console.info stub → POST https://llm-benchmark.local/api/v1/aa_omniscience/v1)
+    // - 仅当 ext.aa_omniscience.enabled && (model_id 匹配或未配 model_id 走全部 model)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 console.warn + 注入 detail
+    // - 注入: EvaluationResult.scores[] 追加 1 个 aa_omniscience QuestionScore (questionId=`aa_omniscience_${model.name}`, category=`aa_omniscience`, dimension=`long_context` 走 v0.4.0 默认, score = accuracy_score * 0.7 + (1 - hallucination_rate) * 30 归一到 0-100)
+    // - 注: Artificial Analysis Omniscience (2026-05-25 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 AA 真实 API
+    if (this.config._external_benchmarks_roadmap?.aa_omniscience?.enabled) {
+      const aao = this.config._external_benchmarks_roadmap.aa_omniscience;
+      const apiBase = aao.api_base ?? 'https://llm-benchmark.local/api/v1/aa_omniscience/v1';
+      const timeoutMs = aao.timeout_ms ?? 30000;
+      const anchorScore = aao.anchor_score;
+      await Promise.all(
+        results.map(async (result) => {
+          // model_id 过滤: 配了 aao.model_id 只评那个; 未配走全部
+          if (aao.model_id && result.model.model !== aao.model_id && result.modelName !== aao.model_id) {
+            return;
+          }
+          const score = await this.fetchAAOmniscienceScore(apiBase, result.model, timeoutMs, anchorScore);
+          result.scores.push(score);
+          console.log(`  [${result.modelName}] aa_omniscience score: ${score.score} (${score.detail ?? 'no detail'})`);
         })
       );
     }
@@ -347,6 +371,93 @@ export class Evaluator {
         detail: isTimeout
           ? `webdev_arena timeout after ${timeoutMs}ms`
           : `webdev_arena fetch error: ${msg.slice(0, 200)}`,
+      };
+    }
+  }
+
+  /**
+   * v0.5.0 dispatch: aa_omniscience 真实 fetch (06-15 00:03 cron, 沿 03:23 webdev_arena 模式)
+   * POST {api_base} body={api_base, model_id, timeout_ms}
+   * 解析 {accuracy_score: number (0-100), hallucination_rate: number (0-1), eval_id?, error?}
+   * 三段 try/catch: timeout / 4xx / 5xx
+   * 返回 QuestionScore: dimension=`long_context` (v0.4.0 默认, aa_omniscience 属长上下文知识检索 + 幻觉率)
+   * score = accuracy_score * 0.7 + (1 - hallucination_rate) * 30 (0-100 归一; accuracy_score 0-100 / hallucination_rate 0-1)
+   * Artificial Analysis Omniscience (2026-05-25) 无 public hosted API, 默认端点为本仓库 stub, 部署者可接自托管适配层
+   */
+  private async fetchAAOmniscienceScore(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    anchorScore?: number
+  ): Promise<QuestionScore> {
+    const questionId = `aa_omniscience_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      timeout_ms: timeoutMs,
+    };
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'aa_omniscience',
+          score: 0,
+          dimension: 'long_context',
+          modelOutput: '',
+          detail: `aa_omniscience HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+        };
+      }
+      const data = (await resp.json()) as { accuracy_score?: number; hallucination_rate?: number; eval_id?: string; error?: string };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'aa_omniscience',
+          score: 0,
+          dimension: 'long_context',
+          modelOutput: '',
+          detail: `aa_omniscience API error: ${data.error}`,
+        };
+      }
+      const accuracy = typeof data.accuracy_score === 'number' ? data.accuracy_score : 0;
+      const hallucination = typeof data.hallucination_rate === 'number' ? data.hallucination_rate : 0;
+      // 0-100 归一: accuracy_score 0-100 → 0-70, (1 - hallucination_rate) 0-1 → 0-30, 加权和
+      const normalized = Math.max(0, Math.min(100, accuracy * 0.7 + (1 - hallucination) * 30));
+      const evalIdPart = data.eval_id ? `, eval_id=${data.eval_id}` : '';
+      let detail = `aa_omniscience accuracy=${accuracy.toFixed(1)}, hallucination=${(hallucination * 100).toFixed(1)}%, score=${normalized.toFixed(1)}${evalIdPart}`;
+      if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
+        console.warn(`  [aa_omniscience] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return {
+        questionId,
+        category: 'aa_omniscience',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'long_context',
+        modelOutput: JSON.stringify(data).slice(0, 500),
+        detail,
+      };
+    } catch (err) {
+      const msg = (err as Error).message || String(err);
+      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      return {
+        questionId,
+        category: 'aa_omniscience',
+        score: 0,
+        dimension: 'long_context',
+        modelOutput: '',
+        detail: isTimeout
+          ? `aa_omniscience timeout after ${timeoutMs}ms`
+          : `aa_omniscience fetch error: ${msg.slice(0, 200)}`,
       };
     }
   }
