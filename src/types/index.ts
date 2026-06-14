@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-15 00:03): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **3 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + **aa_omniscience 06-15 00:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 3/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-15 01:23): type 段 ✅ 全 18 项 (15→18 新增 healthbench/medqa/rcq_clinical 3 医学 leaderboard 锚定, 2026-06-12 Nature Medicine s41591-026-04431-5 通用 LLM > 专科 AI 证据) / dispatch stub ✅ 8 项 / **3 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + **aa_omniscience 06-15 00:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 3/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 (2026-06 webdevarena.com 24h 窗口期 + Anthropic 「2026 Agent 元年」双信号锚定)
@@ -385,6 +385,39 @@ export interface ExternalBenchmarkRoadmap {
     /** 评测子集: 'arc' | 'hellaswag' | 'mmlu' | 'truthfulqa' | 'winogrande' | 'gsm8k' | 'bbh' | 'belebele' | 'all' (default 'all', 对位 HF OLM 6 基准 + CoT BBH + Belebele 多语言) */
     subset?: 'arc' | 'hellaswag' | 'mmlu' | 'truthfulqa' | 'winogrande' | 'gsm8k' | 'bbh' | 'belebele' | 'all';
     /** 注入的锚定分数 (HF OLM 综合, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** HealthBench: 500 items 临床医生对齐评测 (OpenAI 2024 + Nature Medicine 2026-06-12 s41591-026-04431-5 通用 LLM 复用; Claude Opus 4.6 / GPT-5.2 / Gemini 3.1 Pro Preview 三顶级基线锚定; 临床医生写 rubric, 评估模型回答与临床判断对齐度)
+   * — 2026-06-15 01:23 cron: type 段首批锚定, 沿 vllm_serving_bench 0 从零开发占位模式 (5min cron 不调真实 HealthBench API, 仅占位) */
+  healthbench?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子集: 'all' (500 items, default) | 'easy' | 'hard' | 'consensus' */
+    subset?: 'all' | 'easy' | 'hard' | 'consensus';
+    /** 注入的锚定分数 (Nature Medicine 2026-06-12 通用 LLM 对齐分) */
+    anchor_score?: number;
+  };
+  /** MedQA: 500 questions 医学知识评测 (USMLE 风格 + 多语言; Nature Medicine 2026-06-12 s41591-026-04431-5 通用 LLM 复用; Claude Opus 4.6 / GPT-5.2 / Gemini 3.1 Pro Preview 三顶级基线锚定)
+   * — 2026-06-15 01:23 cron: type 段首批锚定 */
+  medqa?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子集: 'usmle' (default) | 'taiwan' | 'mainland' */
+    subset?: 'usmle' | 'taiwan' | 'mainland';
+    /** 注入的锚定分数 (Nature Medicine 2026-06-12 通用 LLM MedQA 正确率) */
+    anchor_score?: number;
+  };
+  /** RCQ (Real Clinical Queries): 100 de-identified 实测临床查询 (Nature Medicine 2026-06-12 s41591-026-04431-5 全新发布, 医生在真实临床环境向 LLM 提问去标识化查询; Claude Opus 4.6 / GPT-5.2 / Gemini 3.1 Pro Preview 三顶级基线锚定)
+   * — 2026-06-15 01:23 cron: type 段首批锚定, 抢 2026 Q2 medical/clinical leaderboard 话语权 */
+  rcq_clinical?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测模式: 'accuracy' (default, 答案准确率) | 'safety' (临床安全) | 'completeness' (回答完整度) | 'all' */
+    mode?: 'accuracy' | 'safety' | 'completeness' | 'all';
+    /** 注入的锚定分数 (Nature Medicine 2026-06-12 通用 LLM RCQ 综合分) */
     anchor_score?: number;
   };
 }
