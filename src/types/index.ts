@@ -130,7 +130,7 @@ export interface QuestionScore {
   /** 得分 (0-100) */
   score: number;
   /** 评测维度 */
-  dimension: 'dialogue' | 'coding' | 'function_calling' | 'long_context' | 'multi_turn';
+  dimension: 'dialogue' | 'coding' | 'function_calling' | 'long_context' | 'multi_turn' | 'safety';
   /** 模型输出 */
   modelOutput: string;
   /** 评测详情 (LLM 判定) */
@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-14 03:23): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **webdev_arena real fetch 真集成 ✅** (06-14 03:23 cron, console.info stub → POST https://webdevarena.com/api/v1/eval, 错误处理 + scores[] 注入, 1/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-14 22:23): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **2 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 2/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 (2026-06 webdevarena.com 24h 窗口期 + Anthropic 「2026 Agent 元年」双信号锚定)

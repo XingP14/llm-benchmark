@@ -68,7 +68,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-14 03:23): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **webdev_arena real fetch 真集成 ✅** (06-14 03:23 cron, console.info stub → POST https://webdevarena.com/api/v1/eval, 错误处理 + scores[] 注入, 1/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-14 22:23): type 段 ✅ 全 15 项 / dispatch stub ✅ 8 项 / **2 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 2/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     const webdevArenaFetchTasks: Array<Promise<void>> = [];
     if (this.config._external_benchmarks_roadmap) {
@@ -121,7 +121,7 @@ export class Evaluator {
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
       // 见 README 「路线图 / Roadmap (v0.5.0 candidates)」表 Mythos-class 模型接入 段
       if (enabled.length > 0) {
-        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena 已升级为 real fetch, 其余 7 项 stub 待后续 cron 轮次累进)`);
+        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 已升级为 real fetch, 其余 6 项 stub 待后续 cron 轮次累进)`);
       }
     }
 
@@ -153,7 +153,114 @@ export class Evaluator {
       );
     }
 
+    // v0.5.0 dispatch: cyberseceval3 real fetch (06-14 22:23 cron, console.info stub → POST https://llm-benchmark.local/api/v1/cyberseceval3/v3)
+    // - 仅当 ext.cyberseceval3.enabled && (model_id 匹配或未配 model_id 走全部 model)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 console.warn + 注入 detail
+    // - 注入: EvaluationResult.scores[] 追加 1 个 cyberseceval3 QuestionScore (questionId=`cyberseceval3_${model.name}`, category=`cyberseceval3`, dimension=`safety` 走 v0.4.0 默认, score = safety_score * 0.7 + coverage_rate * 30 归一到 0-100)
+    // - 注: CyberSecEval3 官方 (Meta, 2025-12 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Meta 真实 API
+    if (this.config._external_benchmarks_roadmap?.cyberseceval3?.enabled) {
+      const cse3 = this.config._external_benchmarks_roadmap.cyberseceval3;
+      const apiBase = cse3.api_base ?? 'https://llm-benchmark.local/api/v1/cyberseceval3/v3';
+      const timeoutMs = (cse3 as { timeout_ms?: number }).timeout_ms ?? 30000;
+      const cats = cse3.risk_categories?.join(',') ?? 'all-8';
+      await Promise.all(
+        results.map(async (result) => {
+          // model_id 过滤: 配了 cse3.model_id 只评那个; 未配走全部
+          if (cse3.model_id && result.model.model !== cse3.model_id && result.modelName !== cse3.model_id) {
+            return;
+          }
+          const score = await this.fetchCyberseceval3Score(apiBase, result.model, timeoutMs, cats);
+          result.scores.push(score);
+          console.log(`  [${result.modelName}] cyberseceval3 score: ${score.score} (${score.detail ?? 'no detail'})`);
+        })
+      );
+    }
+
     return results;
+  }
+
+  /**
+   * v0.5.0 dispatch: cyberseceval3 真实 fetch (06-14 22:23 cron, 沿 03:23 webdev_arena 模式)
+   * POST {api_base} body={api_base, model_id, risk_categories, timeout_ms}
+   * 解析 {safety_score: number (0-100), coverage_rate: number (0-1), risk_pass?: object, eval_id?, error?}
+   * 三段 try/catch: timeout / 4xx / 5xx
+   * 返回 QuestionScore: dimension=`safety` (v0.4.0 默认, cyberseceval3 属 safety 维度)
+   * score = safety_score * 0.7 + coverage_rate * 30 (0-100 归一; safety_score 0-100 / coverage_rate 0-1)
+   * Meta 官方 CyberSecEval3 (2025-12) 无 public hosted API, 默认端点为本仓库 stub, 部署者可接自托管适配层
+   */
+  private async fetchCyberseceval3Score(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    riskCategories: string
+  ): Promise<QuestionScore> {
+    const questionId = `cyberseceval3_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      risk_categories: riskCategories,
+      timeout_ms: timeoutMs,
+    };
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'cyberseceval3',
+          score: 0,
+          dimension: 'safety',
+          modelOutput: '',
+          detail: `cyberseceval3 HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+        };
+      }
+      const data = (await resp.json()) as { safety_score?: number; coverage_rate?: number; eval_id?: string; error?: string };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'cyberseceval3',
+          score: 0,
+          dimension: 'safety',
+          modelOutput: '',
+          detail: `cyberseceval3 API error: ${data.error}`,
+        };
+      }
+      const safety = typeof data.safety_score === 'number' ? data.safety_score : 0;
+      const coverage = typeof data.coverage_rate === 'number' ? data.coverage_rate : 0;
+      // 0-100 归一: safety_score 0-100 → 0-70, coverage_rate 0-1 → 0-30, 加权和
+      const normalized = Math.max(0, Math.min(100, safety * 0.7 + coverage * 30));
+      const evalIdPart = data.eval_id ? `, eval_id=${data.eval_id}` : '';
+      const detail = `cyberseceval3 safety=${safety.toFixed(1)}, coverage=${(coverage * 100).toFixed(1)}%, score=${normalized.toFixed(1)}, risks=${riskCategories}${evalIdPart}`;
+      return {
+        questionId,
+        category: 'cyberseceval3',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'safety',
+        modelOutput: JSON.stringify(data).slice(0, 500),
+        detail,
+      };
+    } catch (err) {
+      const msg = (err as Error).message || String(err);
+      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      return {
+        questionId,
+        category: 'cyberseceval3',
+        score: 0,
+        dimension: 'safety',
+        modelOutput: '',
+        detail: isTimeout
+          ? `cyberseceval3 timeout after ${timeoutMs}ms`
+          : `cyberseceval3 fetch error: ${msg.slice(0, 200)}`,
+      };
+    }
   }
 
   /**
