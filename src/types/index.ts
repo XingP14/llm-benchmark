@@ -178,7 +178,8 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-15 06:43): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **7 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + **process_aware_scoring 06-15 06:43 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 7/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+ * PR 进度 (2026-06-16 01:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + **long_context_cluster 06-16 01:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** — 下一里程碑 v0.6.0
+ * — 06-16 01:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/long_context_cluster/v1`, harness 0.4.0 PR #3256 同源)
  */
 export interface ExternalBenchmarkRoadmap {
   /** webdev-arena: 全栈代码生成 + 实时对抗评分 (2026-06 webdevarena.com 24h 窗口期 + Anthropic 「2026 Agent 元年」双信号锚定)
@@ -277,6 +278,8 @@ export interface ExternalBenchmarkRoadmap {
     subset?: 'longbench_v2' | 'babilong' | 'infinitebench' | 'phonebook' | 'all';
     /** 任务总数 (默认 62) */
     tasks_total?: number;
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
     /** 注入的锚定分数 (Llama-2-7B LongBench v2 2WikiMQA 32.8% F1, 用作 sanity check) */
     anchor_score?: number;
   };

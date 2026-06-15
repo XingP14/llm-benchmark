@@ -68,7 +68,7 @@ export class Evaluator {
     console.log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-15 06:43): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **7 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + **process_aware_scoring 06-15 06:43 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 7/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / 真完整 PR 估 30-45min
+    // PR 进度 (2026-06-16 01:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + **long_context_cluster 06-16 01:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** — 下一里程碑 v0.6.0
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     const webdevArenaFetchTasks: Array<Promise<void>> = [];
     if (this.config._external_benchmarks_roadmap) {
@@ -104,12 +104,13 @@ export class Evaluator {
         const anchor = ext.swe_bench_pro.anchor_score != null ? `, anchor=${ext.swe_bench_pro.anchor_score}` : '';
         enabled.push(`swe_bench_pro(api_base=${ext.swe_bench_pro.api_base ?? '(unset)'}, model_id=${ext.swe_bench_pro.model_id ?? '(unset)'}, subset=${subset}${agentic}${timeout}${anchor})`);
       }
-      // v0.5.0 dispatch stub: long_context_cluster (62 tasks, 4 基准 LongBench v2 + Babilong + InfiniteBench + Phonebook; harness 0.4.0 PR #3256 同源)
+      // v0.5.0 dispatch: long_context_cluster real fetch (06-16 01:03 cron, console.info stub → POST https://llm-benchmark.local/api/v1/long_context_cluster/v1)
       if (ext.long_context_cluster?.enabled) {
         const subset = ext.long_context_cluster.subset ?? 'all';
         const tasks = ext.long_context_cluster.tasks_total ?? 62;
+        const timeout = ext.long_context_cluster.timeout_ms != null ? `, timeout=${ext.long_context_cluster.timeout_ms}ms` : '';
         const anchor = ext.long_context_cluster.anchor_score != null ? `, anchor=${ext.long_context_cluster.anchor_score}` : '';
-        enabled.push(`long_context_cluster(api_base=${ext.long_context_cluster.api_base ?? '(unset)'}, model_id=${ext.long_context_cluster.model_id ?? '(unset)'}, subset=${subset}, tasks=${tasks}${anchor})`);
+        enabled.push(`long_context_cluster(api_base=${ext.long_context_cluster.api_base ?? '(unset)'}, model_id=${ext.long_context_cluster.model_id ?? '(unset)'}, subset=${subset}, tasks=${tasks}${timeout}${anchor})`);
       }
       // v0.5.0 dispatch stub: process_aware_scoring (2026-06-13 22:13 立项 — Princeton SWE-Bench Pro 03-04 + Anthropic 06 「2026 Agent 元年」18 页报告)
       // 评测方法论从「结果分数」转「过程+结果」双轨: 5 过程信号 (commit_count / test_run_count / retry_count / file_coverage / trajectory_score) + pass/fail 双权重
@@ -125,7 +126,7 @@ export class Evaluator {
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
       // 见 README 「路线图 / Roadmap (v0.5.0 candidates)」表 Mythos-class 模型接入 段
       if (enabled.length > 0) {
-        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic + swe_bench_pro + process_aware_scoring 已升级为 real fetch, 其余 1 项 stub 待后续 cron 轮次累进)`);
+        console.info(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic + swe_bench_pro + process_aware_scoring + long_context_cluster 全部 8 项已升级为 real fetch, **v0.5.0 dispatch PR 完整 8/8**)`);
       }
     }
 
@@ -298,6 +299,31 @@ export class Evaluator {
           const score = await this.fetchProcessAwareScoringScore(apiBase, result.model, timeoutMs, anchorScore, mode, agenticBench, passWeight, procWeight);
           result.scores.push(score);
           console.log(`  [${result.modelName}] process_aware_scoring score: ${score.score} (${score.detail ?? 'no detail'})`);
+        })
+      );
+    }
+
+    // v0.5.0 dispatch: long_context_cluster real fetch (06-16 01:03 cron, console.info stub → POST https://llm-benchmark.local/api/v1/long_context_cluster/v1)
+    // - 仅当 ext.long_context_cluster.enabled && (model_id 匹配或未配 model_id 走全部 model)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 console.warn + 注入 detail
+    // - 注入: EvaluationResult.scores[] 追加 1 个 long_context_cluster QuestionScore (questionId=`long_context_cluster_${model.name}`, category=`long_context_cluster`, dimension=`long_context` 走 v0.4.0 默认, score = subset_pass_rate * 0.7 + (1 - tokens_used_normalized) * 0.3 归一到 0-100; 4 基准 LongBench v2 + Babilong + InfiniteBench + Phonebook, harness 0.4.0 PR #3256 同源)
+    // - 注: Long Context Cluster (harness 0.4.0 PR #3256 同源, 62 tasks, 4 基准 LongBench v2 21 + Babilong 13 + InfiniteBench 18 + Phonebook 10) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 harness 真实 API
+    if (this.config._external_benchmarks_roadmap?.long_context_cluster?.enabled) {
+      const lcc = this.config._external_benchmarks_roadmap.long_context_cluster;
+      const apiBase = lcc.api_base ?? 'https://llm-benchmark.local/api/v1/long_context_cluster/v1';
+      const timeoutMs = lcc.timeout_ms ?? 30000;
+      const anchorScore = lcc.anchor_score;
+      const subset = lcc.subset ?? 'all';
+      const tasksTotal = lcc.tasks_total ?? 62;
+      await Promise.all(
+        results.map(async (result) => {
+          // model_id 过滤: 配了 lcc.model_id 只评那个; 未配走全部
+          if (lcc.model_id && result.model.model !== lcc.model_id && result.modelName !== lcc.model_id) {
+            return;
+          }
+          const score = await this.fetchLongContextClusterScore(apiBase, result.model, timeoutMs, anchorScore, subset, tasksTotal);
+          result.scores.push(score);
+          console.log(`  [${result.modelName}] long_context_cluster score: ${score.score} (${score.detail ?? 'no detail'})`);
         })
       );
     }
@@ -951,6 +977,110 @@ export class Evaluator {
         detail: isTimeout
           ? `process_aware_scoring timeout after ${timeoutMs}ms`
           : `process_aware_scoring fetch error: ${msg.slice(0, 200)}`,
+      };
+    }
+  }
+
+  /**
+   * v0.5.0 dispatch: long_context_cluster 真实 fetch (06-16 01:03 cron, 沿 06-15 06:43 process_aware_scoring 模式)
+   * POST {api_base} body={api_base, model_id, subset, tasks_total, timeout_ms}
+   * 解析 {subset_pass_rate: number (0-1), tokens_used: number, task_count: number, anchor_scores?: object, eval_id?, error?}
+   * 三段 try/catch: timeout / 4xx / 5xx
+   * 返回 QuestionScore: dimension=`long_context` (v0.4.0 默认, long_context_cluster 属 long_context 维度)
+   * score = subset_pass_rate * 70 + (1 - min(tokens_used, 1_050_000) / 1_050_000) * 30 (0-100 归一; 1.05M context 上限对齐 GPT-5.4 1.05M 商用档)
+   * Long Context Cluster (harness 0.4.0 PR #3256 同源, 62 tasks, 4 基准 LongBench v2 + Babilong + InfiniteBench + Phonebook) 无 public hosted API, 默认端点为本仓库 stub, 部署者可接自托管适配层
+   */
+  private async fetchLongContextClusterScore(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    anchorScore?: number,
+    subset: string = 'all',
+    tasksTotal: number = 62
+  ): Promise<QuestionScore> {
+    const questionId = `long_context_cluster_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      subset,
+      tasks_total: tasksTotal,
+      timeout_ms: timeoutMs,
+    };
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'long_context_cluster',
+          score: 0,
+          dimension: 'long_context',
+          modelOutput: '',
+          detail: `long_context_cluster HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+        };
+      }
+      const data = (await resp.json()) as { subset_pass_rate?: number; tokens_used?: number; task_count?: number; anchor_scores?: { longbench_v2?: number; babilong?: number; infinitebench?: number; phonebook?: number }; eval_id?: string; error?: string };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'long_context_cluster',
+          score: 0,
+          dimension: 'long_context',
+          modelOutput: '',
+          detail: `long_context_cluster API error: ${data.error}`,
+        };
+      }
+      const passRate = typeof data.subset_pass_rate === 'number' ? data.subset_pass_rate : 0;
+      const tokensUsed = typeof data.tokens_used === 'number' ? data.tokens_used : 0;
+      // 1.05M context 上限对齐 GPT-5.4 1.05M 商用档 (2026-06)
+      const contextCap = 1_050_000;
+      const contextEff = Math.max(0, Math.min(1, 1 - Math.min(tokensUsed, contextCap) / contextCap));
+      const normalized = Math.max(0, Math.min(100, passRate * 70 + contextEff * 30));
+      const taskCountPart = typeof data.task_count === 'number' ? `, tasks=${data.task_count}/${tasksTotal}` : `, tasks=${tasksTotal}`;
+      const tokensPart = `, ctx=${tokensUsed}/${contextCap}`;
+      const evalIdPart = data.eval_id ? `, eval_id=${data.eval_id}` : '';
+      // 补充 4 基准锚定报告 (longbench_v2 / babilong / infinitebench / phonebook)
+      const anchorParts: string[] = [];
+      if (data.anchor_scores) {
+        if (typeof data.anchor_scores.longbench_v2 === 'number') anchorParts.push(`lb2=${data.anchor_scores.longbench_v2.toFixed(1)}`);
+        if (typeof data.anchor_scores.babilong === 'number') anchorParts.push(`bab=${data.anchor_scores.babilong.toFixed(1)}`);
+        if (typeof data.anchor_scores.infinitebench === 'number') anchorParts.push(`inf=${data.anchor_scores.infinitebench.toFixed(1)}`);
+        if (typeof data.anchor_scores.phonebook === 'number') anchorParts.push(`phb=${data.anchor_scores.phonebook.toFixed(1)}`);
+      }
+      const anchorStr = anchorParts.length > 0 ? `, [${anchorParts.join('/')}]` : '';
+      let detail = `long_context_cluster[${subset}] score=${normalized.toFixed(1)}${taskCountPart}${tokensPart}${anchorStr}${evalIdPart}`;
+      if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
+        console.warn(`  [long_context_cluster] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return {
+        questionId,
+        category: 'long_context_cluster',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'long_context',
+        modelOutput: JSON.stringify(data).slice(0, 500),
+        detail,
+      };
+    } catch (err) {
+      const msg = (err as Error).message || String(err);
+      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      return {
+        questionId,
+        category: 'long_context_cluster',
+        score: 0,
+        dimension: 'long_context',
+        modelOutput: '',
+        detail: isTimeout
+          ? `long_context_cluster timeout after ${timeoutMs}ms`
+          : `long_context_cluster fetch error: ${msg.slice(0, 200)}`,
       };
     }
   }
