@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-16 01:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + **long_context_cluster 06-16 01:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** — 下一里程碑 v0.6.0
+ * PR 进度 (2026-06-16 03:23): type 段 ✅ 全 23 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + **long_context_cluster 06-16 01:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定, model+harness+serving-stack 三件套第三腿, 2026-06-14 Artificial Analysis 发布) — 下一里程碑 v0.6.0
  * — 06-16 01:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/long_context_cluster/v1`, harness 0.4.0 PR #3256 同源)
  */
 export interface ExternalBenchmarkRoadmap {
@@ -437,6 +437,28 @@ export interface ExternalBenchmarkRoadmap {
     /** 评测子集: 'usmle' (default) | 'taiwan' | 'mainland' */
     subset?: 'usmle' | 'taiwan' | 'mainland';
     /** 注入的锚定分数 (Nature Medicine 2026-06-12 通用 LLM MedQA 正确率) */
+    anchor_score?: number;
+  };
+  /** AA-AgentPerf v1: Artificial Analysis Agentic AI serving-stack 评测 (2026-06-14 发布)
+   * — 首个专门评测 agentic AI infrastructure 的 benchmark: "在真实工作负载下, 一个推理部署能同时支持多少活跃 agents" (active agents per deployment, 含并发 agent coding / tool-use / session 切换 / GPU 利用率)
+   * — NVIDIA Blackwell GB300 NVL72 相对 HGX H200 跨 20× / MegaWatt 性能领先 (wccftech.com/nvidia-gb300-dominates-agentic-ai-workloads-20x-performance-leap-over-hopper/)
+   * — 配合 06-15 23:43 coding_agent_index_v1 (model+harness 联合) + metr_v3_task_horizon (agentic 时长跨度) 形成「model + harness + serving stack」三件套完整 agent-stack 评测信号网
+   * — 2026 Q2 评测范式从「单 model 分数」转「model + harness + serving stack」三件套, serving stack 是必占位信号
+   * — 借力 Artificial Analysis AA-AgentPerf 公开数据 0 从零开发, 真启用需 v0.5.0 dispatch PR 沿 22:23 type stub 模式扩展 (估 30-45min 跨 6-9 轮 cron 累进)
+   * — 2026-06-16 03:23 cron: type 段首批锚定 (model+harness+serving-stack 三件套第三腿, NVIDIA GB300 20×/MW 锚定)
+   * — 3 评测维度: 'active_agents' (同时活跃 agent 数, default) | 'throughput_per_mw' (每兆瓦吞吐量) | 'gpu_utilization_concurrent' (并发 agent 时 GPU 利用率)
+   * — 锚定: NVIDIA GB300 NVL72 vs HGX H200 = 20× / MW (跨多个并发 agent sessions 保持 GPU 满载) */
+  aa_agentperf_v1?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测维度: 'active_agents' (同时活跃 agent 数, default) | 'throughput_per_mw' (每兆瓦吞吐量) | 'gpu_utilization_concurrent' (并发 agent 时 GPU 利用率) */
+    metric?: 'active_agents' | 'throughput_per_mw' | 'gpu_utilization_concurrent';
+    /** 并发 agent session 数 (default 64, 对位 GB300 NVL72 满载) */
+    concurrent_sessions?: number;
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (NVIDIA GB300 NVL72 20× / MW 领先 HGX H200, 用作 sanity check) */
     anchor_score?: number;
   };
   /** RCQ (Real Clinical Queries): 100 de-identified 实测临床查询 (Nature Medicine 2026-06-12 s41591-026-04431-5 全新发布, 医生在真实临床环境向 LLM 提问去标识化查询; Claude Opus 4.6 / GPT-5.2 / Gemini 3.1 Pro Preview 三顶级基线锚定)
