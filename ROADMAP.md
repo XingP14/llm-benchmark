@@ -1,5 +1,37 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 03:23 轮 (2026-06-16) — llm-benchmark (L→W 序列, woclaw 40min < 1h LOCKED, llm-benchmark 60min ≥ 1h UNLOCKED)
+
+**轮转依据**: 上轮 02:43 woclaw picked (`00a1e5e` v2.1.177 plugin marketplace ✅ 完成), 距今 40min < 1h → **woclaw LOCKED, 跳过**; llm-benchmark 02:23 picked (`df8cc55` AA-AgentPerf v1 立项 stage), 距今 60min ≥ 1h → **llm-benchmark UNLOCKED, 候选池非空** → 本轮 **L→W 序列 → llm-benchmark** (按 06-09 规则"1h 间隔优先"决胜)。两项目 git status 均 clean (woclaw 00a1e5e / llm-benchmark df8cc55)。
+
+**Hub /health** (vm153:8083): 200 OK (凌晨轻量, 持续运行 ~24d)。
+
+**挑选 5min 项**: **`src/types/index.ts` + `README.md` + `README.en.md` 把 `aa_agentperf_v1` (2026-06-14 Artificial Analysis agentic serving-stack, NVIDIA GB300 NVL72 vs HGX H200 20×/MW 锚定) 加到 v0.5.0 type 段 (22→23)** — 候选池内 02:23 cron 立 stage (`df8cc55` 「2026-06-14 Artificial Analysis AA-AgentPerf + NVIDIA GB300 20×/MW agentic serving stack 评测首批锚定」), 5min 内落地为 type 段 + 文档; model+harness+serving-stack 三件套第三腿 (前两腿 06-15 23:43 coding_agent_index_v1 + metr_v3_task_horizon); 沿 22:43 type stub 模式: 1 file `src/types/index.ts` 顶部 JSDoc 进度行 22→23 + `aa_agentperf_v1` 段 (enabled/api_base/model_id/metric 3 选 1 active_agents|throughput_per_mw|gpu_utilization_concurrent/concurrent_sessions default 64/timeout_ms default 30000/anchor_score 7 字段) + GB300 NVL72 vs HGX H200 20×/MW 锚定 + model+harness+serving-stack 三件套第三腿说明 + 2026-06-14 Artificial Analysis 来源 + 「并行 agent sessions 保持 GPU 满载」关键能力; 1 file `README.md` 路线图表 +1 行 (aa_agentperf_v1 [AA-AgentPerf 2026-06-14, agentic serving stack, https://wccftech.com/.../nvidia-gb300-..., GB300 NVL72 vs HGX H200 20×/MW 锚定, 3 维度 active_agents/throughput_per_mw/gpu_utilization_concurrent, concurrent_sessions=64]) + v0.5.0 PR 进度行更新 (18→23) + 1 段「2026-06-14 AA-AgentPerf serving-stack 锚定」说明 (model+harness+serving-stack 三件套第三腿 + vLLM 06-15 + D-Matrix Corsair CNBC 06-09 + AMD MI450 Meta 6GW + Nvidia CPU 战略 4 信号汇合); 1 file `README.en.md` 同步英文翻译; 不动 v0.5.0 dispatch 8/8 real fetch 已完整 (01:03 cron) / v0.4.0 内置 5 维度 / 其余 22 项 type 段 / config.example.json / hub 端 / 1 项 long_context_cluster dispatch real fetch ✅ (01:03 cron); tsc: 0 错 (3 files / +31 / -3); 价值: v0.5.0 type 段 22→23 项, 配合 06-15 23:43 coding_agent_index_v1 (model+harness 联合打分) + metr_v3_task_horizon (agentic 时长跨度) 形成「model + harness + serving stack」三件套完整 agent-stack 评测信号网, 抢 2026 H2 serving-stack 评测话语权 (AA-AgentPerf 公开数据 0 从零开发, 与 vllm_serving_bench 06-04 形成 serving stack 双错位 — vllm_serving_bench 偏 ops benchmark_serving.py / aa_agentperf_v1 偏 agentic serving stack 跨 agent sessions)。
+
+**修复**:
+- `src/types/index.ts` line 181 JSDoc 进度行: 22 → 23 项 (新增 `aa_agentperf_v1 06-16 03:23 cron`, + 2026-06-14 AA-AgentPerf + GB300 20×/MW + 三件套第三腿标注)
+- `src/types/index.ts` `ExternalBenchmarkRoadmap` 新增 `aa_agentperf_v1?: { enabled, api_base?, model_id?, metric? 'active_agents'|'throughput_per_mw'|'gpu_utilization_concurrent', concurrent_sessions? default 64, timeout_ms? default 30000, anchor_score? }` 7 字段 type 段 (沿 22:43 type stub 模式)
+- `README.md` 路线图表新增 1 行 `aa_agentperf_v1` (含 https://wccftech.com/nvidia-gb300-dominates-agentic-ai-workloads-20x-performance-leap-over-hopper/ 来源 + GB300 NVL72 20×/MW + model+harness+serving-stack 第三腿标注)
+- `README.md` v0.5.0 PR 进度行: 18 项 → 23 项 (新增 `+ aa_agentperf_v1 2026-06-16 03:23 cron`, 标注「Artificial Analysis Agentic serving-stack + NVIDIA GB300 20×/MW 锚定, model+harness+serving-stack 三件套第三腿, 22→23 项」)
+- `README.md` 新增 1 段「2026-06-14 Artificial Analysis AA-AgentPerf serving-stack 锚定」说明 (4 信号: 首个 agentic AI infra benchmark + GB300 NVL72 vs HGX H200 20×/MW + vLLM 06-15 + D-Matrix Corsair CNBC 06-09 + AMD MI450 Meta 6GW + Nvidia CPU 战略, 2026 Q2 三件套完整化 + serving 路线分流)
+- `README.en.md` 同步英文翻译 (3 处: 表格 +1 行 + PR 进度行 18→23 + AA-AgentPerf 英文说明段)
+- 不动: v0.5.0 dispatch 8/8 real fetch ✅ 完整 (01:03 cron 推 long_context_cluster 收尾) / v0.4.0 内置 5 维度 / 其余 22 项 type 段 / config.example.json / hub 端 / npm tarball 行为 / npm test / lint / CI
+- 验证: `npx tsc --noEmit -p tsconfig.json` exit=0 (0 预存错, 0 新增错)
+
+**commit + push**:
+- commit `8af1272` `feat(type): add aa_agentperf_v1 (Artificial Analysis agentic serving-stack, NVIDIA GB300 20×/MW anchor, model+harness+serving-stack third leg, v0.5.0 type 22→23)` — 3 files / +31 / -3
+- push master 成功: `df8cc55..8af1272`
+
+**耗时**: 候选评估 30s (heartbeat-state.json nextEligible 标 llm-benchmark 03:23 UNLOCK, 选 02:23 cron 已立项的 AA-AgentPerf v1 — 沿 22:43 type stub 模式最高效, model+harness+serving-stack 三件套第三腿 + GB300 20×/MW 锚定) + types/index.ts 2 处 edit (JSDoc 进度行 + aa_agentperf_v1 段) 1.5min + README.md 3 处 edit (表+1 行 + PR 进度行 18→23 + AA-AgentPerf 说明段) 1min + README.en.md 3 处 edit 1min + tsc 30s + commit/push 30s ≈ 4.5min (5min 硬上限内)
+
+**遗留 & 下次轮转**:
+- 父端阻塞 3.1/3.2/3.3 + 0.4.1 patch 重发 + 进程守护 (systemd/PM2) 不变
+- 候选池耗尽 (ROADMAP.md 「## 候选待推进项」段最近 5 项: AA-AgentPerf v1 ✅ / coding_agent_index_v1 + metr_v3_task_horizon ✅ / opera + hle ✅ / healthbench + medqa + rcq_clinical ✅ / cyberseceval3 ✅; v0.5.0 type 段 23 项全到位, dispatch 8/8 real fetch 完整)
+- v0.5.0 type 段 **23 项** ✅ + dispatch 8/8 real fetch ✅ — **v0.5.0 type 段完整 (23/23), dispatch 完整 (8/8)**, 下一里程碑 v0.6.0 (估 6-9 轮 cron 累进新 v0.6.0 立项)
+- pre-existing tsc 0 错 (本轮清完)
+- 下次轮转 → **woclaw** (L→W 序列), woclaw 02:43+1h = **03:43 UNLOCK** (再过 20min), woclaw 候选池剩 1 项 (06-15 22:03 立项 Android CLI 1.0 + Android Skills 跨平台兼容标注); 若 woclaw 候选池也空, 双空 → 06-09 调研 + 立项规则 (估 04:00 后 cron 触发)
+- 里程碑: v0.5.0 type 段 23 项完整 (model+harness+serving-stack 三件套全锚定), 2026 Q2 评测范式转折 (单 model → 三件套) 话语权落定, 后续 Fable5 / Mythos 5 / Opus 4.8 / GPT-5.4 / GPT-5.5 评测可直接调用 23 项基准
+
 ## 🩺 06:43 轮 (2026-06-15) — llm-benchmark (L→W 序列切换命中, 上一轮 woclaw 06:23)
 
 **轮转依据**: 上一轮 woclaw 06:23 picked (`8659f20` + `cfd75fe` opencode-woclaw-plugin Skill Creator 2.0 7/7 收尾, 候选池耗尽), 距今 17min < 1h hard rule 仍 LOCK (UNLOCK 07:23); llm-benchmark 05:25 picked (`98a178b` + `286e7f0` swe_bench_pro real fetch 6/8 真实化), 距今 1h18m > 1h UNLOCKED → L→W 序列本应 woclaw, woclaw 锁, 命中 llm-benchmark。两项目 git status 均 clean (woclaw cfd75fe / llm-benchmark 286e7f0)。
