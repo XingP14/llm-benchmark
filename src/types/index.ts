@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-16 23:43): type 段 ✅ 全 28 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + **06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套)** — 下一里程碑 v0.6.0
+ * PR 进度 (2026-06-17 03:03): type 段 ✅ 全 35 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + 06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套) + **06-17 03:03 cron type 段 28→35 (2026-06 serving 推理新主战场 vLLM MRV2 + SGLang × TRT-LLM DSA NSA backend + DeepSeek V3.2 1M 开源 + Qwen 3.5 / Kimi K2.6 / GLM-5 / MiniMax 2.5 4 开源 SOTA 现役模型首批锚定: vllm_mrv2 GB200 56% + sglang_trtllm_dsa_nsa Blackwell 3x-5x + deepseek_v3_2_long_context 1.6T/49B/1M + qwen3_5_anchor + kimi_k2_6_thinking + glm_5_anchor + minimax_2_5_anchor)** — 下一里程碑 v0.6.0
  * — 06-16 01:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/long_context_cluster/v1`, harness 0.4.0 PR #3256 同源)
  */
 export interface ExternalBenchmarkRoadmap {
@@ -540,6 +540,110 @@ export interface ExternalBenchmarkRoadmap {
     /** HTTP 请求超时 (ms, default 30000) */
     timeout_ms?: number;
     /** 注入的锚定分数 (2026 safety suite 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** vLLM Model Runner V2 (MRV2): vLLM 0.8.0+ 默认 runner, 解耦 model forward pass + CUDA graph capture + 异步调度 (spheron.network/blog/vllm-model-runner-v2-mrv2-deployment-guide/, 2026 Q2 serving 推理栈新基线)
+   * — 2026-06-17 03:03 cron: type 段首批锚定 (serving 推理新主战场 #1, GB200 56% throughput gain, Claude Opus 4.6 / Mythos 5 / DeepSeek V3.2 锚定)
+   * — 部署模式: 'gb200' | 'h100' | 'h200' | 'all' (default) */
+  vllm_mrv2?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 部署 GPU 模式: 'gb200' (default, Blackwell 56% gain) | 'h100' | 'h200' | 'all' */
+    hardware?: 'gb200' | 'h100' | 'h200' | 'all';
+    /** 评测模式: 'throughput' (default) | 'latency' | 'gpu_utilization' | 'all' */
+    mode?: 'throughput' | 'latency' | 'gpu_utilization' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (vLLM MRV2 GB200 56% throughput gain vs legacy runner, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** SGLang × TRT-LLM DSA NSA backend: Native Sparse Attention + TRT-LLM DeepSeek Sparse Attention kernels 集成 (spheron.network/blog/vllm-vs-tensorrt-llm-vs-sglang-benchmarks, --nsa-prefill-backend trtllm + --nsa-decode-backend trtllm 启用, Blackwell 3x-5x speedup on DeepSeek V3.2)
+   * — 2026-06-17 03:03 cron: type 段首批锚定 (serving 推理新主战场 #2, 2026 H1 最具突破性 serving 加速信号, DeepSeek V3.2 锚定)
+   * — backend 模式: 'trtllm' (default, Blackwell 3-5x) | 'flashinfer' | 'auto' */
+  sglang_trtllm_dsa_nsa?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** NSA backend 模式: 'trtllm' (default, Blackwell 3-5x) | 'flashinfer' | 'auto' */
+    nsa_backend?: 'trtllm' | 'flashinfer' | 'auto';
+    /** 评测阶段: 'prefill' (default) | 'decode' | 'both' */
+    phase?: 'prefill' | 'decode' | 'both';
+    /** HTTP 请求超时 (ms, default 60000, NSA prefill 长) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (SGLang × TRT-LLM DSA NSA Blackwell 3-5x speedup, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** DeepSeek V3.2 1.6T MoE 1M long-context: 开源 1M context SOTA 模型 (api-docs.deepseek.com/news/deepseek-v3-2-release, 1.6T total / 49B activated / NSA backend 加速)
+   * — 2026-06-17 03:03 cron: type 段首批锚定 (open-weights 1M long-context SOTA, 与 Mythos 5 / Opus 4.8 1M 闭源对位, NSA 加速配合)
+   * — 上下文长度: '128k' | '1m' (default) | '2m' */
+  deepseek_v3_2_long_context?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 上下文长度: '128k' | '1m' (default) | '2m' */
+    context_length?: '128k' | '1m' | '2m';
+    /** 评测模式: 'pass_retrieval' (default, 长上下文 needle-in-haystack) | 'pass_reasoning' | 'composite' */
+    mode?: 'pass_retrieval' | 'pass_reasoning' | 'composite';
+    /** HTTP 请求超时 (ms, default 60000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (DeepSeek V3.2 1M 公开长上下文基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** Qwen 3.5 系列: Alibaba 通义千问 3.5 开源 SOTA (qwen.alibaba.com, Qwen3-4B Thinking / 235B A22B Thinking / 397B 全栈, 2026-06 LiveBench 上榜)
+   * — 2026-06-17 03:03 cron: type 段首批锚定 (中国系开源 SOTA #1, Qwen3-4B Thinking LiveBench 64.1 / 235B A22B Thinking 62.2 / 397B 全栈上榜)
+   * — 评测子模型: 'qwen3_4b_thinking' | 'qwen3_235b_a22b_thinking' | 'qwen3_397b' | 'all' (default) */
+  qwen3_5_anchor?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子模型: 'qwen3_4b_thinking' | 'qwen3_235b_a22b_thinking' | 'qwen3_397b' | 'all' (default) */
+    sub_model?: 'qwen3_4b_thinking' | 'qwen3_235b_a22b_thinking' | 'qwen3_397b' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (Qwen 3.5 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** Kimi K2.6 Thinking: Moonshot AI 月之暗面 K2.6 / K2.5 Thinking 长推理模型 (kimi.com/blog/kimi-k2-6, K2.6 Thinking LiveBench 72.17, K2.5 Thinking 69.07)
+   * — 2026-06-17 03:03 cron: type 段首批锚定 (中国系开源 SOTA #2, K2.6 Thinking 72.17 / K2.5 Thinking 69.07 公开锚定)
+   * — 评测子模型: 'k2_6_thinking' (default) | 'k2_5_thinking' | 'all' */
+  kimi_k2_6_thinking?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子模型: 'k2_6_thinking' (default) | 'k2_5_thinking' | 'all' */
+    sub_model?: 'k2_6_thinking' | 'k2_5_thinking' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (Kimi K2.6 / K2.5 Thinking 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** GLM-5 / GLM-5.1: Z.ai 智谱旗舰长 horizon agent workflows 开源模型 (z.ai, GLM-5.1 Coding index 46.5)
+   * — 2026-06-17 03:03 cron: type 段首批锚定 (中国系开源 SOTA #3, GLM-5.1 长 horizon agent 锚定, Coding index 46.5)
+   * — 评测子模型: 'glm_5_1' (default) | 'glm_5' | 'all' */
+  glm_5_anchor?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子模型: 'glm_5_1' (default) | 'glm_5' | 'all' */
+    sub_model?: 'glm_5_1' | 'glm_5' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (GLM-5.1 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** MiniMax 2.5 / MiniMax-M2.5: MiniMax 公司新一代开源 SOTA (已被 vLLM 官方支持, 2026 H1 现役开源 SOTA)
+   * — 2026-06-17 03:03 cron: type 段首批锚定 (中国系开源 SOTA #4, MiniMax-M2.5 vLLM 官方支持, LiveBench 上榜)
+   * — 评测子模型: 'minimax_2_5' (default) | 'minimax_m2_5' | 'all' */
+  minimax_2_5_anchor?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子模型: 'minimax_2_5' (default) | 'minimax_m2_5' | 'all' */
+    sub_model?: 'minimax_2_5' | 'minimax_m2_5' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (MiniMax 2.5 公开前沿模型基准, 用作 sanity check) */
     anchor_score?: number;
   };
 }
