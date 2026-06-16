@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-17 04:43): type 段 ✅ 全 37 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + 06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套) + 06-17 03:03 cron type 段 28→35 (2026-06 serving 推理新主战场 vLLM MRV2 + SGLang × TRT-LLM DSA NSA backend + DeepSeek V3.2 1M 开源 + Qwen 3.5 / Kimi K2.6 / GLM-5 / MiniMax 2.5 4 开源 SOTA 现役模型首批锚定) + **06-17 04:43 cron type 段 35→37 (2026 Q2 长上下文 / agent memory 双主战场首批锚定: `mrcr_v2_8needle` MRCR v2 8-needle 1M 检索衰减 + `locomo_longmemeval_beam` LoCoMo + LongMemEval + BEAM 跨 session memory 三件套; Claude Opus 4.6 76% / GPT-5.4 36.6% / Gemini 3 Pro 24.5% MRCR v2 + Gemini 3 Deep Think 99% / GPT-5.5 96% / Claude Opus 4.7 89% NIAH-2 single-needle 1M)** — 下一里程碑 v0.6.0
+ * PR 进度 (2026-06-17 06:03): type 段 ✅ 全 40 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + 06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套) + 06-17 03:03 cron type 段 28→35 (2026-06 serving 推理新主战场 vLLM MRV2 + SGLang × TRT-LLM DSA NSA backend + DeepSeek V3.2 1M 开源 + Qwen 3.5 / Kimi K2.6 / GLM-5 / MiniMax 2.5 4 开源 SOTA 现役模型首批锚定) + 06-17 04:43 cron type 段 35→37 (2026 Q2 长上下文 / agent memory 双主战场首批锚定: `mrcr_v2_8needle` MRCR v2 8-needle 1M 检索衰减 + `locomo_longmemeval_beam` LoCoMo + LongMemEval + BEAM 跨 session memory 三件套; Claude Opus 4.6 76% / GPT-5.4 36.6% / Gemini 3 Pro 24.5% MRCR v2 + Gemini 3 Deep Think 99% / GPT-5.5 96% / Claude Opus 4.7 89% NIAH-2 single-needle 1M) + **06-17 06:03 cron type 段 37→40 (2026-06 新兴 3 大 leaderboard 首批锚定: `enterpriserag_bench` Onyx EnterpriseRAG-Bench 500K+ docs / 9 enterprise sources / MIT 公开 + `final_bench_metacog` FINAL Bench ALL-Leaderboard 42 LLM × 31 维度 Metacog 自我认知 + `sonar_llm_leaderboard` Sonar Summit 2026-03-04 "correctness ≠ code quality" code quality + security 评测方法论首日信号; Claude Opus 4.6 / GPT-5.4 / Gemini 3.1 Pro + Mythos 5 / Fable 5 / Opus 4.8 / Qwen 3.5 / DeepSeek V3.2 / Llama 4 Scout 锚定)** — 下一里程碑 v0.6.0
  * — 06-16 01:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/long_context_cluster/v1`, harness 0.4.0 PR #3256 同源)
  */
 export interface ExternalBenchmarkRoadmap {
@@ -644,6 +644,54 @@ export interface ExternalBenchmarkRoadmap {
     /** HTTP 请求超时 (ms, default 30000) */
     timeout_ms?: number;
     /** 注入的锚定分数 (MiniMax 2.5 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** Onyx EnterpriseRAG-Bench: 首个开源企业 RAG 评测基准 (onyx-dot-app/EnterpriseRAG-Bench, 2026-06, 500K+ docs / 9 enterprise sources / MIT 协议, 9 类企业数据源 Slack/Notion/Google Drive/Confluence/Jira/GitHub/Linear/Salesforce/HubSpot 真实企业数据)
+   * — 2026-06-17 06:03 cron: type 段首批锚定 (RAG 评测从模拟转真实企业数据, Claude Opus 4.6 / GPT-5.4 / Gemini 3.1 Pro Preview 锚定)
+   * — 3 任务模式: 'retrieval_accuracy' (default) | 'end_to_end_qa' | 'citation_quality' | 'all' (default) */
+  enterpriserag_bench?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测模式: 'retrieval_accuracy' (default) | 'end_to_end_qa' | 'citation_quality' | 'all' (default, 三件套 bundled) */
+    mode?: 'retrieval_accuracy' | 'end_to_end_qa' | 'citation_quality' | 'all';
+    /** 数据源选择: 'slack' | 'notion' | 'gdrive' | 'confluence' | 'jira' | 'github' | 'linear' | 'salesforce' | 'hubspot' | 'all' (default, 9 类企业数据) */
+    data_source?: 'slack' | 'notion' | 'gdrive' | 'confluence' | 'jira' | 'github' | 'linear' | 'salesforce' | 'hubspot' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (EnterpriseRAG-Bench 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** FINAL Bench ALL-Leaderboard: 跨 42 LLM × 31 评测领域综合 leaderboard (final-bench/ALL-Bench-Leaderboard, 2026-06, metacog 自我认知「知道自己不知道什么」核心新维度)
+   * — 2026-06-17 06:03 cron: type 段首批锚定 (评测范式从「知识」转「自我认知」首日信号, Claude Mythos 5 / Fable 5 / Opus 4.6 锚定)
+   * — 8 子基准: MMLU-Pro / GPQA / AIME / HLE / ARC-AGI-2 / SWE-Pro / IFEval / LCB */
+  final_bench_metacog?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子集: 'mmlu_pro' | 'gpqa' | 'aime' | 'hle' | 'arc_agi_2' | 'swe_pro' | 'ifeval' | 'lcb' | 'all' (default, 8 子基准 bundled) */
+    subset?: 'mmlu_pro' | 'gpqa' | 'aime' | 'hle' | 'arc_agi_2' | 'swe_pro' | 'ifeval' | 'lcb' | 'all';
+    /** 评测维度: 'metacog' (default, 自我认知) | 'accuracy' (传统正确率) | 'composite' (metacog + accuracy bundled) */
+    dimension?: 'metacog' | 'accuracy' | 'composite';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (FINAL Bench ALL-Leaderboard 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** Sonar LLM Leaderboard: 独立评测 LLM 生成代码 maintainability / technical debt / security vulnerabilities 3 大深层质量 (Sonar Summit 2026-03-04, "correctness ≠ code quality" 2026 评测方法论首日信号)
+   * — 2026-06-17 06:03 cron: type 段首批锚定 (评测从 functional correctness 转 code quality + security, Claude Opus 4.6 / GPT-5.4 / Gemini 3.1 Pro 锚定)
+   * — 3 评分维度: 'maintainability' (default) | 'security' | 'technical_debt' | 'all' (default) */
+  sonar_llm_leaderboard?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评分维度: 'maintainability' (default) | 'security' | 'technical_debt' | 'all' (default, 3 维 bundled) */
+    dimension?: 'maintainability' | 'security' | 'technical_debt' | 'all';
+    /** 编程语言: 'python' | 'javascript' | 'typescript' | 'java' | 'go' | 'rust' | 'all' (default, 6 语言 bundled) */
+    language?: 'python' | 'javascript' | 'typescript' | 'java' | 'go' | 'rust' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (Sonar LLM Leaderboard 公开前沿模型基准, 用作 sanity check) */
     anchor_score?: number;
   };
   /** MRCR v2 8-needle: 2026 最严长上下文多针检索测试 (Anthropic 内部评测 + contextarena.ai 第三方, 1M context 多针检索; yage.ai/share/long-context-benchmark-en-20260315.html)
