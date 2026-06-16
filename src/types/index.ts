@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-16 03:23): type 段 ✅ 全 23 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + **long_context_cluster 06-16 01:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定, model+harness+serving-stack 三件套第三腿, 2026-06-14 Artificial Analysis 发布) — 下一里程碑 v0.6.0
+ * PR 进度 (2026-06-16 23:43): type 段 ✅ 全 28 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + **06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套)** — 下一里程碑 v0.6.0
  * — 06-16 01:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/long_context_cluster/v1`, harness 0.4.0 PR #3256 同源)
  */
 export interface ExternalBenchmarkRoadmap {
@@ -470,6 +470,76 @@ export interface ExternalBenchmarkRoadmap {
     /** 评测模式: 'accuracy' (default, 答案准确率) | 'safety' (临床安全) | 'completeness' (回答完整度) | 'all' */
     mode?: 'accuracy' | 'safety' | 'completeness' | 'all';
     /** 注入的锚定分数 (Nature Medicine 2026-06-12 通用 LLM RCQ 综合分) */
+    anchor_score?: number;
+  };
+  /** ARC-AGI-3: 抽象推理 + agentic tasks (2026 arcprize.org/blog/arc-agi-3-launch 发布, Kili 6 维 2026 Top AI Benchmark 之 agent eval 类, 与 GAIA/τ2-Bench/WebArena 同列)
+   * — 2026-06-16 22:23 cron: type 段首批锚定 (Kili 2026 6 维 4 维盲点之首, abstract reasoning + agentic 评测)
+   * — 锚定: Claude Fable 5 / GPT-5.4 / Claude Mythos 5 */
+  arc_agi_3?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测模式: 'abstract' (default, 抽象推理) | 'agentic' (agentic task) | 'both' */
+    mode?: 'abstract' | 'agentic' | 'both';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (ARC-AGI-3 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** GDPval: real-world professional work 评测 (OpenAI + 商业 tasks 联合发布, Kili 6 维 2026 Top AI Benchmark 之一, 真实专业工作 vs 学术 benchmark 范式转移信号)
+   * — 2026-06-16 22:23 cron: type 段首批锚定 (Kili 6 维 professional work 维, Claude Opus 4.6 / GPT-5.2 / Gemini 3.1 Pro 锚定)
+   * — 3 任务模式: 'consulting' | 'law' | 'sales' | 'engineering' | 'all' (default) */
+  gdpval?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测任务类别: 'consulting' | 'law' | 'sales' | 'engineering' | 'all' (default) */
+    task_category?: 'consulting' | 'law' | 'sales' | 'engineering' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (GDPval 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** Terminal-Bench 2.0 hard tier: terminal agentic 高难度任务 (github.com/Terminal-Bench/..., Frontier coding + 长程 shell agent 主战场, Kili 6 维 coding 维)
+   * — 2026-06-16 22:23 cron: type 段首批锚定 (Kili 6 维 coding 维 hard tier, Claude Opus 4.6 / GPT-5.4-high 锚定)
+   * — 评分模式: 'pass_rate' (default) | 'duration_score' (越快分越高) | 'composite' (pass 70% + speed 30%) */
+  terminal_bench_hard?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评分模式: 'pass_rate' (default) | 'duration_score' | 'composite' */
+    score_mode?: 'pass_rate' | 'duration_score' | 'composite';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (Terminal-Bench 2.0 hard tier 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** HuggingFace Open LLM Leaderboard v2: open-weights 模型评测主战场 (huggingface.co/open-llm-leaderboard, MMLU-Pro + BBH + 7 hard 基准 bundled, lm-eval-harness v0.4.0 同源)
+   * — 2026-06-16 22:23 cron: type 段首批锚定 (Kili 6 维 open-weights 主战场, Qwen 3.5 / DeepSeek V3.2 / Llama 4 Scout 锚定)
+   * — 9 基准 bundled: MMLU-Pro + BBH + MuSR + IFEval + MATH + GPQA + MATH-Hard */
+  hf_open_llm_leaderboard_v2?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子集: 'all' (default, 9 bundled 基准) | 'mmlu_pro' | 'bbh' | 'musr' | 'ifeval' | 'math' | 'gpqa' | 'math_hard' */
+    subset?: 'all' | 'mmlu_pro' | 'bbh' | 'musr' | 'ifeval' | 'math' | 'gpqa' | 'math_hard';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (HF OLL v2 公开 open-weights 前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** Safety Bench 2026 Suite: Agent-SafetyBench + OS-HARM + CUAHarm 2026 三件套 (Kili 6 维 safety 维, 2026 顶级 safety 评测集合, 配合 cyberseceval3 单点形成完整 2026 safety 锚)
+   * — 2026-06-16 22:23 cron: type 段首批锚定 (Kili 6 维 safety 维三件套, Claude Mythos 5 / GPT-5.4 / Gemini 3.1 Pro 锚定)
+   * — 3 子套: 'agent_safety' (Agent-SafetyBench) | 'os_harm' (OS-HARM) | 'cua_harm' (CUAHarm) | 'all' (default) */
+  safety_bench_2026_suite?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子套: 'agent_safety' | 'os_harm' | 'cua_harm' | 'all' (default) */
+    suite?: 'agent_safety' | 'os_harm' | 'cua_harm' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (2026 safety suite 公开前沿模型基准, 用作 sanity check) */
     anchor_score?: number;
   };
 }
