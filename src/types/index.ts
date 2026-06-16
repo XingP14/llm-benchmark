@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-17 03:03): type 段 ✅ 全 35 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + 06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套) + **06-17 03:03 cron type 段 28→35 (2026-06 serving 推理新主战场 vLLM MRV2 + SGLang × TRT-LLM DSA NSA backend + DeepSeek V3.2 1M 开源 + Qwen 3.5 / Kimi K2.6 / GLM-5 / MiniMax 2.5 4 开源 SOTA 现役模型首批锚定: vllm_mrv2 GB200 56% + sglang_trtllm_dsa_nsa Blackwell 3x-5x + deepseek_v3_2_long_context 1.6T/49B/1M + qwen3_5_anchor + kimi_k2_6_thinking + glm_5_anchor + minimax_2_5_anchor)** — 下一里程碑 v0.6.0
+ * PR 进度 (2026-06-17 04:43): type 段 ✅ 全 37 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + 06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套) + 06-17 03:03 cron type 段 28→35 (2026-06 serving 推理新主战场 vLLM MRV2 + SGLang × TRT-LLM DSA NSA backend + DeepSeek V3.2 1M 开源 + Qwen 3.5 / Kimi K2.6 / GLM-5 / MiniMax 2.5 4 开源 SOTA 现役模型首批锚定) + **06-17 04:43 cron type 段 35→37 (2026 Q2 长上下文 / agent memory 双主战场首批锚定: `mrcr_v2_8needle` MRCR v2 8-needle 1M 检索衰减 + `locomo_longmemeval_beam` LoCoMo + LongMemEval + BEAM 跨 session memory 三件套; Claude Opus 4.6 76% / GPT-5.4 36.6% / Gemini 3 Pro 24.5% MRCR v2 + Gemini 3 Deep Think 99% / GPT-5.5 96% / Claude Opus 4.7 89% NIAH-2 single-needle 1M)** — 下一里程碑 v0.6.0
  * — 06-16 01:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/long_context_cluster/v1`, harness 0.4.0 PR #3256 同源)
  */
 export interface ExternalBenchmarkRoadmap {
@@ -644,6 +644,40 @@ export interface ExternalBenchmarkRoadmap {
     /** HTTP 请求超时 (ms, default 30000) */
     timeout_ms?: number;
     /** 注入的锚定分数 (MiniMax 2.5 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** MRCR v2 8-needle: 2026 最严长上下文多针检索测试 (Anthropic 内部评测 + contextarena.ai 第三方, 1M context 多针检索; yage.ai/share/long-context-benchmark-en-20260315.html)
+   * — 2026-06-17 04:43 cron: type 段首批锚定 (2026 Q2 长上下文 1M 检索衰减主战场, Claude Opus 4.6 76% / GPT-5.4 36.6% (512K-1M) / Gemini 3 Pro 24.5%, 揭示「1M 是 capacity 不是 quality」)
+   * — 上下文长度: '128k' | '512k' | '1m' (default) | '2m' */
+  mrcr_v2_8needle?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 上下文长度: '128k' | '512k' | '1m' (default) | '2m' */
+    context_length?: '128k' | '512k' | '1m' | '2m';
+    /** 评测模式: 'multi_needle' (default, 8-needle) | 'single_needle' (NIAH-2 配对) | 'composite' (NIAH + MRCR bundled) */
+    mode?: 'multi_needle' | 'single_needle' | 'composite';
+    /** HTTP 请求超时 (ms, default 60000, 1M context 长) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (1M 1.0=Opus 4.6 76% / GPT-5.4 36.6% / Gemini 3 Pro 24.5%, NIAH-2 1.0=Gemini 3 Deep Think 99% / GPT-5.5 96% / Opus 4.7 89% / DeepSeek V4-Pro 78%, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** LoCoMo + LongMemEval + BEAM (2026 AI Memory Benchmarks 三件套): mem0 2026 状态报告, 区分「1M input 找 fact」vs「assistant 记住 3 周前 user 说的」, 跨 session memory system 评测 (mem0.ai/blog/ai-memory-benchmarks-in-2026)
+   * — 2026-06-17 04:43 cron: type 段首批锚定 (2026 H2 跨 session memory 主战场, 与 NIAH/MRCR 检索互补, Claude Fable 5 / Opus 4.8 / Mythos 5 锚定)
+   * — 评测子集: 'locomo' | 'longmemeval' | 'beam' | 'all' (default) */
+  locomo_longmemeval_beam?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评测子集: 'locomo' | 'longmemeval' | 'beam' | 'all' (default, 三件套 bundled) */
+    suite?: 'locomo' | 'longmemeval' | 'beam' | 'all';
+    /** 会话时间跨度: '1d' (default) | '1w' | '1m' | '3w' (跨月 agent memory 主战场) */
+    session_horizon?: '1d' | '1w' | '1m' | '3w';
+    /** 评测模式: 'recall' (default) | 'reasoning' | 'composite' (recall + reasoning bundled) */
+    mode?: 'recall' | 'reasoning' | 'composite';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (2026 memory suite 公开前沿模型基准, 用作 sanity check) */
     anchor_score?: number;
   };
 }
