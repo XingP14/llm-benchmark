@@ -60,6 +60,34 @@ export class Evaluator {
    *   - swebench.com 官方 leaderboard (2026-02-19 更新)
    *   跨 harness 决策前务必查 3 源, 避免 harness-multiplier effect 误判。
    *
+   * 📋 **Harness v0.4.0 compatibility** (2026-06-17 22:03 cron, type 段 40→42
+   *   `lm_eval_harness_v0_4_0` 锚定): 2026-05-12 EleutherAI/lm-evaluation-harness
+   *   v0.4.0 正式发布 (https://github.com/EleutherAI/lm-evaluation-harness), 关键
+   *   范式重定义 — (a) **「Config-based task creation and configuration」** YAML
+   *   config 即可定义新 task, 无需写 Python src; (b) **「Support for Jinja2 prompt
+   *   design」** 模板化 prompt + Promptsource 互导; (c) **「Speedups and new modeling
+   *   libraries supported」** HF + vLLM + MPS (Apple Silicon) + GPT-NeoX 4 backend;
+   *   配合 06-13 `lm_eval_harness_v4_config` (config YAML 加载 stub) 形成「harness
+   *   release 锚定 + 任务 config 加载」双件套; 用户用 v0.4.0 YAML config 可评
+   *   60+ 学术基准 (ARC / HellaSwag / MMLU / TruthfulQA / Winogrande / GSM8k /
+   *   MMLU-Pro / GPQA / BBH / HumanEval / MBPP / DROP / IFEval / LCB / SWE-Bench
+   *   等); 当前仅在 `_external_benchmarks_roadmap.lm_eval_harness_v0_4_0` 字段
+   *   下生效 (5min cron 不调真实 harness v0.4.0 endpoint, 仅占位)。
+   *
+   * ⚠️ **Task conflict resolver** (2026-06-17 22:03 cron, type 段 40→42
+   *   `lm_eval_task_conflict_resolver` 锚定): 跨学术基准评测实战痛点
+   *   (CSDN 2026-03-30 「彻底解决 lm-evaluation-harness 任务冲突: 权威依赖管理
+   *   终极指南」 https://blog.csdn.net/gitblog_00173/article/details/151881638)
+   *   — 「acpbench 任务和 math 任务可能需要不同版本的某些库 (如 numpy 1.x vs
+   *   numpy 2.x), 从而导致冲突」; [dependency-groups] 段已知冲突组合自动检测 +
+   *   numpy / torch / datasets / transformers 跨 version resolver, 跑前
+   *   dry-run 验证 (3 模式 dry_run / auto_resolve / report_only); 用户跑
+   *   `lm-eval --tasks acpbench,math,gsm8k` 时, acpbench 依赖 numpy 1.x + math
+   *   依赖 numpy 2.x 会冲突, llm-benchmark dispatch 应当检测 + 报告 + 跳过; 60+
+   *   学术基准跨 task conflict 自动化 resolver = 2026 H2 跨 vendor model 选型
+   *   基础设施; 当前仅在 `_external_benchmarks_roadmap.lm_eval_task_conflict_resolver`
+   *   字段下生效 (5min cron 不调真实 resolver endpoint, 仅占位)。
+   *
    * 参考:
    *   - DigitalApplied "LLM Benchmark Methodology 2026: Reading Leaderboards"
    *     https://www.digitalapplied.com/blog/llm-benchmark-methodology-2026-contamination-leaderboard-guide

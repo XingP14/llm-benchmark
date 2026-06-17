@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-17 06:03): type 段 ✅ 全 40 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + 06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套) + 06-17 03:03 cron type 段 28→35 (2026-06 serving 推理新主战场 vLLM MRV2 + SGLang × TRT-LLM DSA NSA backend + DeepSeek V3.2 1M 开源 + Qwen 3.5 / Kimi K2.6 / GLM-5 / MiniMax 2.5 4 开源 SOTA 现役模型首批锚定) + 06-17 04:43 cron type 段 35→37 (2026 Q2 长上下文 / agent memory 双主战场首批锚定: `mrcr_v2_8needle` MRCR v2 8-needle 1M 检索衰减 + `locomo_longmemeval_beam` LoCoMo + LongMemEval + BEAM 跨 session memory 三件套; Claude Opus 4.6 76% / GPT-5.4 36.6% / Gemini 3 Pro 24.5% MRCR v2 + Gemini 3 Deep Think 99% / GPT-5.5 96% / Claude Opus 4.7 89% NIAH-2 single-needle 1M) + **06-17 06:03 cron type 段 37→40 (2026-06 新兴 3 大 leaderboard 首批锚定: `enterpriserag_bench` Onyx EnterpriseRAG-Bench 500K+ docs / 9 enterprise sources / MIT 公开 + `final_bench_metacog` FINAL Bench ALL-Leaderboard 42 LLM × 31 维度 Metacog 自我认知 + `sonar_llm_leaderboard` Sonar Summit 2026-03-04 "correctness ≠ code quality" code quality + security 评测方法论首日信号; Claude Opus 4.6 / GPT-5.4 / Gemini 3.1 Pro + Mythos 5 / Fable 5 / Opus 4.8 / Qwen 3.5 / DeepSeek V3.2 / Llama 4 Scout 锚定)** — 下一里程碑 v0.6.0
+ * PR 进度 (2026-06-17 22:03): type 段 ✅ 全 42 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + 06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套) + 06-17 03:03 cron type 段 28→35 (2026-06 serving 推理新主战场 vLLM MRV2 + SGLang × TRT-LLM DSA NSA backend + DeepSeek V3.2 1M 开源 + Qwen 3.5 / Kimi K2.6 / GLM-5 / MiniMax 2.5 4 开源 SOTA 现役模型首批锚定) + 06-17 04:43 cron type 段 35→37 (2026 Q2 长上下文 / agent memory 双主战场首批锚定: `mrcr_v2_8needle` MRCR v2 8-needle 1M 检索衰减 + `locomo_longmemeval_beam` LoCoMo + LongMemEval + BEAM 跨 session memory 三件套; Claude Opus 4.6 76% / GPT-5.4 36.6% / Gemini 3 Pro 24.5% MRCR v2 + Gemini 3 Deep Think 99% / GPT-5.5 96% / Claude Opus 4.7 89% NIAH-2 single-needle 1M) + 06-17 06:03 cron type 段 37→40 (2026-06 新兴 3 大 leaderboard 首批锚定: `enterpriserag_bench` Onyx EnterpriseRAG-Bench 500K+ docs / 9 enterprise sources / MIT 公开 + `final_bench_metacog` FINAL Bench ALL-Leaderboard 42 LLM × 31 维度 Metacog 自我认知 + `sonar_llm_leaderboard` Sonar Summit 2026-03-04 "correctness ≠ code quality" code quality + security 评测方法论首日信号; Claude Opus 4.6 / GPT-5.4 / Gemini 3.1 Pro + Mythos 5 / Fable 5 / Opus 4.8 / Qwen 3.5 / DeepSeek V3.2 / Llama 4 Scout 锚定) + **06-17 22:03 cron type 段 40→42 (2026 Q2 harness 评测双盲点首批锚定: `lm_eval_harness_v0_4_0` EleutherAI 2026-05-12 重大 release: config-based task creation + Jinja2 prompt design + 速度优化 + 4 backend + 60+ 学术基准 + `lm_eval_task_conflict_resolver` CSDN 2026-03-30 任务冲突依赖管理终极指南, [dependency-groups] 自动检测 + numpy/torch/datasets 跨 version resolver, 与 06-13 `lm_eval_harness_v4_config` 形成「harness release 锚定 + 任务冲突自动化解决」对位; 60+ 学术基准跨 task conflict 自动化 resolver = 2026 H2 跨 vendor model 选型基础设施)** — 下一里程碑 v0.6.0
  * — 06-16 01:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/long_context_cluster/v1`, harness 0.4.0 PR #3256 同源)
  */
 export interface ExternalBenchmarkRoadmap {
@@ -726,6 +726,49 @@ export interface ExternalBenchmarkRoadmap {
     /** HTTP 请求超时 (ms, default 30000) */
     timeout_ms?: number;
     /** 注入的锚定分数 (2026 memory suite 公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** lm_eval_harness_v0_4_0: EleutherAI lm-evaluation-harness v0.4.0 重大 release 锚定 (2026-05-12 config-based task creation + Jinja2 prompt design + 速度优化 + 4 backend + 60+ 学术基准, 2026 H1 harness 评测范式转折)
+   * — 06-17 22:03 cron: type 段锚定, 与 06-13 `lm_eval_harness_v4_config` (config YAML 加载 stub) 形成「harness release 锚定 + 任务 config 加载」对位
+   * — Response (POST https://api.lm-eval-harness.local/v0.4.0/run): { yaml_config_hash: string; tasks_completed: string[]; scores: Record<string, number>; error?: string }
+   * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
+  lm_eval_harness_v0_4_0?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** harness 配置文件路径 (YAML, 60+ 学术基准 bundled, e.g. MMLU / MMLU-Pro / GPQA / GSM8K / MATH / HumanEval / MBPP / BBH / DROP / HellaSwag / ARC / TruthfulQA / IFEval / LCB / SWE-Bench) */
+    config_path?: string;
+    /** 后端: 'hf' (HuggingFace, default) | 'vllm' (vLLM serving) | 'mps' (Apple Silicon) | 'gpt_neox' */
+    backend?: 'hf' | 'vllm' | 'mps' | 'gpt_neox';
+    /** prompt 模板: 'jinja2' (default, v0.4.0 新) | 'promptsource' | 'raw' */
+    prompt_engine?: 'jinja2' | 'promptsource' | 'raw';
+    /** few-shot 数量 (default 5) */
+    fewshot?: number;
+    /** 后处理: 'output_extraction' (default) | 'answer_extraction' | 'none' */
+    post_process?: 'output_extraction' | 'answer_extraction' | 'none';
+    /** 评测子集: 'arc' (default) | 'hellaswag' | 'mmlu' | 'mmlu_pro' | 'truthfulqa' | 'winogrande' | 'gsm8k' | 'all' */
+    subset?: 'arc' | 'hellaswag' | 'mmlu' | 'mmlu_pro' | 'truthfulqa' | 'winogrande' | 'gsm8k' | 'all';
+    /** HTTP 请求超时 (ms, default 60000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (60+ 学术基准公开前沿模型基准, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** lm_eval_task_conflict_resolver: lm-evaluation-harness 任务冲突依赖管理自动化 (CSDN 2026-03-30 实战痛点, [dependency-groups] 已知冲突组合自动检测 + numpy/torch/datasets 跨 version resolver)
+   * — 06-17 22:03 cron: type 段锚定, 跑前 dry-run 验证 + 冲突报告 + 跳过, 与 `lm_eval_harness_v0_4_0` 配对
+   * — Response (POST https://llm-benchmark.local/api/v1/lm_eval_task_conflict_resolver/v1): { conflicts_detected: number; resolver_status: 'clean' | 'partial_skip' | 'fail'; skip_tasks: string[]; report_yaml: string; error?: string }
+   * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
+  lm_eval_task_conflict_resolver?: {
+    enabled: boolean;
+    api_base?: string;
+    /** 待评测的 task 列表 (e.g. ['acpbench', 'math', 'gsm8k']), 跑前 dry-run 验证版本冲突 */
+    tasks?: string[];
+    /** resolver 模式: 'dry_run' (default, 仅检测不运行) | 'auto_resolve' (尝试自动解决) | 'report_only' (生成报告) */
+    mode?: 'dry_run' | 'auto_resolve' | 'report_only';
+    /** 已知冲突版本检测: 'numpy' (default, 1.x vs 2.x) | 'torch' (1.x vs 2.x) | 'datasets' | 'transformers' | 'all' */
+    dependency_groups?: 'numpy' | 'torch' | 'datasets' | 'transformers' | 'all';
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (已知冲突组合数, 用作 sanity check) */
     anchor_score?: number;
   };
 }
