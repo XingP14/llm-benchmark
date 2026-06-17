@@ -178,7 +178,7 @@ export interface DimensionScore {
 
 /**
  * v0.5.0+ 外部基准路线图 (roadmap-only, 沿 06-09 23:03 ROADMAP 段从示例到实现)
- * PR 进度 (2026-06-17 22:03): type 段 ✅ 全 42 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + 06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套) + 06-17 03:03 cron type 段 28→35 (2026-06 serving 推理新主战场 vLLM MRV2 + SGLang × TRT-LLM DSA NSA backend + DeepSeek V3.2 1M 开源 + Qwen 3.5 / Kimi K2.6 / GLM-5 / MiniMax 2.5 4 开源 SOTA 现役模型首批锚定) + 06-17 04:43 cron type 段 35→37 (2026 Q2 长上下文 / agent memory 双主战场首批锚定: `mrcr_v2_8needle` MRCR v2 8-needle 1M 检索衰减 + `locomo_longmemeval_beam` LoCoMo + LongMemEval + BEAM 跨 session memory 三件套; Claude Opus 4.6 76% / GPT-5.4 36.6% / Gemini 3 Pro 24.5% MRCR v2 + Gemini 3 Deep Think 99% / GPT-5.5 96% / Claude Opus 4.7 89% NIAH-2 single-needle 1M) + 06-17 06:03 cron type 段 37→40 (2026-06 新兴 3 大 leaderboard 首批锚定: `enterpriserag_bench` Onyx EnterpriseRAG-Bench 500K+ docs / 9 enterprise sources / MIT 公开 + `final_bench_metacog` FINAL Bench ALL-Leaderboard 42 LLM × 31 维度 Metacog 自我认知 + `sonar_llm_leaderboard` Sonar Summit 2026-03-04 "correctness ≠ code quality" code quality + security 评测方法论首日信号; Claude Opus 4.6 / GPT-5.4 / Gemini 3.1 Pro + Mythos 5 / Fable 5 / Opus 4.8 / Qwen 3.5 / DeepSeek V3.2 / Llama 4 Scout 锚定) + **06-17 22:03 cron type 段 40→42 (2026 Q2 harness 评测双盲点首批锚定: `lm_eval_harness_v0_4_0` EleutherAI 2026-05-12 重大 release: config-based task creation + Jinja2 prompt design + 速度优化 + 4 backend + 60+ 学术基准 + `lm_eval_task_conflict_resolver` CSDN 2026-03-30 任务冲突依赖管理终极指南, [dependency-groups] 自动检测 + numpy/torch/datasets 跨 version resolver, 与 06-13 `lm_eval_harness_v4_config` 形成「harness release 锚定 + 任务冲突自动化解决」对位; 60+ 学术基准跨 task conflict 自动化 resolver = 2026 H2 跨 vendor model 选型基础设施)** — 下一里程碑 v0.6.0
+ * PR 进度 (2026-06-17 22:03): type 段 ✅ 全 42 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + long_context_cluster 06-16 01:03 cron, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** + 06-16 03:23 cron type 段 22→23 (aa_agentperf_v1 NVIDIA GB300 20×/MW agentic serving-stack 锚定) + 06-16 22:23 cron type 段 23→28 (Kili 2026 Top 6 维 4 维盲点 + HF OLL v2 首批锚定: arc_agi_3 抽象推理 + gdpval 真实专业工作 + terminal_bench_hard 高难度 terminal agentic + hf_open_llm_leaderboard_v2 open-weights 主战场 + safety_bench_2026_suite Agent-SafetyBench + OS-HARM + CUAHarm 三件套) + 06-17 03:03 cron type 段 28→35 (2026-06 serving 推理新主战场 vLLM MRV2 + SGLang × TRT-LLM DSA NSA backend + DeepSeek V3.2 1M 开源 + Qwen 3.5 / Kimi K2.6 / GLM-5 / MiniMax 2.5 4 开源 SOTA 现役模型首批锚定) + 06-17 04:43 cron type 段 35→37 (2026 Q2 长上下文 / agent memory 双主战场首批锚定: `mrcr_v2_8needle` MRCR v2 8-needle 1M 检索衰减 + `locomo_longmemeval_beam` LoCoMo + LongMemEval + BEAM 跨 session memory 三件套; Claude Opus 4.6 76% / GPT-5.4 36.6% / Gemini 3 Pro 24.5% MRCR v2 + Gemini 3 Deep Think 99% / GPT-5.5 96% / Claude Opus 4.7 89% NIAH-2 single-needle 1M) + 06-17 06:03 cron type 段 37→40 (2026-06 新兴 3 大 leaderboard 首批锚定: `enterpriserag_bench` Onyx EnterpriseRAG-Bench 500K+ docs / 9 enterprise sources / MIT 公开 + `final_bench_metacog` FINAL Bench ALL-Leaderboard 42 LLM × 31 维度 Metacog 自我认知 + `sonar_llm_leaderboard` Sonar Summit 2026-03-04 "correctness ≠ code quality" code quality + security 评测方法论首日信号; Claude Opus 4.6 / GPT-5.4 / Gemini 3.1 Pro + Mythos 5 / Fable 5 / Opus 4.8 / Qwen 3.5 / DeepSeek V3.2 / Llama 4 Scout 锚定) + **06-17 22:03 cron type 段 40→42 (2026 Q2 harness 评测双盲点首批锚定: `lm_eval_harness_v0_4_0` EleutherAI 2026-05-12 重大 release: config-based task creation + Jinja2 prompt design + 速度优化 + 4 backend + 60+ 学术基准 + `lm_eval_task_conflict_resolver` CSDN 2026-03-30 任务冲突依赖管理终极指南, [dependency-groups] 自动检测 + numpy/torch/datasets 跨 version resolver, 与 06-13 `lm_eval_harness_v4_config` 形成「harness release 锚定 + 任务冲突自动化解决」对位; 60+ 学术基准跨 task conflict 自动化 resolver = 2026 H2 跨 vendor model 选型基础设施) + 06-17 23:43 cron type 段 42→45 (2026-06 新兴 3 大 leaderboard 首批锚定: `skillvetbench` 2026-05-24 LLM-as-Judge 5 维 SARS (Skill Agentic Risk Score) agent skill 安全审计, ClawHub 52,000 skills 库首日安全审计基础设施, 与 woclaw 23:43 cron OpenClaw v2026.6.8 + SkillVetBench 自审姊妹信号; `frontiermath_v2` Epoch AI 2026-06-12 v2 release, Tiers 1-3 + Tier 4 release, SOTA: GPT-5.5 Pro 87.7% / Claude Fable 5 87.0% / GPT-5.5 85.3% / Claude Opus 4.8 80.0%; `nemotron_3_ultra` NVIDIA 2026-06-04 550B-A55B HF release, 8× B200 BF16 chunked prefill + MTP, RULER 1M 94.7% 业内 1M 检索新高 / AA-LCR 65.4% / Tau2 76.9%)** — 下一里程碑 v0.6.0
  * — 06-16 01:03 cron: console.info stub → 真实 fetch (`POST https://llm-benchmark.local/api/v1/long_context_cluster/v1`, harness 0.4.0 PR #3256 同源)
  */
 export interface ExternalBenchmarkRoadmap {
@@ -769,6 +769,59 @@ export interface ExternalBenchmarkRoadmap {
     /** HTTP 请求超时 (ms, default 30000) */
     timeout_ms?: number;
     /** 注入的锚定分数 (已知冲突组合数, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** skillvetbench: LLM-as-Judge 5 维 SARS (Skill Agentic Risk Score) agent skill 安全审计 (2026-05-24 snapshot, arXiv 2606.15899, https://huggingface.co/blog/skillvetbench, ClawHub 52,000 skills 库首日安全审计基础设施)
+   * — 06-17 23:43 cron: type 段首批锚定 (2026-06 agent skill 安全评测盲点, 与 woclaw 23:43 cron OpenClaw v2026.6.8 + SkillVetBench 自审姊妹信号)
+   * — 5 维 SARS: instruction_layer | multi_agent | exfiltration | privilege_escalation | data_poisoning | all
+   * — Response (POST https://api.skillvetbench.local/v1/audit): { sars_score: number; per_dim_scores: Record<string, number>; skill_id: string; eval_model: string; error?: string } */
+  skillvetbench?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 评估模型 (作为 LLM-as-Judge 裁判): 'gpt-5.5' | 'claude-fable-5' | 'claude-opus-4.8' | 'gemini-3.1-pro' | 'deepseek-v4-pro' | 'auto' (default) */
+    eval_model?: 'gpt-5.5' | 'claude-fable-5' | 'claude-opus-4.8' | 'gemini-3.1-pro' | 'deepseek-v4-pro' | 'auto';
+    /** 评测维度: 'instruction_layer' | 'multi_agent' | 'exfiltration' | 'privilege_escalation' | 'data_poisoning' | 'all' (default) */
+    dimension?: 'instruction_layer' | 'multi_agent' | 'exfiltration' | 'privilege_escalation' | 'data_poisoning' | 'all';
+    /** SkillVetBench snapshot date (default "2026-05-24") */
+    snapshot_date?: string;
+    /** HTTP 请求超时 (ms, default 30000) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (ClawHub 52k skills 首日审计基线, 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** frontiermath_v2: Epoch AI FrontierMath v2 (2026-06-12 release, Tiers 1-3 + Tier 4 release, 修正并移除 problem items, research-level 私有问题)
+   * — 06-17 23:43 cron: type 段首批锚定 (2026-06 顶级模型 expert math 评测新主战场, SOTA: GPT-5.5 Pro xhigh 87.7% / Claude Fable 5 max 87.0% / GPT-5.5 xhigh 85.3% / Claude Opus 4.8 80.0% / GPT-5.4 xhigh 78.6%)
+   * — 难度梯度: 't1' | 't2' | 't3' | 't4' (research-level) | 'all' (default)
+   * — Response (POST https://api.frontiermath-v2.local/v1/eval): { tier_score: number; per_tier_scores: Record<string, number>; difficulty_breakdown: Record<string, number>; model_id: string; error?: string } */
+  frontiermath_v2?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 难度梯度: 't1' | 't2' | 't3' | 't4' (research-level 私有问题) | 'all' (default, 4 tier bundled) */
+    tier?: 't1' | 't2' | 't3' | 't4' | 'all';
+    /** 数学难度: 'undergraduate' | 'early_career' | 'research' | 'all' (default) */
+    math_difficulty?: 'undergraduate' | 'early_career' | 'research' | 'all';
+    /** HTTP 请求超时 (ms, default 60000, Tier 4 私有问题耗时较长) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (FrontierMath v2 SOTA 公开基准, GPT-5.5 Pro 87.7% 用作 sanity check) */
+    anchor_score?: number;
+  };
+  /** nemotron_3_ultra: NVIDIA Nemotron-3-Ultra 550B-A55B frontier reasoning (2026-06-04 HF release, https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16, 8× B200 单节点 BF16 chunked prefill + MTP)
+   * — 06-17 23:43 cron: type 段首批锚定 (frontier-scale general purpose reasoning and chat, RULER 1M 94.7% 业内 1M 检索新高 / AA-LCR 65.4% / Tau2 76.9% / Longbench v2 ≤1M 61.9% / IFBench 81.7%)
+   * — 硬件配置: '8xb200' (default, 单节点) | '8xh200' | '4xb200-single' | 'auto'
+   * — Response (POST https://api.nemotron-3-ultra.local/v1/eval): { ruler_1m: number; aa_lcr: number; tau2: number; longbench_v2: number; ifbench: number; model_id: string; error?: string } */
+  nemotron_3_ultra?: {
+    enabled: boolean;
+    api_base?: string;
+    model_id?: string;
+    /** 硬件配置: '8xb200' (default, 单节点 8× B200) | '8xh200' (Hopper) | '4xb200-single' (4 卡) | 'auto' */
+    hardware?: '8xb200' | '8xh200' | '4xb200-single' | 'auto';
+    /** 上下文长度: '128k' | '256k' | '512k' | '1m' (default, 业内 1M 检索新高) */
+    context_length?: '128k' | '256k' | '512k' | '1m';
+    /** HTTP 请求超时 (ms, default 60000, 1M 推理耗时较长) */
+    timeout_ms?: number;
+    /** 注入的锚定分数 (RULER 1M 94.7% 公开基准, 用作 sanity check) */
     anchor_score?: number;
   };
 }
