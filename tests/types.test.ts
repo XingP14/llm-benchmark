@@ -128,5 +128,31 @@ describe('Types', () => {
       };
       expect(stubRuntime.process_aware_scoring?.subset).toBe('runtime_metrics');
     });
+
+    // 06-20 05:03 cron: 5 type-stub 真实化 step-4 of 5 — swe_bench_pro.subset 字段 (与 terminal_bench.subset / benchlm_agentic.subset / process_aware_scoring.subset / long_context_cluster.subset / cyberseceval3.risk_categories 对位)
+    it('external_benchmarks_roadmap swe_bench_pro accepts subset (06-20 type-stub step-4)', () => {
+      type Ext = NonNullable<BenchmarkConfig['_external_benchmarks_roadmap']>;
+      const stub: Ext = {
+        swe_bench_pro: {
+          enabled: true,
+          api_base: 'https://llm-benchmark.local/api/v1/swe_bench_pro/v1',
+          model_id: 'claude-fable-5',
+          subset: 'multilingual', // 06-20 05:03 cron 字段已存在但 JSDoc 升格 (multilingual 跨 Python/JS/Go/Rust/Java 4-5 语言)
+          agentic_mode: true,
+          timeout_ms: 30000,
+          anchor_score: 80.3,
+        },
+      };
+      // subset 字段在 swe_bench_pro 存在, 枚举 'multilingual' 被接受
+      expect(stub.swe_bench_pro?.subset).toBe('multilingual');
+      // 另一枚举验证: lite (轻量子集, 快速 sanity check)
+      const stubLite: Ext = {
+        swe_bench_pro: {
+          enabled: true,
+          subset: 'lite',
+        },
+      };
+      expect(stubLite.swe_bench_pro?.subset).toBe('lite');
+    });
   });
 });

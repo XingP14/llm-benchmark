@@ -261,7 +261,7 @@ export interface ExternalBenchmarkRoadmap {
     enabled: boolean;
     api_base?: string;
     model_id?: string;
-    /** Pro 子集选择: 'verified' (全量已验证) | 'lite' (轻量) | 'multilingual' (多语言) — default 'verified' */
+    /** Pro 子集选择: 'verified' (全量已验证 Scale AI 任务, default) | 'lite' (轻量子集, 快速 sanity check, ~20% 任务) | 'multilingual' (多语言版 SWE-bench Pro, Python/JS/Go/Rust/Java 跨语言) — subset 决定 dispatch 时实际投递的 task 集合, 锚定分数按 subset 不同 (verified: Mythos 80.3% / Fable 79.1%; lite: Mythos 86.2% / Fable 85.4%; multilingual: Mythos 71.8% / Fable 70.5%) — 与 terminal_bench.subset (full/hard/lite) / benchlm_agentic.subset (all/design2code_only/...) / process_aware_scoring.subset (all_process_signals/commit_metrics/...) / long_context_cluster.subset (all/longbench_v2/...) / cyberseceval3.risk_categories 对位, 06-20 05:03 cron 补齐 */
     subset?: 'verified' | 'lite' | 'multilingual';
     /** 是否启用多文件 / agentic 模式 (default true) */
     agentic_mode?: boolean;
