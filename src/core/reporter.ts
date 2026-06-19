@@ -5,30 +5,45 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
+ * 维度顺序与中文标签（统一在 Reporter 中维护，src/index.ts printSummary / Reporter 各报表入口共享）
+ * - dialogue / coding 默认开启 (true)
+ * - function_calling / long_context / multi_turn 可选 (默认 false，未启用时填 `-`)
+ * 实际默认行为见 initConfig() / config.example.json 中 benchmarks 段
+ *
+ * 短名 / 长名双轨：
+ * - `cn`   = 简短中文 (console 表格用, 限 4-5 字)
+ * - `label` = 中文长名 (Markdown 报告用, 含义更完整)
+ */
+export interface DimHeader {
+  key: keyof DimensionScore;
+  label: string;
+  cn: string;
+}
+
+export const DIM_HEADERS: ReadonlyArray<DimHeader> = [
+  { key: 'dialogue', label: '对话能力', cn: '对话' },
+  { key: 'coding', label: '代码能力', cn: '代码' },
+  { key: 'function_calling', label: '工具调用', cn: '工具调用' },
+  { key: 'long_context', label: '长上下文', cn: '长上下文' },
+  { key: 'multi_turn', label: '多轮对话', cn: '多轮对话' },
+];
+
+/**
+ * 从 EvaluationResult.dimensions 取一个维度的展示值。
+ * 未启用 / 缺失时返回 '-'，存在 average 时返回保留 1 位小数。
+ * 这是 Reporter 与 src/index.ts printSummary 唯一需要的取值逻辑，
+ * 集中实现避免双处副本产生漂移 (以往 06-20 cron refactor 之前的 bug)。
+ */
+export function getDimCell(dimensions: DimensionScore | undefined, key: keyof DimensionScore): string {
+  const dim = (dimensions as any)?.[key];
+  if (!dim || typeof dim.average !== 'number') return '-';
+  return Number(dim.average).toFixed(1);
+}
+
+/**
  * 报告生成器 - 生成可视化对比报告
  */
 export class Reporter {
-  /**
-   * 维度顺序与中文标签（与 src/index.ts printSummary 中 dimHeaders 保持一致）
-   * - dialogue / coding 默认开启 (true)
-   * - function_calling / long_context / multi_turn 可选 (默认 false，未启用时填 `-`)
-   * 实际默认行为见 initConfig() / config.example.json 中 benchmarks 段
-   */
-  private static readonly DIM_HEADERS: Array<{ key: keyof DimensionScore; label: string; cn: string }> = [
-    { key: 'dialogue', label: 'dialogue', cn: '对话能力' },
-    { key: 'coding', label: 'coding', cn: '代码能力' },
-    { key: 'function_calling', label: 'function_calling', cn: '工具调用' },
-    { key: 'long_context', label: 'long_context', cn: '长上下文' },
-    { key: 'multi_turn', label: 'multi_turn', cn: '多轮对话' },
-  ];
-
-  private static getDimValue(dimensions: DimensionScore, key: keyof DimensionScore): string {
-    const dim = (dimensions as any)[key];
-    if (!dim || typeof dim.average !== 'number') return '-';
-    // 保留 1 位小数，避免整数字段（如 100.0）和小数字段（如 92.5）格式不一致
-    return Number(dim.average).toFixed(1);
-  }
-
   static generateJSON(results: EvaluationResult[]): ComparisonReport {
     return {
       results: results,
@@ -48,8 +63,8 @@ export class Reporter {
 
     md += `## 总体排名\n\n`;
     // 表头：5 个维度（可选维度始终展示，未启用时填 `-`）
-    const headerCells = ['排名', '模型', '总分', ...Reporter.DIM_HEADERS.map((d) => d.cn), '耗时'];
-    const sepCells = ['------', '------', '------', ...Reporter.DIM_HEADERS.map(() => '----------'), '------'];
+    const headerCells = ['排名', '模型', '总分', ...DIM_HEADERS.map((d) => d.label), '耗时'];
+    const sepCells = ['------', '------', '------', ...DIM_HEADERS.map(() => '----------'), '------'];
     md += `| ${headerCells.join(' | ')} |\n`;
     md += `| ${sepCells.join(' | ')} |\n`;
 
@@ -57,7 +72,7 @@ export class Reporter {
 
     sorted.forEach((result, index) => {
       const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
-      const dimCells = Reporter.DIM_HEADERS.map((d) => Reporter.getDimValue(result.dimensions, d.key));
+      const dimCells = DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key));
       md += `| ${medal} | ${result.modelName} | ${result.totalScore} | ${dimCells.join(' | ')} | ${(result.duration / 1000).toFixed(1)}s |\n`;
     });
 
@@ -70,16 +85,16 @@ export class Reporter {
       md += `- **总分**: ${result.totalScore}\n`;
       // 5 维度概览（v0.4.0 起覆盖 5 维度：dialogue / coding 默认开启，
       // function_calling / long_context / multi_turn 可选，未启用时填 -）
-      Reporter.DIM_HEADERS.forEach((d) => {
-        md += `- **${d.cn}**: ${Reporter.getDimValue(result.dimensions, d.key)}\n`;
+      DIM_HEADERS.forEach((d) => {
+        md += `- **${d.label}**: ${getDimCell(result.dimensions, d.key)}\n`;
       });
       md += `- **评测耗时**: ${(result.duration / 1000).toFixed(1)}s\n\n`;
 
       // 每个存在的维度都展示分类明细（v0.4.0 之前只列 dialogue / coding）
-      Reporter.DIM_HEADERS.forEach((d) => {
+      DIM_HEADERS.forEach((d) => {
         const dim = (result.dimensions as any)[d.key];
         if (!dim || !dim.details) return;
-        md += `**${d.cn}分类:**\n\n`;
+        md += `**${d.label}分类:**\n\n`;
         md += `| 类别 | 得分 |\n`;
         md += `|------|------|\n`;
         for (const [category, score] of Object.entries(dim.details)) {
@@ -154,7 +169,7 @@ export class Reporter {
                     <th>排名</th>
                     <th>模型</th>
                     <th>总分</th>
-                    ${Reporter.DIM_HEADERS.map((d) => `<th>${d.cn}</th>`).join('')}
+                    ${DIM_HEADERS.map((d) => `<th>${d.label}</th>`).join('')}
                     <th>耗时</th>
                 </tr>
             </thead>
@@ -173,7 +188,7 @@ export class Reporter {
                         <div class="score-bar"><div class="score-fill total" style="width: ${result.totalScore}%"></div></div>
                     </td>`;
 
-      Reporter.DIM_HEADERS.forEach((d) => {
+      DIM_HEADERS.forEach((d) => {
         const dim = (result.dimensions as any)[d.key];
         if (!dim || typeof dim.average !== 'number') {
           html += `<td><span class="dim-na">-</span></td>`;
@@ -206,22 +221,22 @@ export class Reporter {
                 <h3>${result.modelName}</h3>
                 <p><strong>总分:</strong> ${result.totalScore}</p>`;
 
-      Reporter.DIM_HEADERS.forEach((d) => {
+      DIM_HEADERS.forEach((d) => {
         const dim = (result.dimensions as any)[d.key];
         if (!dim || typeof dim.average !== 'number') {
-          html += `<p><strong>${d.cn}:</strong> <span class="dim-na">-</span></p>`;
+          html += `<p><strong>${d.label}:</strong> <span class="dim-na">-</span></p>`;
         } else {
           const v = Number(dim.average).toFixed(1);
-          html += `<p><strong>${d.cn}:</strong> ${v}</p>`;
+          html += `<p><strong>${d.label}:</strong> ${v}</p>`;
         }
       });
 
       // 每个存在的维度都展示分类明细（v0.4.0 之前只列 dialogue / coding）
-      Reporter.DIM_HEADERS.forEach((d) => {
+      DIM_HEADERS.forEach((d) => {
         const dim = (result.dimensions as any)[d.key];
         if (!dim || !dim.details) return;
         html += `
-                <h4>${d.cn}分类</h4>
+                <h4>${d.label}分类</h4>
                 <ul>`;
         for (const [category, score] of Object.entries(dim.details)) {
           html += `<li>${category}: ${score}</li>`;
@@ -250,15 +265,8 @@ export class Reporter {
     const sorted = [...results].sort((a, b) => b.totalScore - a.totalScore);
 
     // 维度列：固定 5 列（function_calling / 长上下文 / 多轮 可选，没有时填 -）
-    const dimHeaders: Array<{ key: keyof DimensionScore; label: string }> = [
-      { key: 'dialogue', label: 'dialogue' },
-      { key: 'coding', label: 'coding' },
-      { key: 'function_calling', label: 'function_calling' },
-      { key: 'long_context', label: 'long_context' },
-      { key: 'multi_turn', label: 'multi_turn' },
-    ];
-
-    const headers = ['rank', 'model', 'total', ...dimHeaders.map((d) => d.label), 'duration_s', 'questions'];
+    // 统一从 module-level DIM_HEADERS 取 key + label (csv 需英文 label)
+    const headers = ['rank', 'model', 'total', ...DIM_HEADERS.map((d) => String(d.key)), 'duration_s', 'questions'];
     const lines: string[] = [headers.join(',')];
 
     const escape = (v: unknown): string => {
@@ -275,7 +283,7 @@ export class Reporter {
         idx + 1,
         r.modelName,
         r.totalScore,
-        ...dimHeaders.map(({ key }) => {
+        ...DIM_HEADERS.map(({ key }) => {
           const dim = (r.dimensions as any)[key];
           return dim && typeof dim.average === 'number' ? dim.average : '-';
         }),

@@ -1,6 +1,6 @@
 // tests/reporter.test.ts
 
-import { Reporter } from '../src/core/reporter';
+import { Reporter, DIM_HEADERS, getDimCell } from '../src/core/reporter';
 import { EvaluationResult } from '../src/types';
 
 const mockResults: EvaluationResult[] = [
@@ -219,6 +219,38 @@ describe('Reporter', () => {
 
       // 清理
       fs.rmSync(outputDir, { recursive: true });
+    });
+  });
+
+  // 06-20 cron refactor: DIM_HEADERS + getDimCell 从 Reporter 私有 static
+  // 提为 module-level export，与 src/index.ts printSummary 共享。
+  // 下述 test 锁定导出行为，避免后续谁又把它在两处拷贝。
+  describe('shared exports (DIM_HEADERS + getDimCell)', () => {
+    it('DIM_HEADERS has 5 entries with consistent key/label/cn', () => {
+      expect(DIM_HEADERS).toHaveLength(5);
+      const keys = DIM_HEADERS.map((d) => d.key);
+      expect(keys).toEqual(['dialogue', 'coding', 'function_calling', 'long_context', 'multi_turn']);
+      for (const d of DIM_HEADERS) {
+        expect(d.label.length).toBeGreaterThan(0);
+        expect(d.cn.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('getDimCell returns "-" for missing/undefined dimension', () => {
+      expect(getDimCell(undefined, 'dialogue')).toBe('-');
+      const dims = { dialogue: undefined } as any;
+      expect(getDimCell(dims, 'dialogue')).toBe('-');
+    });
+
+    it('getDimCell returns "-" for dimension without numeric average', () => {
+      const dims = { dialogue: { total: 100, count: 1 } } as any;
+      expect(getDimCell(dims, 'dialogue')).toBe('-');
+    });
+
+    it('getDimCell formats average to 1 decimal place', () => {
+      expect(getDimCell({ dialogue: { average: 90, total: 90, count: 1 } } as any, 'dialogue')).toBe('90.0');
+      expect(getDimCell({ coding: { average: 92.456, total: 92, count: 1 } } as any, 'coding')).toBe('92.5');
+      expect(getDimCell({ coding: { average: 0, total: 0, count: 0 } } as any, 'coding')).toBe('0.0');
     });
   });
 });

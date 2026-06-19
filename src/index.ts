@@ -3,7 +3,7 @@
 import { BenchmarkConfig, ModelConfig } from './types';
 import { version as pkgVersion } from '../package.json';
 import { Evaluator } from './core/evaluator';
-import { Reporter } from './core/reporter';
+import { Reporter, DIM_HEADERS, getDimCell } from './core/reporter';
 import { LLMAdapter } from './adapters/adapter';
 import { OpenAIAdapter } from './adapters/openai-adapter';
 import { AnthropicAdapter } from './adapters/anthropic-adapter';
@@ -256,34 +256,21 @@ function listBenchmarks() {
 function printSummary(results: any[]) {
   // v0.4.0 起覆盖 5 维度：dialogue / coding 默认开启 (true)，
   // function_calling / long_context / multi_turn 可选 (默认 false，未启用时填 -)。
-  // 顺序与中文标签与 src/core/reporter.ts 中 Reporter.DIM_HEADERS 保持一致。
-  // 实际默认行为见 initConfig() / config.example.json 中 benchmarks 段。
-  const dimHeaders: Array<{ key: string; cn: string }> = [
-    { key: 'dialogue', cn: '对话' },
-    { key: 'coding', cn: '代码' },
-    { key: 'function_calling', cn: '工具调用' },
-    { key: 'long_context', cn: '长上下文' },
-    { key: 'multi_turn', cn: '多轮对话' },
-  ];
-
-  const getDimCell = (result: any, key: string): string => {
-    const dim = result.dimensions?.[key];
-    if (!dim || typeof dim.average !== 'number') return '-';
-    return Number(dim.average).toFixed(1);
-  };
+  // 统一从 src/core/reporter.ts 导入 DIM_HEADERS + getDimCell，与 Reporter 各报表入口
+  // 共享同一份事实 (避免双处副本产生漂移, 06-20 cron refactor 之前的 bug)。
 
   console.log('📊 评测结果:\n');
 
   const sorted = [...results].sort((a, b) => b.totalScore - a.totalScore);
 
-  const header = ['| 排名 ', '| 模型 ', '| 总分 ', ...dimHeaders.map((d) => `| ${d.cn} `), '|'];
-  const sep = ['|------', '|------', '|------', ...dimHeaders.map(() => '|------'), '|'];
+  const header = ['| 排名 ', '| 模型 ', '| 总分 ', ...DIM_HEADERS.map((d) => `| ${d.cn} `), '|'];
+  const sep = ['|------', '|------', '|------', ...DIM_HEADERS.map(() => '|------'), '|'];
   console.log(header.join('|') + '|');
   console.log(sep.join('|') + '|');
 
   sorted.forEach((result, index) => {
     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
-    const cells = [medal, result.modelName, `**${result.totalScore}**`, ...dimHeaders.map((d) => getDimCell(result, d.key))];
+    const cells = [medal, result.modelName, `**${result.totalScore}**`, ...DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key))];
     console.log('| ' + cells.join(' | ') + ' |');
   });
 }
