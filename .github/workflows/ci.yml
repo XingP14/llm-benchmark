@@ -1,5 +1,11 @@
 name: CI
 
+# 避免同 branch 上多次 push 并发跑导致 npm ci cache 冲突
+# (与 6741027 docker.yml 修法同模式, 后 push 取消前 push, 同一 ref 串行)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [master, main]
