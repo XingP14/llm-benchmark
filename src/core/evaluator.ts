@@ -116,9 +116,10 @@ export class Evaluator {
       }
       // v0.5.0 dispatch stub: BenchLM.ai agentic eval (2026-06-07 发布, 248 模型 × 225 基准, agentic 主战场)
       if (ext.benchlm_agentic?.enabled) {
-        const native = ext.benchlm_agentic.native_evals ? ' + Native Evals' : '';
+        const subset = ext.benchlm_agentic.subset ?? 'all';
+        const native = ext.benchlm_agentic.native_evals || subset === 'native_evals_only' ? ' + Native Evals' : '';
         const anchor = ext.benchlm_agentic.anchor_score != null ? `, anchor=${ext.benchlm_agentic.anchor_score}` : '';
-        enabled.push(`benchlm_agentic(api_base=${ext.benchlm_agentic.api_base ?? '(unset)'}, model_id=${ext.benchlm_agentic.model_id ?? '(unset)'}${anchor}${native})`);
+        enabled.push(`benchlm_agentic(api_base=${ext.benchlm_agentic.api_base ?? '(unset)'}, model_id=${ext.benchlm_agentic.model_id ?? '(unset)'}, subset=${subset}${anchor}${native})`);
       }
       // v0.5.0 dispatch stub: Meta CyberSecEval 3 (2025-12 发布, 8 项风险跨 offensive security 3 大类, Claude Mythos 5 主战场)
       if (ext.cyberseceval3?.enabled) {
@@ -268,13 +269,14 @@ export class Evaluator {
       const timeoutMs = bla.timeout_ms ?? 30000;
       const anchorScore = bla.anchor_score;
       const nativeEvals = bla.native_evals ?? false;
+      const subset = bla.subset ?? 'all';
       await Promise.all(
         results.map(async (result) => {
           // model_id 过滤: 配了 bla.model_id 只评那个; 未配走全部
           if (bla.model_id && result.model.model !== bla.model_id && result.modelName !== bla.model_id) {
             return;
           }
-          const score = await this.fetchBenchlmAgenticScore(apiBase, result.model, timeoutMs, anchorScore, nativeEvals);
+          const score = await this.fetchBenchlmAgenticScore(apiBase, result.model, timeoutMs, anchorScore, nativeEvals, subset);
           result.scores.push(score);
           console.log(`  [${result.modelName}] benchlm_agentic score: ${score.score} (${score.detail ?? 'no detail'})`);
         })
@@ -722,7 +724,8 @@ export class Evaluator {
     model: ModelConfig,
     timeoutMs: number,
     anchorScore?: number,
-    nativeEvals: boolean = false
+    nativeEvals: boolean = false,
+    subset: 'all' | 'design2code_only' | 'vision2web_only' | 'native_evals_only' = 'all'
   ): Promise<QuestionScore> {
     const questionId = `benchlm_agentic_${model.name}`;
     const basePayload = {
@@ -730,6 +733,7 @@ export class Evaluator {
       model_id: model.model ?? model.name,
       timeout_ms: timeoutMs,
       native_evals: nativeEvals,
+      subset, // 06-20 03:03 cron: 与 terminal_bench.subset / swe_bench_pro.subset / long_context_cluster.subset / cyberseceval3.risk_categories 对位
     };
     try {
       const controller = new AbortController();
@@ -768,14 +772,15 @@ export class Evaluator {
       const v2w = typeof data.vision2web_score === 'number' ? data.vision2web_score : 0;
       // 0-100 归一: pass_rate 0-1 → 0-50, d2c 0-100 → 0-25, v2w 0-100 → 0-25, 加权和
       let normalized = Math.max(0, Math.min(100, passRate * 50 + d2c * 0.25 + v2w * 0.25));
-      const nativePart = nativeEvals && typeof data.native_evals_score === 'number'
+      const nativePart = (nativeEvals || subset === 'native_evals_only') && typeof data.native_evals_score === 'number'
         ? `, native_evals=${data.native_evals_score.toFixed(1)} (启用+5)`
         : '';
-      if (nativeEvals && typeof data.native_evals_score === 'number') {
+      if ((nativeEvals || subset === 'native_evals_only') && typeof data.native_evals_score === 'number') {
         normalized = Math.min(100, normalized + 5);
       }
+      const subsetPart = subset !== 'all' ? `, subset=${subset}` : '';
       const evalIdPart = data.eval_id ? `, eval_id=${data.eval_id}` : '';
-      let detail = `benchlm_agentic pass_rate=${(passRate * 100).toFixed(1)}%, d2c=${d2c.toFixed(1)}, v2w=${v2w.toFixed(1)}, score=${normalized.toFixed(1)}${nativePart}${evalIdPart}`;
+      let detail = `benchlm_agentic pass_rate=${(passRate * 100).toFixed(1)}%, d2c=${d2c.toFixed(1)}, v2w=${v2w.toFixed(1)}, score=${normalized.toFixed(1)}${subsetPart}${nativePart}${evalIdPart}`;
       if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
         console.warn(`  [benchlm_agentic] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
         detail += ` (anchor ⚠️ ${anchorScore})`;

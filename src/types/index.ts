@@ -231,6 +231,8 @@ export interface ExternalBenchmarkRoadmap {
     enabled: boolean;
     api_base?: string;
     model_id?: string;
+    /** 选用子集: 'all' (24 项全量, default) | 'design2code_only' (Design2Code 单维度) | 'vision2web_only' (Vision2Web 单维度) | 'native_evals_only' (Native Evals 单维度, 与 native_evals=true 等价但语义更清晰) — 与 terminal_bench.subset / swe_bench_pro.subset / long_context_cluster.subset / cyberseceval3.risk_categories 对位, 06-20 03:03 cron 补齐 */
+    subset?: 'all' | 'design2code_only' | 'vision2web_only' | 'native_evals_only';
     /** HTTP 请求超时 (ms, default 30000) */
     timeout_ms?: number;
     /** 注入的锚定分数 (首条数据, 用作 sanity check) */

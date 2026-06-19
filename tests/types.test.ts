@@ -73,5 +73,32 @@ describe('Types', () => {
       expect(stub.swe_bench_pro?.subset).toBe('verified');
       expect(stub.process_aware_scoring?.mode).toBe('all');
     });
+
+    // 06-20 03:03 cron: 5 type-stub 真实化 step-2 of 5 — benchlm_agentic.subset 字段 (与 terminal_bench.subset / swe_bench_pro.subset / long_context_cluster.subset / cyberseceval3.risk_categories 对位)
+    it('external_benchmarks_roadmap benchlm_agentic accepts subset (06-20 type-stub step-2)', () => {
+      type Ext = NonNullable<BenchmarkConfig['_external_benchmarks_roadmap']>;
+      const stub: Ext = {
+        benchlm_agentic: {
+          enabled: true,
+          api_base: 'https://llm-benchmark.local/api/v1/benchlm_agentic/v1',
+          model_id: 'claude-fable-5',
+          subset: 'design2code_only', // 06-20 03:03 cron 新增字段
+          timeout_ms: 30000,
+          anchor_score: 78.5,
+          native_evals: false,
+        },
+      };
+      // subset 字段在 benchlm_agentic 存在, 枚举 'design2code_only' 被接受; native_evals=true 与 subset='native_evals_only' 并行不冲突
+      expect(stub.benchlm_agentic?.subset).toBe('design2code_only');
+      expect(stub.benchlm_agentic?.native_evals).toBe(false);
+      // 也验证另一个枚举值
+      const stubNativeOnly: Ext = {
+        benchlm_agentic: {
+          enabled: true,
+          subset: 'native_evals_only',
+        },
+      };
+      expect(stubNativeOnly.benchlm_agentic?.subset).toBe('native_evals_only');
+    });
   });
 });
