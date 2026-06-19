@@ -106,8 +106,9 @@ export class Evaluator {
         enabled.push(`webdev_arena(api_base=${ext.webdev_arena.api_base ?? '(unset)'}, model_id=${ext.webdev_arena.model_id ?? '(unset)'})`);
       }
       if (ext.terminal_bench?.enabled) {
+        const subset = ext.terminal_bench.subset ?? 'full';
         const anchor = ext.terminal_bench.anchor_score != null ? `, anchor=${ext.terminal_bench.anchor_score}` : '';
-        enabled.push(`terminal_bench(api_base=${ext.terminal_bench.api_base ?? '(unset)'}, model_id=${ext.terminal_bench.model_id ?? '(unset)'}${anchor})`);
+        enabled.push(`terminal_bench(api_base=${ext.terminal_bench.api_base ?? '(unset)'}, model_id=${ext.terminal_bench.model_id ?? '(unset)'}, subset=${subset}${anchor})`);
       }
       if (ext.aa_omniscience?.enabled) {
         const anchor = ext.aa_omniscience.anchor_score != null ? `, anchor=${ext.aa_omniscience.anchor_score}` : '';
@@ -242,13 +243,14 @@ export class Evaluator {
       const apiBase = tb.api_base ?? 'https://llm-benchmark.local/api/v1/terminal_bench/v2';
       const timeoutMs = tb.timeout_ms ?? 30000;
       const anchorScore = tb.anchor_score;
+      const subset = tb.subset ?? 'full';
       await Promise.all(
         results.map(async (result) => {
           // model_id 过滤: 配了 tb.model_id 只评那个; 未配走全部
           if (tb.model_id && result.model.model !== tb.model_id && result.modelName !== tb.model_id) {
             return;
           }
-          const score = await this.fetchTerminalBenchScore(apiBase, result.model, timeoutMs, anchorScore);
+          const score = await this.fetchTerminalBenchScore(apiBase, result.model, timeoutMs, anchorScore, subset);
           result.scores.push(score);
           console.log(`  [${result.modelName}] terminal_bench score: ${score.score} (${score.detail ?? 'no detail'})`);
         })
@@ -631,13 +633,15 @@ export class Evaluator {
     apiBase: string,
     model: ModelConfig,
     timeoutMs: number,
-    anchorScore?: number
+    anchorScore?: number,
+    subset: string = 'full'
   ): Promise<QuestionScore> {
     const questionId = `terminal_bench_${model.name}`;
     const basePayload = {
       api_base: model.endpoint,
       model_id: model.model ?? model.name,
       timeout_ms: timeoutMs,
+      subset,
     };
     try {
       const controller = new AbortController();
@@ -676,7 +680,7 @@ export class Evaluator {
       // 0-100 归一: pass_rate 0-1 → 0-70, 速度 1 - dur/3600 → 0-30 (1h 满 cap, 越快分越高)
       const normalized = Math.max(0, Math.min(100, passRate * 70 + (1 - durSec / 3600) * 30));
       const trajPart = data.trajectory_id ? `, trajectory_id=${data.trajectory_id}` : '';
-      const detail = `terminal_bench pass_rate=${(passRate * 100).toFixed(1)}%, avg_duration=${durSec.toFixed(0)}s, score=${normalized.toFixed(1)}${trajPart}`;
+      const detail = `terminal_bench[${subset}] pass_rate=${(passRate * 100).toFixed(1)}%, avg_duration=${durSec.toFixed(0)}s, score=${normalized.toFixed(1)}${trajPart}`;
       if (anchorScore != null && Math.abs(normalized - anchorScore) > 5) {
         console.warn(`  [terminal_bench] anchor mismatch: model=${model.name} score=${normalized.toFixed(1)} anchor=${anchorScore} (diff > 5)`);
       }

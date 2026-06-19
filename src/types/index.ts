@@ -203,6 +203,8 @@ export interface ExternalBenchmarkRoadmap {
     enabled: boolean;
     api_base?: string;
     model_id?: string;
+    /** 选用子集: 'full' (100+ 全量任务, default) | 'hard' (高难度子集, Mythos 顶级模型锚定) | 'lite' (轻量子集, 快速 sanity check) — 与 SWE-bench Pro `subset` 对位, 06-20 02:43 cron 补齐 */
+    subset?: 'full' | 'hard' | 'lite';
     /** HTTP 请求超时 (ms, default 30000) */
     timeout_ms?: number;
     /** 注入的锚定分数 (首条数据, 用作 sanity check) */
