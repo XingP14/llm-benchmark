@@ -98,7 +98,8 @@ export class Evaluator {
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
     // PR 进度 (2026-06-16 01:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + **long_context_cluster 06-16 01:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** — 下一里程碑 v0.6.0
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
-    const webdevArenaFetchTasks: Array<Promise<void>> = [];
+    // 真实 fetch 段在 line ~187+ (webdev_arena) / ~215+ (cyberseceval3) / ... 通过 await Promise.all(results.map(...)) 调度,
+    // 早期规划的 webdevArenaFetchTasks 骨架数组已废弃 (06-20 05:43 cron 修 lint, @typescript-eslint/no-unused-vars)
     if (this.config._external_benchmarks_roadmap) {
       const ext = this.config._external_benchmarks_roadmap;
       const enabled: string[] = [];
