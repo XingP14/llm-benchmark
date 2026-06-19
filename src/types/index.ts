@@ -201,6 +201,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   terminal_bench?: {
     enabled: boolean;
+    /** dispatch 类别标签: 'agentic_coding' — agentic terminal/shell 编程评测 (与 benchlm_agentic.type='agentic_fullstack' / swe_bench_pro.type='agentic_swe' / process_aware_scoring.type='process_agentic' 对位, 06-20 06:03 cron 补齐) */
+    type?: 'agentic_coding';
     api_base?: string;
     model_id?: string;
     /** 选用子集: 'full' (100+ 全量任务, default) | 'hard' (高难度子集, Mythos 顶级模型锚定) | 'lite' (轻量子集, 快速 sanity check) — 与 SWE-bench Pro `subset` 对位, 06-20 02:43 cron 补齐 */
@@ -229,6 +231,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   benchlm_agentic?: {
     enabled: boolean;
+    /** dispatch 类别标签: 'agentic_fullstack' — agentic 全栈 web dev / Design2Code / Vision2Web / Native Evals 评测 (与 terminal_bench.type='agentic_coding' / swe_bench_pro.type='agentic_swe' / process_aware_scoring.type='process_agentic' 对位, 06-20 06:03 cron 补齐) */
+    type?: 'agentic_fullstack';
     api_base?: string;
     model_id?: string;
     /** 选用子集: 'all' (24 项全量, default) | 'design2code_only' (Design2Code 单维度) | 'vision2web_only' (Vision2Web 单维度) | 'native_evals_only' (Native Evals 单维度, 与 native_evals=true 等价但语义更清晰) — 与 terminal_bench.subset / swe_bench_pro.subset / long_context_cluster.subset / cyberseceval3.risk_categories 对位, 06-20 03:03 cron 补齐 */
@@ -259,6 +263,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   swe_bench_pro?: {
     enabled: boolean;
+    /** dispatch 类别标签: 'agentic_swe' — agentic software engineering 多文件 / 多语言 patch 评测 (与 terminal_bench.type='agentic_coding' / benchlm_agentic.type='agentic_fullstack' / process_aware_scoring.type='process_agentic' 对位, 06-20 06:03 cron 补齐) */
+    type?: 'agentic_swe';
     api_base?: string;
     model_id?: string;
     /** Pro 子集选择: 'verified' (全量已验证 Scale AI 任务, default) | 'lite' (轻量子集, 快速 sanity check, ~20% 任务) | 'multilingual' (多语言版 SWE-bench Pro, Python/JS/Go/Rust/Java 跨语言) — subset 决定 dispatch 时实际投递的 task 集合, 锚定分数按 subset 不同 (verified: Mythos 80.3% / Fable 79.1%; lite: Mythos 86.2% / Fable 85.4%; multilingual: Mythos 71.8% / Fable 70.5%) — 与 terminal_bench.subset (full/hard/lite) / benchlm_agentic.subset (all/design2code_only/...) / process_aware_scoring.subset (all_process_signals/commit_metrics/...) / long_context_cluster.subset (all/longbench_v2/...) / cyberseceval3.risk_categories 对位, 06-20 05:03 cron 补齐 */
@@ -276,6 +282,8 @@ export interface ExternalBenchmarkRoadmap {
    * — 借力 harness 0.4.0 dispatch 集成, Mythos 1M+ / Fable 1M+ / GPT-5.4 1.05M 已商用, 评测必须跟上 */
   long_context_cluster?: {
     enabled: boolean;
+    /** dispatch 类别标签: 'long_context_retrieval' — LongBench v2 + Babilong + InfiniteBench + Phonebook 4 基准 62 tasks 长上下文检索 (与 terminal_bench.type='agentic_coding' / swe_bench_pro.type='agentic_swe' / benchlm_agentic.type='agentic_fullstack' / process_aware_scoring.type='process_agentic' 对位, 06-20 06:03 cron 补齐) */
+    type?: 'long_context_retrieval';
     api_base?: string;
     model_id?: string;
     /** 选用子集: 'longbench_v2' (21 tasks, 多领域长文 QA/摘要/dialogue) | 'babilong' (13 tasks, 推理 + 长上下文旅遊 + bAbI QA 继承) | 'infinitebench' (18 tasks, 100K+ 超长上下文检索/摘要) | 'phonebook' (10 tasks, 1M+ 电话簿 mid-context 检索) | 'all' (62 tasks, default) — subset 决定 dispatch 时实际投递的 task 集合, 错定分数按 subset 不同 (longbench_v2: GPT-4-128k 49.5% / babilong: GPT-4-128k 68.4% / infinitebench: GPT-4-128k KV-Retrieval 89.0% / phonebook: Llama-2-7B 54.2% Middle) — 与 terminal_bench.subset (full/hard/lite) / benchlm_agentic.subset (all/design2code_only/...) / process_aware_scoring.subset (all_process_signals/commit_metrics/...) / swe_bench_pro.subset (verified/lite/multilingual) / cyberseceval3.risk_categories 对位, 06-20 05:03 cron 补齐 */
@@ -381,6 +389,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   process_aware_scoring?: {
     enabled: boolean;
+    /** dispatch 类别标签: 'process_agentic' — agentic 任务「过程+结果」双轨打分 (commit_count / test_run_count / retry_count / file_coverage / trajectory_score 5 信号 + pass/fail 双权重, 与 terminal_bench.type='agentic_coding' / swe_bench_pro.type='agentic_swe' / benchlm_agentic.type='agentic_fullstack' / long_context_cluster.type='long_context_retrieval' 对位, 06-20 06:03 cron 补齐) */
+    type?: 'process_agentic';
     /** API endpoint (沿 webdev_arena / cyberseceval3 同模式, 06-14 22:43 cron 补 2 字段对齐 v0.5.0 dispatch 模式) */
     api_base?: string;
     /** 模型 id (沿 webdev_arena / cyberseceval3 同模式, 06-14 22:43 cron 补 2 字段对齐 v0.5.0 dispatch 模式) */
