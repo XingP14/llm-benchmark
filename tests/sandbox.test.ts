@@ -35,4 +35,32 @@ describe('PythonSandbox', () => {
     const result = await sandbox.execute(code, '');
     expect(result.success).toBe(false);
   });
+
+  // Tests for the private extractPythonCode() helper.
+  // We reach it via `(sandbox as any)` because it is only called from execute().
+  // This covers the 3 regex branches in src/sandbox/python-sandbox.ts (lines ~22-48)
+  // and brings sandbox/python-sandbox.ts branches coverage from ~50% toward 100%.
+  describe('extractPythonCode', () => {
+    const extract = (s: string) => (sandbox as any).extractPythonCode(s) as string;
+
+    it('extracts from ```python fenced block', () => {
+      const text = 'Here is code:\n```python\ndef f():\n    return 1\n```\nDone.';
+      expect(extract(text)).toBe('def f():\n    return 1');
+    });
+
+    it('extracts from ```py fenced block', () => {
+      const text = '```py\ndef g():\n    return 2\n```';
+      expect(extract(text)).toBe('def g():\n    return 2');
+    });
+
+    it('extracts from generic ``` block when it contains def', () => {
+      const text = '```\ndef h():\n    return 3\n```';
+      expect(extract(text)).toBe('def h():\n    return 3');
+    });
+
+    it('falls back to raw text when no fences present', () => {
+      const raw = 'def plain():\n    return 4';
+      expect(extract(raw)).toBe(raw);
+    });
+  });
 });
