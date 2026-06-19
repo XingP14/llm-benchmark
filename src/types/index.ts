@@ -278,7 +278,7 @@ export interface ExternalBenchmarkRoadmap {
     enabled: boolean;
     api_base?: string;
     model_id?: string;
-    /** 选用子集: 'longbench_v2' (21 tasks) | 'babilong' (13 tasks) | 'infinitebench' (18 tasks) | 'phonebook' (10 tasks) | 'all' (62 tasks, default) */
+    /** 选用子集: 'longbench_v2' (21 tasks, 多领域长文 QA/摘要/dialogue) | 'babilong' (13 tasks, 推理 + 长上下文旅遊 + bAbI QA 继承) | 'infinitebench' (18 tasks, 100K+ 超长上下文检索/摘要) | 'phonebook' (10 tasks, 1M+ 电话簿 mid-context 检索) | 'all' (62 tasks, default) — subset 决定 dispatch 时实际投递的 task 集合, 错定分数按 subset 不同 (longbench_v2: GPT-4-128k 49.5% / babilong: GPT-4-128k 68.4% / infinitebench: GPT-4-128k KV-Retrieval 89.0% / phonebook: Llama-2-7B 54.2% Middle) — 与 terminal_bench.subset (full/hard/lite) / benchlm_agentic.subset (all/design2code_only/...) / process_aware_scoring.subset (all_process_signals/commit_metrics/...) / swe_bench_pro.subset (verified/lite/multilingual) / cyberseceval3.risk_categories 对位, 06-20 05:03 cron 补齐 */
     subset?: 'longbench_v2' | 'babilong' | 'infinitebench' | 'phonebook' | 'all';
     /** 任务总数 (默认 62) */
     tasks_total?: number;

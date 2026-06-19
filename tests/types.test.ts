@@ -154,5 +154,33 @@ describe('Types', () => {
       };
       expect(stubLite.swe_bench_pro?.subset).toBe('lite');
     });
+
+    // 06-20 05:03 cron: 5 type-stub 真实化 step-5 of 5 — long_context_cluster.subset 字段 (与 terminal_bench.subset / benchlm_agentic.subset / process_aware_scoring.subset / swe_bench_pro.subset / cyberseceval3.risk_categories 对位)
+    it('external_benchmarks_roadmap long_context_cluster accepts subset (06-20 type-stub step-5)', () => {
+      type Ext = NonNullable<BenchmarkConfig['_external_benchmarks_roadmap']>;
+      const stub: Ext = {
+        long_context_cluster: {
+          enabled: true,
+          api_base: 'https://llm-benchmark.local/api/v1/long_context_cluster/v1',
+          model_id: 'claude-fable-5',
+          subset: 'infinitebench', // 06-20 05:03 cron 字段已存在但 JSDoc 升格 (100K+ 超长上下文 18 tasks)
+          tasks_total: 18,
+          timeout_ms: 30000,
+          anchor_score: 89.0,
+        },
+      };
+      // subset 字段在 long_context_cluster 存在, 枚举 'infinitebench' 被接受
+      expect(stub.long_context_cluster?.subset).toBe('infinitebench');
+      // 另一枚举验证: longbench_v2 (21 tasks, 多领域长文 QA/摘要/dialogue)
+      const stubLongbench: Ext = {
+        long_context_cluster: {
+          enabled: true,
+          subset: 'longbench_v2',
+          tasks_total: 21,
+        },
+      };
+      expect(stubLongbench.long_context_cluster?.subset).toBe('longbench_v2');
+      expect(stubLongbench.long_context_cluster?.tasks_total).toBe(21);
+    });
   });
 });
