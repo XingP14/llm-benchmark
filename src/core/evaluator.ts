@@ -145,12 +145,13 @@ export class Evaluator {
       // v0.5.0 dispatch stub: process_aware_scoring (2026-06-13 22:13 立项 — Princeton SWE-Bench Pro 03-04 + Anthropic 06 「2026 Agent 元年」18 页报告)
       // 评测方法论从「结果分数」转「过程+结果」双轨: 5 过程信号 (commit_count / test_run_count / retry_count / file_coverage / trajectory_score) + pass/fail 双权重
       if (ext.process_aware_scoring?.enabled) {
+        const subset = ext.process_aware_scoring.subset ?? 'all_process_signals';
         const mode = ext.process_aware_scoring.mode ?? 'all';
         const bench = ext.process_aware_scoring.agentic_benchmark ?? 'swe_bench_pro';
         const passWeight = ext.process_aware_scoring.pass_fail_weight ?? 0.7;
         const procWeight = ext.process_aware_scoring.process_weight ?? 0.3;
         const anchor = ext.process_aware_scoring.anchor_score != null ? `, anchor=${ext.process_aware_scoring.anchor_score}` : '';
-        enabled.push(`process_aware_scoring(api_base=${ext.process_aware_scoring.api_base ?? '(unset)'}, model_id=${ext.process_aware_scoring.model_id ?? '(unset)'}, mode=${mode}, agentic_benchmark=${bench}, weights=${passWeight}/${procWeight}${anchor})`);
+        enabled.push(`process_aware_scoring(api_base=${ext.process_aware_scoring.api_base ?? '(unset)'}, model_id=${ext.process_aware_scoring.model_id ?? '(unset)'}, subset=${subset}, mode=${mode}, agentic_benchmark=${bench}, weights=${passWeight}/${procWeight}${anchor})`);
       }
       // v0.5.0 model_id routing hint (2026-06-11): Mythos-class 模型 `claude-fable-5` (Anthropic GA, 2026-06-09)
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
@@ -318,6 +319,7 @@ export class Evaluator {
       const apiBase = pas.api_base ?? 'https://llm-benchmark.local/api/v1/process_aware_scoring/v1';
       const timeoutMs = pas.timeout_ms ?? 30000;
       const anchorScore = pas.anchor_score;
+      const subset = pas.subset ?? 'all_process_signals';
       const mode = pas.mode ?? 'all';
       const agenticBench = pas.agentic_benchmark ?? 'swe_bench_pro';
       const passWeight = pas.pass_fail_weight ?? 0.7;
@@ -328,7 +330,7 @@ export class Evaluator {
           if (pas.model_id && result.model.model !== pas.model_id && result.modelName !== pas.model_id) {
             return;
           }
-          const score = await this.fetchProcessAwareScoringScore(apiBase, result.model, timeoutMs, anchorScore, mode, agenticBench, passWeight, procWeight);
+          const score = await this.fetchProcessAwareScoringScore(apiBase, result.model, timeoutMs, anchorScore, subset, mode, agenticBench, passWeight, procWeight);
           result.scores.push(score);
           console.log(`  [${result.modelName}] process_aware_scoring score: ${score.score} (${score.detail ?? 'no detail'})`);
         })
@@ -924,6 +926,7 @@ export class Evaluator {
     model: ModelConfig,
     timeoutMs: number,
     anchorScore?: number,
+    subset: string = 'all_process_signals',
     mode: string = 'all',
     agenticBenchmark: string = 'swe_bench_pro',
     passFailWeight: number = 0.7,
@@ -933,6 +936,7 @@ export class Evaluator {
     const basePayload = {
       api_base: model.endpoint,
       model_id: model.model ?? model.name,
+      subset,
       mode,
       agentic_benchmark: agenticBenchmark,
       pass_fail_weight: passFailWeight,
@@ -989,7 +993,7 @@ export class Evaluator {
       if (typeof data.file_coverage === 'number') sigParts.push(`cov=${(data.file_coverage * 100).toFixed(1)}%`);
       if (typeof data.trajectory_score === 'number') sigParts.push(`traj=${data.trajectory_score.toFixed(1)}`);
       const sigStr = sigParts.length > 0 ? `, ${sigParts.join('/')}` : '';
-      let detail = `process_aware_scoring[${mode}@${agenticBenchmark}] score=${normalized.toFixed(1)}${sigStr}${evalIdPart}`;
+      let detail = `process_aware_scoring[${subset}|${mode}@${agenticBenchmark}] score=${normalized.toFixed(1)}${sigStr}${evalIdPart}`;
       if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
         console.warn(`  [process_aware_scoring] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
         detail += ` (anchor ⚠️ ${anchorScore})`;

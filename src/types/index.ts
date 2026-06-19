@@ -385,7 +385,9 @@ export interface ExternalBenchmarkRoadmap {
     api_base?: string;
     /** 模型 id (沿 webdev_arena / cyberseceval3 同模式, 06-14 22:43 cron 补 2 字段对齐 v0.5.0 dispatch 模式) */
     model_id?: string;
-    /** 评测模式: 'commit_count' (commit 数量) | 'test_run_count' (测试运行次数) | 'retry_count' (重试次数) | 'file_coverage' (文件覆盖率) | 'trajectory_score' (agentic 轨迹综合分) | 'all' (5 维度, default) */
+    /** 选用子集: 'all_process_signals' (5 维全量, default, 与 mode='all' 等价) | 'commit_metrics' (commit_count + file_coverage 双信号, 静态产物维度) | 'runtime_metrics' (test_run_count + retry_count + trajectory_score 三信号, agentic 运行时维度) | 'single' (仅 mode 字段指定的那一维信号) — 与 terminal_bench.subset / swe_bench_pro.subset / long_context_cluster.subset / benchlm_agentic.subset / cyberseceval3.risk_categories 对位, 06-20 04:23 cron 补齐 */
+    subset?: 'all_process_signals' | 'commit_metrics' | 'runtime_metrics' | 'single';
+    /** 评测模式: 'commit_count' (commit 数量) | 'test_run_count' (测试运行次数) | 'retry_count' (重试次数) | 'file_coverage' (文件覆盖率) | 'trajectory_score' (agentic 轨迹综合分) | 'all' (5 维度, default) — subset='single' 时只取 mode 字段指定的那一维 */
     mode?: 'commit_count' | 'test_run_count' | 'retry_count' | 'file_coverage' | 'trajectory_score' | 'all';
     /** 关联的 agentic 基准: 'swe_bench_pro' (Princeton 默认) | 'terminal_bench' (agentic coding) | 'webdev_arena' (全栈 web dev) */
     agentic_benchmark?: 'swe_bench_pro' | 'terminal_bench' | 'webdev_arena';

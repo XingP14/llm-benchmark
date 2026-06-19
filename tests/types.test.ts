@@ -100,5 +100,33 @@ describe('Types', () => {
       };
       expect(stubNativeOnly.benchlm_agentic?.subset).toBe('native_evals_only');
     });
+
+    // 06-20 04:23 cron: 5 type-stub 真实化 step-3 of 5 — process_aware_scoring.subset 字段 (与 terminal_bench.subset / swe_bench_pro.subset / long_context_cluster.subset / benchlm_agentic.subset / cyberseceval3.risk_categories 对位)
+    it('external_benchmarks_roadmap process_aware_scoring accepts subset (06-20 type-stub step-3)', () => {
+      type Ext = NonNullable<BenchmarkConfig['_external_benchmarks_roadmap']>;
+      const stub: Ext = {
+        process_aware_scoring: {
+          enabled: true,
+          api_base: 'https://llm-benchmark.local/api/v1/process_aware_scoring/v1',
+          model_id: 'claude-fable-5',
+          subset: 'commit_metrics', // 06-20 04:23 cron 新增字段 (静态产物 commit_count + file_coverage 双信号)
+          mode: 'all',
+          agentic_benchmark: 'swe_bench_pro',
+          pass_fail_weight: 0.7,
+          process_weight: 0.3,
+          timeout_ms: 30000,
+        },
+      };
+      // subset 字段在 process_aware_scoring 存在, 枚举 'commit_metrics' 被接受
+      expect(stub.process_aware_scoring?.subset).toBe('commit_metrics');
+      // 另一枚举验证: runtime_metrics (运行时维度 test_run + retry + trajectory)
+      const stubRuntime: Ext = {
+        process_aware_scoring: {
+          enabled: true,
+          subset: 'runtime_metrics',
+        },
+      };
+      expect(stubRuntime.process_aware_scoring?.subset).toBe('runtime_metrics');
+    });
   });
 });
