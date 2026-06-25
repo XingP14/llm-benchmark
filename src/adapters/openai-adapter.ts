@@ -1,7 +1,7 @@
 // src/adapters/openai-adapter.ts - OpenAI 兼容接口适配器
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout, defaultPing } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse } from './adapter';
 
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant';
@@ -35,12 +35,7 @@ export class OpenAIAdapter implements LLMAdapter {
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `OpenAI API Error: ${response.status} - ${errorText}`
-      );
-    }
+    if (!response.ok) await assertOkResponse(response, 'OpenAI');
 
     const data = await response.json() as any;
 

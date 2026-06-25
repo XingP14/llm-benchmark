@@ -679,3 +679,61 @@ describe('defaultPing (shared helper)', () => {
     expect(chatFn.mock.calls[0][1]).toBe(customConfig);
   });
 });
+
+describe('assertOkResponse (shared helper)', () => {
+  // 验证 src/adapters/adapter.ts 中新抽取的 assertOkResponse 辅助函数。
+  // 6 个适配器（openai/qwen/deepseek/glm/anthropic/ollama）现在统一委托此函数处理
+  // 非 2xx 响应。覆盖：2xx 透传 / 非 2xx 抛带 provider 前缀的 Error / status 数字拼接 / text() 内容原样透传。
+
+  const { assertOkResponse } = require('../src/adapters/adapter');
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('should resolve silently when response.ok is true (2xx)', async () => {
+    const okResponse = { ok: true, status: 200, text: jest.fn() } as any;
+    await expect(assertOkResponse(okResponse, 'OpenAI')).resolves.toBeUndefined();
+    // ok 路径上不应调用 response.text()
+    expect(okResponse.text).not.toHaveBeenCalled();
+  });
+
+  it('should throw `${provider} API Error: ${status} - ${body}` when response.ok is false', async () => {
+    const failResponse = {
+      ok: false,
+      status: 401,
+      text: jest.fn().mockResolvedValue('{"error":"invalid api key"}'),
+    } as any;
+    await expect(assertOkResponse(failResponse, 'DeepSeek')).rejects.toThrow(
+      'DeepSeek API Error: 401 - {"error":"invalid api key"}'
+    );
+    expect(failResponse.text).toHaveBeenCalledTimes(1);
+  });
+
+  it('should embed the provider string verbatim in the error message (5xx path)', async () => {
+    const failResponse = {
+      ok: false,
+      status: 503,
+      text: jest.fn().mockResolvedValue('upstream timeout'),
+    } as any;
+    // 验证 6 个 provider 名都正确传递（前缀不带空格 / 不 trim）
+    for (const provider of ['OpenAI', 'Qwen', 'DeepSeek', 'GLM', 'Anthropic', 'Ollama']) {
+      await expect(assertOkResponse(failResponse, provider)).rejects.toThrow(
+        new RegExp(`^${provider} API Error: `)
+      );
+    }
+  });
+
+  it('should re-throw verbatim when response.text() itself rejects (defensive)', async () => {
+    // 模拟 response body 流异常（例如网络中断提前 close body），
+    // 原 6 处行为是 await response.text() 自然抛错，本函数不 catch 内部错误。
+    const failResponse = {
+      ok: false,
+      status: 500,
+      text: jest.fn().mockRejectedValue(new Error('stream closed unexpectedly')),
+    } as any;
+    await expect(assertOkResponse(failResponse, 'GLM')).rejects.toThrow(
+      'stream closed unexpectedly'
+    );
+  });
+});

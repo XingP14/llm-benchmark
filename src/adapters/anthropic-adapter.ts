@@ -1,7 +1,7 @@
 // src/adapters/anthropic-adapter.ts - Anthropic Claude 适配器
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout, defaultPing } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse } from './adapter';
 
 interface AnthropicMessage {
   role: 'system' | 'user' | 'assistant';
@@ -65,12 +65,7 @@ export class AnthropicAdapter implements LLMAdapter {
       body: JSON.stringify(body),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Anthropic API Error: ${response.status} - ${errorText}`
-      );
-    }
+    if (!response.ok) await assertOkResponse(response, 'Anthropic');
 
     const data = (await response.json()) as AnthropicResponse;
 

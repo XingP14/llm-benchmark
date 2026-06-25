@@ -1,7 +1,7 @@
 // src/adapters/ollama-adapter.ts - Ollama 本地模型适配器（OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout, defaultPing } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse } from './adapter';
 
 interface OllamaMessage {
   role: 'system' | 'user' | 'assistant';
@@ -64,12 +64,7 @@ export class OllamaAdapter implements LLMAdapter {
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Ollama API Error: ${response.status} - ${errorText}`
-      );
-    }
+    if (!response.ok) await assertOkResponse(response, 'Ollama');
 
     const data = (await response.json()) as OllamaResponse;
 

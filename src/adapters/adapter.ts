@@ -118,3 +118,36 @@ export async function defaultPing<M extends { role: string; content: string }>(
     return false;
   }
 }
+
+/**
+ * 统一 6 适配器的 "非 2xx 响应 → 抛带 provider 前缀的 Error" 模式。
+ *
+ * 6 个适配器（openai / qwen / deepseek / glm / anthropic / ollama）原本各自
+ * 手写 4-5 行 byte-identical 模式：
+ *   if (!response.ok) {
+ *     const errorText = await response.text();
+ *     throw new Error(`{Provider} API Error: ${response.status} - ${errorText}`);
+ *   }
+ * 仅 `${Provider}` 字符串字面量不同（OpenAI / Qwen / DeepSeek / GLM / Anthropic / Ollama），
+ * 行为 100% 一致。
+ *
+ * 抽到此处后：
+ *   1. 消除 6×5 = 30 行复制 → 1 处定义
+ *   2. provider 名 → 错误消息前缀集中维护，避免后续调整文案需 6 处对齐
+ *   3. 各适配器 `if (!response.ok)` 段退化为单行委托：
+ *        if (!response.ok) await assertOkResponse(response, 'OpenAI');
+ *
+ * 行为 1:1 保留：
+ *   - 仅在 !response.ok 时触发，response.ok 时直接 resolve（await 一个不抛的 Promise）
+ *   - 错误消息格式严格保持 `${provider} API Error: ${response.status} - ${errorText}`
+ *   - response.text() 失败 / 抛错时，原样上抛（与原 6 处行为一致；本函数不 catch 内部错误）
+ *
+ * @param response   fetchWithTimeout 返回的 Response
+ * @param provider   适配器名（OpenAI / Qwen / DeepSeek / GLM / Anthropic / Ollama）
+ *                   注意：仅作错误消息前缀展示，与真实 vendor 名称大小写保持一致
+ */
+export async function assertOkResponse(response: Response, provider: string): Promise<void> {
+  if (response.ok) return;
+  const errorText = await response.text();
+  throw new Error(`${provider} API Error: ${response.status} - ${errorText}`);
+}

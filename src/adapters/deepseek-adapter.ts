@@ -1,7 +1,7 @@
 // src/adapters/deepseek-adapter.ts - DeepSeek 适配器（OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout, defaultPing } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse } from './adapter';
 
 interface DeepSeekMessage {
   role: 'system' | 'user' | 'assistant';
@@ -57,12 +57,7 @@ export class DeepSeekAdapter implements LLMAdapter {
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `DeepSeek API Error: ${response.status} - ${errorText}`
-      );
-    }
+    if (!response.ok) await assertOkResponse(response, 'DeepSeek');
 
     const data = (await response.json()) as DeepSeekResponse;
 
