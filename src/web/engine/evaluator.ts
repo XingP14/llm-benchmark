@@ -16,9 +16,26 @@ import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calli
 import { getAllLongContextBenchmarks } from '../../benchmarks/long-context';
 import { getAllMultiTurnBenchmarks } from '../../benchmarks/multi-turn';
 import { BenchmarkQuestion } from '../../types';
+import { MultiTurnQuestion } from '../../benchmarks/multi-turn';
 import { PythonSandbox } from '../../sandbox/python-sandbox';
 
 export type WSSender = (data: any) => void;
+
+/**
+ * configs 表的 SQLite 行 shape (与 src/web/db/database.ts 第 100 行 CREATE TABLE 一致).
+ * type 字段用 ModelConfig['type'] 字面量联合, 与 buildModelConfig 输出口径一致.
+ */
+interface ConfigRow {
+  id: number;
+  user_id: number;
+  name: string;
+  type: ModelConfig['type'];
+  endpoint: string;
+  api_key: string;
+  model: string | null;
+  is_active: number;
+  created_at: string;
+}
 
 export class EvaluatorEngine {
   private sandbox = new PythonSandbox();
@@ -72,7 +89,7 @@ export class EvaluatorEngine {
           return;
         }
 
-        const config = db.prepare('SELECT * FROM configs WHERE id=?').get(configId) as any;
+        const config = db.prepare('SELECT * FROM configs WHERE id=?').get(configId) as ConfigRow;
         if (!config) continue;
 
         const adapter = this.createAdapter(config.type);
@@ -91,7 +108,7 @@ export class EvaluatorEngine {
             // 调用 LLM
             let output: string;
             if (question.type === 'multi_turn') {
-              const mtQuestion = question as any;
+              const mtQuestion = question as MultiTurnQuestion;
               const turns: Array<{ role: string; content: string }> = mtQuestion.turns || [];
               output = await adapter.chat(turns, this.buildModelConfig(config));
             } else {
@@ -188,13 +205,13 @@ export class EvaluatorEngine {
   /**
    * 构建模型配置
    */
-  private buildModelConfig(dbConfig: any): ModelConfig {
+  private buildModelConfig(dbConfig: ConfigRow): ModelConfig {
     return {
       name: dbConfig.name,
       type: dbConfig.type,
       endpoint: dbConfig.endpoint,
       apiKey: dbConfig.api_key,
-      model: dbConfig.model,
+      model: dbConfig.model ?? undefined,
     };
   }
 

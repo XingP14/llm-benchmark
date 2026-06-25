@@ -6,7 +6,7 @@ import { BenchmarkQuestion, CodeTestCase } from '../types';
  * 代码能力评测集
  * 涵盖: 语法正确性、逻辑正确性、代码质量、算法效率
  */
-interface CodeBenchmarkQuestion extends BenchmarkQuestion {
+export interface CodeBenchmarkQuestion extends BenchmarkQuestion {
   language: string;
   starterCode?: string;
   testCases: CodeTestCase[];

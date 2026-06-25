@@ -1,6 +1,9 @@
 // src/core/scorer.ts - 评分器
 
 import { BenchmarkQuestion, QuestionScore, ModelConfig } from '../types';
+import { FunctionCallingQuestion } from '../benchmarks/function-calling';
+import { LongContextQuestion } from '../benchmarks/long-context';
+import { MultiTurnQuestion } from '../benchmarks/multi-turn';
 import { LLMAdapter } from '../adapters/adapter';
 import { PythonSandbox } from '../sandbox/python-sandbox';
 import { TestResult } from '../sandbox/executor';
@@ -116,7 +119,7 @@ export class Scorer {
     modelOutput: string
   ): Promise<QuestionScore> {
     try {
-      const fcQuestion = question as any;
+      const fcQuestion = question as FunctionCallingQuestion;
       const expected = fcQuestion.expectedToolCall;
       if (!expected) {
         return {
@@ -196,7 +199,7 @@ export class Scorer {
     modelOutput: string
   ): Promise<QuestionScore> {
     try {
-      const lcQuestion = question as any;
+      const lcQuestion = question as LongContextQuestion;
       const keyFacts: string[] = lcQuestion.keyFacts || [];
       if (keyFacts.length === 0) {
         return {
@@ -254,7 +257,7 @@ export class Scorer {
     modelOutput: string
   ): Promise<QuestionScore> {
     try {
-      const mtQuestion = question as any;
+      const mtQuestion = question as MultiTurnQuestion;
       const check = mtQuestion.consistencyCheck || { required: [], forbidden: [] };
       const required: string[] = check.required || [];
       const forbidden: string[] = check.forbidden || [];

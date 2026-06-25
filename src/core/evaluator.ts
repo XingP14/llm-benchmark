@@ -11,10 +11,10 @@ import {
 import { LLMAdapter } from '../adapters/adapter';
 import { Scorer } from './scorer';
 import { getAllDialogueBenchmarks } from '../benchmarks/dialogue';
-import { getAllCodeBenchmarks } from '../benchmarks/coding';
+import { getAllCodeBenchmarks, CodeBenchmarkQuestion } from '../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../benchmarks/function-calling';
 import { getAllLongContextBenchmarks } from '../benchmarks/long-context';
-import { getAllMultiTurnBenchmarks } from '../benchmarks/multi-turn';
+import { getAllMultiTurnBenchmarks, MultiTurnQuestion } from '../benchmarks/multi-turn';
 
 /**
  * 评测引擎 - 协调整个评测流程
@@ -1208,7 +1208,7 @@ export class Evaluator {
 
     // 多轮对话：把 turns 整体作为 messages 发送，最后一轮 user 作为"问题轮"
     if (question.type === 'multi_turn') {
-      const mtQuestion = question as any;
+      const mtQuestion = question as MultiTurnQuestion;
       const turns: Array<{ role: string; content: string }> = mtQuestion.turns || [];
       const modelOutput = await this.adapter.chat(turns, model);
       return scorer.scoreMultiTurn(question, modelOutput);
@@ -1225,7 +1225,7 @@ export class Evaluator {
     const modelOutput = await this.adapter.chat(messages, model);
 
     if (question.type === 'coding') {
-      const codeQuestion = question as any;
+      const codeQuestion = question as CodeBenchmarkQuestion;
       return scorer.scoreCoding(question, modelOutput, codeQuestion.testCases);
     }
 
