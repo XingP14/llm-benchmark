@@ -799,3 +799,90 @@ describe('buildOpenAIChatBody (shared helper)', () => {
     expect(parsed.messages[0].content).toBe('你是助手');
   });
 });
+
+describe('throwIfProviderError (shared helper)', () => {
+  // 验证 src/adapters/adapter.ts 中新抽取的 throwIfProviderError 辅助函数。
+  // 原 5 个 OpenAI 兼容适配器（openai/qwen/deepseek/glm/ollama）手写 `if (data.error) throw new Error(\`${Provider} Error: ${data.error.message}\`)`
+  // 现抽为统一 helper, provider 字符串透传, error.message 缺失时兜底 'unknown error'。
+  const { throwIfProviderError } = require('../src/adapters/adapter');
+
+  it('throws `${provider} Error: ${message}` when data.error is present', () => {
+    expect(() => throwIfProviderError({ error: { message: 'rate limit exceeded' } }, 'OpenAI'))
+      .toThrow('OpenAI Error: rate limit exceeded');
+    expect(() => throwIfProviderError({ error: { message: 'invalid api key' } }, 'Qwen'))
+      .toThrow('Qwen Error: invalid api key');
+    expect(() => throwIfProviderError({ error: { message: 'model overloaded' } }, 'DeepSeek'))
+      .toThrow('DeepSeek Error: model overloaded');
+    expect(() => throwIfProviderError({ error: { message: 'quota exhausted' } }, 'GLM'))
+      .toThrow('GLM Error: quota exhausted');
+    expect(() => throwIfProviderError({ error: { message: 'model not found' } }, 'Ollama'))
+      .toThrow('Ollama Error: model not found');
+  });
+
+  it('falls back to "unknown error" when data.error.message is missing', () => {
+    expect(() => throwIfProviderError({ error: {} }, 'OpenAI'))
+      .toThrow('OpenAI Error: unknown error');
+  });
+
+  it('passes through silently when data.error is absent', () => {
+    expect(() => throwIfProviderError({ choices: [] }, 'OpenAI')).not.toThrow();
+    expect(() => throwIfProviderError({}, 'Qwen')).not.toThrow();
+    expect(() => throwIfProviderError({ error: null }, 'DeepSeek')).not.toThrow();
+  });
+
+  it('passes through silently when data is null or undefined', () => {
+    // 与原 5 处 `if (data.error)` 等价：data=null/undefined 时短路为 false，不抛
+    expect(() => throwIfProviderError(null, 'GLM')).not.toThrow();
+    expect(() => throwIfProviderError(undefined, 'Ollama')).not.toThrow();
+  });
+});
+
+describe('extractOpenAIChatContent (shared helper)', () => {
+  // 验证 src/adapters/adapter.ts 中新抽取的 extractOpenAIChatContent 辅助函数。
+  // 原 5 个 OpenAI 兼容适配器手写 `data.choices?.[0]?.message?.content || ''`
+  // openai/deepseek 还多一步 reasoning_content fallback（推理模型）。
+  // 抽为统一 helper, fallbackToReasoning: true 时 content 空则取 reasoning_content。
+  const { extractOpenAIChatContent } = require('../src/adapters/adapter');
+
+  it('returns content from choices[0].message.content in the simple case (qwen/glm/ollama)', () => {
+    const data = { choices: [{ message: { content: '你好世界' } }] };
+    expect(extractOpenAIChatContent(data)).toBe('你好世界');
+  });
+
+  it('returns empty string when choices/message/content are all absent', () => {
+    expect(extractOpenAIChatContent({})).toBe('');
+    expect(extractOpenAIChatContent({ choices: [] })).toBe('');
+    expect(extractOpenAIChatContent({ choices: [{}] })).toBe('');
+    expect(extractOpenAIChatContent({ choices: [{ message: {} }] })).toBe('');
+    expect(extractOpenAIChatContent({ choices: [{ message: { content: null } }] })).toBe('');
+    expect(extractOpenAIChatContent({ choices: [{ message: { content: '' } }] })).toBe('');
+  });
+
+  it('returns empty string when data is null or undefined', () => {
+    expect(extractOpenAIChatContent(null)).toBe('');
+    expect(extractOpenAIChatContent(undefined)).toBe('');
+  });
+
+  it('falls back to reasoning_content when fallbackToReasoning: true and content is empty (openai/deepseek 推理模型)', () => {
+    const data = { choices: [{ message: { content: '', reasoning_content: '推理链: 1+1=2' } }] };
+    expect(extractOpenAIChatContent(data, { fallbackToReasoning: true })).toBe('推理链: 1+1=2');
+  });
+
+  it('prefers content over reasoning_content when fallbackToReasoning: true (reasoning 模型同时返回两者)', () => {
+    // 原始 5 处代码: `return content || reasoning || ''`, content 优先
+    const data = { choices: [{ message: { content: '最终答案', reasoning_content: '推理链: ...' } }] };
+    expect(extractOpenAIChatContent(data, { fallbackToReasoning: true })).toBe('最终答案');
+  });
+
+  it('does NOT fallback to reasoning_content when fallbackToReasoning is false (default)', () => {
+    // 默认 (qwen/glm/ollama) 行为: 即使有 reasoning_content 也不取, 严格保留 content
+    const data = { choices: [{ message: { content: '', reasoning_content: '推理链: 应忽略' } }] };
+    expect(extractOpenAIChatContent(data)).toBe('');
+    expect(extractOpenAIChatContent(data, { fallbackToReasoning: false })).toBe('');
+  });
+
+  it('returns empty string when both content and reasoning_content are empty and fallbackToReasoning: true', () => {
+    const data = { choices: [{ message: { content: '', reasoning_content: '' } }] };
+    expect(extractOpenAIChatContent(data, { fallbackToReasoning: true })).toBe('');
+  });
+});

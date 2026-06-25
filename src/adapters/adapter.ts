@@ -194,3 +194,61 @@ export function buildOpenAIChatBody<M extends { role: string; content: string }>
     max_tokens: maxTokens,
   });
 }
+
+/**
+ * 5 个 OpenAI 兼容适配器（openai/qwen/deepseek/glm/ollama）原本各自手写：
+ *   if (data.error) { throw new Error(\`${Provider} Error: ${data.error.message}\`); }
+ * 仅 Provider 字面量不同，错误结构一致。
+ *
+ * 抽到此处后行为 1:1 保留：
+ *   - data.error 存在 → throw \`${provider} Error: ${data.error.message}\`（与原 5 处字符串字面量完全一致）
+ *   - data.error 不存在 → 透传，无副作用
+ *   - 入参用 structural type（Pick 风格），避免与各 adapter 自定义 Response interface（如 QwenResponse/GLMResponse）耦合
+ *
+ * @param data     已 JSON.parse 的响应体
+ * @param provider Provider 显示名（如 'OpenAI' / 'Qwen' / 'DeepSeek' / 'GLM' / 'Ollama'）
+ */
+export function throwIfProviderError(
+  data: { error?: { message?: string } } | null | undefined,
+  provider: string
+): void {
+  if (data?.error) {
+    const message = data.error.message ?? 'unknown error';
+    throw new Error(`${provider} Error: ${message}`);
+  }
+}
+
+/**
+ * 5 个 OpenAI 兼容适配器（openai/qwen/deepseek/glm/ollama）原本各自手写：
+ *   return data.choices?.[0]?.message?.content || '';
+ * 其中 openai/deepseek 还多一步 reasoning_content fallback（推理模型）。
+ *
+ * 抽到此处后行为 1:1 保留：
+ *   - 简单场景（qwen/glm/ollama）：直接返回 content，空字符串兜底
+ *   - 推理场景（openai/deepseek）：先取 content，空则取 reasoning_content，再空则空字符串
+ *   - choices/message 缺失 → 空字符串（与原可选链 || '' 语义一致）
+ *   - 入参用 structural type，兼容 5 个 adapter 的窄 Response 定义（message.content + 可选 reasoning_content）
+ *
+ * @param data    已 JSON.parse 的响应体
+ * @param options.fallbackToReasoning  true 时若 content 为空则取 reasoning_content（推理模型）
+ * @returns       提取出的 assistant 文本
+ */
+export function extractOpenAIChatContent(
+  data: {
+    choices?: Array<{
+      message?: {
+        content?: string | null;
+        reasoning_content?: string;
+      };
+    }>;
+  } | null | undefined,
+  options: { fallbackToReasoning?: boolean } = {}
+): string {
+  const choice = data?.choices?.[0]?.message;
+  const content = choice?.content || '';
+  if (options.fallbackToReasoning) {
+    const reasoning = choice?.reasoning_content || '';
+    return content || reasoning || '';
+  }
+  return content;
+}

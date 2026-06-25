@@ -1,7 +1,7 @@
 // src/adapters/deepseek-adapter.ts - DeepSeek 适配器（OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse, buildOpenAIChatBody } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse, buildOpenAIChatBody, throwIfProviderError, extractOpenAIChatContent } from './adapter';
 
 interface DeepSeekMessage {
   role: 'system' | 'user' | 'assistant';
@@ -56,15 +56,10 @@ export class DeepSeekAdapter implements LLMAdapter {
 
     const data = (await response.json()) as DeepSeekResponse;
 
-    if (data.error) {
-      throw new Error(`DeepSeek Error: ${data.error.message}`);
-    }
+    throwIfProviderError(data, 'DeepSeek');
 
-    const choice = data.choices?.[0]?.message;
-    const content = choice?.content || '';
     // 推理模型（deepseek-reasoner）会同时返回 reasoning_content
-    const reasoning = choice?.reasoning_content || '';
-    return content || reasoning || '';
+    return extractOpenAIChatContent(data, { fallbackToReasoning: true });
   }
 
   async ping(config: ModelConfig): Promise<boolean> {

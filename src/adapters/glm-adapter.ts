@@ -1,7 +1,7 @@
 // src/adapters/glm-adapter.ts - 智谱 GLM 适配器（OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse, buildOpenAIChatBody } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse, buildOpenAIChatBody, throwIfProviderError, extractOpenAIChatContent } from './adapter';
 
 interface GLMMessage {
   role: 'system' | 'user' | 'assistant';
@@ -55,11 +55,9 @@ export class GLMAdapter implements LLMAdapter {
 
     const data = (await response.json()) as GLMResponse;
 
-    if (data.error) {
-      throw new Error(`GLM Error: ${data.error.message}`);
-    }
+    throwIfProviderError(data, 'GLM');
 
-    return data.choices[0]?.message?.content || '';
+    return extractOpenAIChatContent(data);
   }
 
   async ping(config: ModelConfig): Promise<boolean> {

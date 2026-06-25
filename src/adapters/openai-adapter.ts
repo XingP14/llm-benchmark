@@ -1,7 +1,7 @@
 // src/adapters/openai-adapter.ts - OpenAI 兼容接口适配器
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse, buildOpenAIChatBody } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse, buildOpenAIChatBody, throwIfProviderError, extractOpenAIChatContent } from './adapter';
 
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant';
@@ -34,15 +34,10 @@ export class OpenAIAdapter implements LLMAdapter {
 
     const data = await response.json() as any;
 
-    if (data.error) {
-      throw new Error(`OpenAI Error: ${data.error.message}`);
-    }
+    throwIfProviderError(data, 'OpenAI');
 
     // 优先使用 content，如果为空则尝试 reasoning_content（推理模型）
-    const choice = data.choices?.[0]?.message;
-    const content = choice?.content || '';
-    const reasoning = choice?.reasoning_content || '';
-    return content || reasoning || '';
+    return extractOpenAIChatContent(data, { fallbackToReasoning: true });
   }
 
   async ping(config: ModelConfig): Promise<boolean> {
