@@ -73,6 +73,9 @@ async function runBenchmark(args: string[]) {
   console.log('🚀 LLM Benchmark 开始...\n');
 
   const config = loadConfig(configPath);
+  if (!config.models || config.models.length === 0) {
+    throw new Error(`config.models 为空: 请在 ${configPath} 中至少配置 1 个 model (name + endpoint + apiKey + type + model 5 字段)`);
+  }
   const adapter = createAdapter(config.models[0].type);
 
   let lastProgress = 0;
@@ -187,6 +190,9 @@ async function compareModels(args: string[]) {
     output: './results',
   };
 
+  if (models.length === 0) {
+    throw new Error('compareModels: models 为空 (内部错误, 上方 modelPaths.length < 2 已 process.exit(1) 拦截)');
+  }
   const adapter = createAdapter(models[0].type);
   const evaluator = new Evaluator(benchmarkConfig, adapter);
 
