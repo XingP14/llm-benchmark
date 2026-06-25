@@ -1,11 +1,32 @@
 // src/adapters/openai-adapter.ts - OpenAI 兼容接口适配器
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse, buildOpenAIChatBody, throwIfProviderError, extractOpenAIChatContent } from './adapter';
+import {
+  LLMAdapter,
+  fetchWithTimeout,
+  defaultPing,
+  assertOkResponse,
+  buildOpenAIChatBody,
+  throwIfProviderError,
+  extractOpenAIChatContent,
+} from './adapter';
 
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
+}
+
+interface OpenAIResponse {
+  choices: Array<{
+    message: {
+      content: string | null;
+      reasoning_content?: string;
+    };
+  }>;
+  error?: {
+    message: string;
+    type: string;
+  };
 }
 
 export class OpenAIAdapter implements LLMAdapter {
@@ -32,7 +53,7 @@ export class OpenAIAdapter implements LLMAdapter {
 
     if (!response.ok) await assertOkResponse(response, 'OpenAI');
 
-    const data = await response.json() as any;
+    const data = (await response.json()) as OpenAIResponse;
 
     throwIfProviderError(data, 'OpenAI');
 

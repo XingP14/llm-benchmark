@@ -1,4 +1,5 @@
 // tests/adapter.test.ts - 适配器测试 (包含 fetch mock)
+import { splitSystemMessage, buildAnthropicChatBody } from '../src/adapters/adapter';
 
 import { OpenAIAdapter } from '../src/adapters/openai-adapter';
 import { AnthropicAdapter } from '../src/adapters/anthropic-adapter';
@@ -884,5 +885,110 @@ describe('extractOpenAIChatContent (shared helper)', () => {
   it('returns empty string when both content and reasoning_content are empty and fallbackToReasoning: true', () => {
     const data = { choices: [{ message: { content: '', reasoning_content: '' } }] };
     expect(extractOpenAIChatContent(data, { fallbackToReasoning: true })).toBe('');
+  });
+});
+
+describe('splitSystemMessage', () => {
+  it('returns [undefined, [...]] when no system message exists', () => {
+    const messages = [
+      { role: 'user', content: 'Hi' },
+      { role: 'assistant', content: 'Hello' },
+    ] as Array<{ role: string; content: string }>;
+    const [sys, rest] = splitSystemMessage(messages);
+    expect(sys).toBeUndefined();
+    expect(rest).toEqual(messages);
+  });
+
+  it('separates single system message from non-system messages preserving order', () => {
+    const sysMsg = { role: 'system', content: 'You are a helpful assistant.' };
+    const userMsg1 = { role: 'user', content: 'Q1' };
+    const asstMsg = { role: 'assistant', content: 'A1' };
+    const userMsg2 = { role: 'user', content: 'Q2' };
+    const messages = [sysMsg, userMsg1, asstMsg, userMsg2] as Array<{ role: string; content: string }>;
+    const [sys, rest] = splitSystemMessage(messages);
+    expect(sys).toBe(sysMsg);
+    expect(rest).toEqual([userMsg1, asstMsg, userMsg2]);
+  });
+
+  it('takes first system message and EXCLUDES all system messages from rest (matches find+filter)', () => {
+    // 与原 anthropic-adapter 11 行 find+filter 语义完全一致:
+    //   find() 返回第一条 system message
+    //   filter(m => m.role !== 'system') 排除所有 system 消息
+    // 这里覆盖 "多 system" 边界, 确保 helper 不会把多余的 system 漏到 rest 数组
+    const sys1 = { role: 'system', content: 'first' };
+    const sys2 = { role: 'system', content: 'second' };
+    const userMsg = { role: 'user', content: 'Q' };
+    const messages = [sys1, sys2, userMsg] as Array<{ role: string; content: string }>;
+    const [sys, rest] = splitSystemMessage(messages);
+    expect(sys).toBe(sys1);
+    expect(rest).toEqual([userMsg]); // sys2 也被 filter 排除, 不进 rest
+  });
+
+  it('returns empty rest array for empty input', () => {
+    const [sys, rest] = splitSystemMessage([]);
+    expect(sys).toBeUndefined();
+    expect(rest).toEqual([]);
+  });
+});
+
+describe('buildAnthropicChatBody', () => {
+  it('builds body with default max_tokens=2048 and excludes system from messages', () => {
+    const body = buildAnthropicChatBody('claude-3-haiku-20240307', [
+      { role: 'system', content: '你是助手' },
+      { role: 'user', content: '你好' },
+    ]);
+    expect(body).toEqual({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: '你好' }],
+      system: '你是助手',
+    });
+  });
+
+  it('respects custom max_tokens parameter', () => {
+    const body = buildAnthropicChatBody(
+      'claude-3-5-sonnet-20240620',
+      [{ role: 'user', content: 'Q' }],
+      8192
+    );
+    expect(body.max_tokens).toBe(8192);
+  });
+
+  it('omits top-level system field when no system message present', () => {
+    const body = buildAnthropicChatBody('claude-3-haiku-20240307', [
+      { role: 'user', content: 'Q1' },
+      { role: 'assistant', content: 'A1' },
+      { role: 'user', content: 'Q2' },
+    ]);
+    expect(body).toEqual({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 2048,
+      messages: [
+        { role: 'user', content: 'Q1' },
+        { role: 'assistant', content: 'A1' },
+        { role: 'user', content: 'Q2' },
+      ],
+    });
+    expect('system' in body).toBe(false);
+  });
+
+  it('preserves message order in non-system array', () => {
+    const body = buildAnthropicChatBody('claude-3-haiku-20240307', [
+      { role: 'system', content: 'sys' },
+      { role: 'user', content: '1' },
+      { role: 'assistant', content: '2' },
+      { role: 'user', content: '3' },
+    ]);
+    expect((body.messages as Array<{ content: string }>).map(m => m.content)).toEqual(['1', '2', '3']);
+  });
+
+  it('handles empty messages array', () => {
+    const body = buildAnthropicChatBody('claude-3-haiku-20240307', []);
+    expect(body).toEqual({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 2048,
+      messages: [],
+    });
+    expect('system' in body).toBe(false);
   });
 });

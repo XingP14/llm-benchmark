@@ -252,3 +252,78 @@ export function extractOpenAIChatContent(
   }
   return content;
 }
+
+/**
+ * 把 messages 拆成 (systemMessage | undefined, nonSystemMessages) 两部分。
+ *
+ * Anthropic API 要求 system message 单独作为顶层 `system` 字段传入（不能放进
+ * messages 数组里），因此 Anthropic 适配器原本手写：
+ *   const systemMessage = messages.find(m => m.role === 'system');
+ *   const userMessages  = messages.filter(m => m.role !== 'system');
+ *
+ * 抽到此处后行为 1:1 保留：
+ *   - find 返回第一条 system message，undefined 表示不存在
+ *   - filter 保留原顺序（非 system）
+ *   - 入参用泛型 `M extends { role: string; content: string }`，兼容 5 个
+ *     OpenAI 兼容适配器的窄 Message 类型（role 是字面量联合），同时也兼容
+ *     AnthropicMessage（role: 'system' | 'user' | 'assistant'）
+ *
+ * @param messages 输入消息数组（含可能存在的 system message）
+ * @returns        [systemMessage | undefined, nonSystemMessages[]]
+ */
+export function splitSystemMessage<M extends { role: string; content: string }>(
+  messages: M[]
+): [M | undefined, M[]] {
+  const systemMessage = messages.find(m => m.role === 'system');
+  const nonSystem = messages.filter(m => m.role !== 'system');
+  return [systemMessage, nonSystem];
+}
+
+/**
+ * 构造 Anthropic /v1/messages 请求体（与 5 个 OpenAI 兼容适配器的 body 构造
+ * 模式一致，但 Anthropic 要求 system message 拆出作为顶层字段）。
+ *
+ * Anthropic 适配器原本手写 11 行：
+ *   const [systemMessage, userMessages] = splitSystemMessage(messages);
+ *   const body: Record<string, any> = {
+ *     model: model,
+ *     max_tokens: 2048,
+ *     messages: userMessages.map(m => ({
+ *       role: m.role as 'user' | 'assistant',
+ *       content: m.content,
+ *     })),
+ *   };
+ *   if (systemMessage) body.system = systemMessage.content;
+ *
+ * 抽到此处后行为 1:1 保留：
+ *   - max_tokens 默认 2048（Anthropic Claude 3 默认窗口）
+ *   - messages 数组中 system 被剔除，user/assistant 保留并 cast 为窄联合
+ *     （Anthropic API 不接受 system 在 messages 里）
+ *   - 当且仅当 systemMessage 存在时附加顶层 `system` 字段（与原 `if` 语义一致）
+ *   - 返回 Record<string, unknown>，调用方仍可 JSON.stringify 后塞进 fetch body
+ *   - 入参泛型 `M extends { role: string; content: string }` 兼容 AnthropicMessage
+ *
+ * @param model     Anthropic 模型名（如 'claude-3-haiku-20240307'）
+ * @param messages  原始消息数组（含可能存在的 system message）
+ * @param maxTokens 最大 token 数，默认 2048
+ * @returns         Anthropic /v1/messages 请求体对象
+ */
+export function buildAnthropicChatBody<M extends { role: string; content: string }>(
+  model: string,
+  messages: M[],
+  maxTokens: number = 2048
+): Record<string, unknown> {
+  const [systemMessage, userMessages] = splitSystemMessage(messages);
+  const body: Record<string, unknown> = {
+    model,
+    max_tokens: maxTokens,
+    messages: userMessages.map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    })),
+  };
+  if (systemMessage) {
+    body.system = systemMessage.content;
+  }
+  return body;
+}
