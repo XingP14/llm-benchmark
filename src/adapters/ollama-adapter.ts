@@ -1,7 +1,7 @@
 // src/adapters/ollama-adapter.ts - Ollama 本地模型适配器（OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter } from './adapter';
+import { LLMAdapter, fetchWithTimeout } from './adapter';
 
 interface OllamaMessage {
   role: 'system' | 'user' | 'assistant';
@@ -49,48 +49,35 @@ export class OllamaAdapter implements LLMAdapter {
     // Ollama 本地推理一般不需要 API key；若用户提供则使用（支持反向代理）
     const apiKey = config.apiKey || 'ollama';
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 300000);
+    // 超时与 AbortController 防御统一由 fetchWithTimeout 提供
+    const response = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 4096,
+      }),
+    });
 
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 4096,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Ollama API Error: ${response.status} - ${errorText}`
-        );
-      }
-
-      const data = (await response.json()) as OllamaResponse;
-
-      if (data.error) {
-        throw new Error(`Ollama Error: ${data.error.message}`);
-      }
-
-      return data.choices?.[0]?.message?.content || '';
-    } catch (err: any) {
-      clearTimeout(timeout);
-      if (err.name === 'AbortError') {
-        throw new Error('API 请求超时 (300s)');
-      }
-      throw err;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Ollama API Error: ${response.status} - ${errorText}`
+      );
     }
+
+    const data = (await response.json()) as OllamaResponse;
+
+    if (data.error) {
+      throw new Error(`Ollama Error: ${data.error.message}`);
+    }
+
+    return data.choices?.[0]?.message?.content || '';
   }
 
   async ping(config: ModelConfig): Promise<boolean> {

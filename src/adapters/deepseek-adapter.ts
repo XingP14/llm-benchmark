@@ -1,7 +1,7 @@
 // src/adapters/deepseek-adapter.ts - DeepSeek 适配器（OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter } from './adapter';
+import { LLMAdapter, fetchWithTimeout } from './adapter';
 
 interface DeepSeekMessage {
   role: 'system' | 'user' | 'assistant';
@@ -42,53 +42,39 @@ export class DeepSeekAdapter implements LLMAdapter {
     const endpoint = config.endpoint || 'https://api.deepseek.com/v1';
     const url = `${endpoint.replace(/\/$/, '')}/chat/completions`;
 
-    // 推理模型可能耗时较长
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 300000);
+    // 推理模型可能耗时较长，超时与 AbortController 防御统一由 fetchWithTimeout 提供
+    const response = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 4096,
+      }),
+    });
 
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 4096,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `DeepSeek API Error: ${response.status} - ${errorText}`
-        );
-      }
-
-      const data = (await response.json()) as DeepSeekResponse;
-
-      if (data.error) {
-        throw new Error(`DeepSeek Error: ${data.error.message}`);
-      }
-
-      const choice = data.choices?.[0]?.message;
-      const content = choice?.content || '';
-      // 推理模型（deepseek-reasoner）会同时返回 reasoning_content
-      const reasoning = choice?.reasoning_content || '';
-      return content || reasoning || '';
-    } catch (err: any) {
-      clearTimeout(timeout);
-      if (err.name === 'AbortError') {
-        throw new Error('API 请求超时 (300s)');
-      }
-      throw err;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `DeepSeek API Error: ${response.status} - ${errorText}`
+      );
     }
+
+    const data = (await response.json()) as DeepSeekResponse;
+
+    if (data.error) {
+      throw new Error(`DeepSeek Error: ${data.error.message}`);
+    }
+
+    const choice = data.choices?.[0]?.message;
+    const content = choice?.content || '';
+    // 推理模型（deepseek-reasoner）会同时返回 reasoning_content
+    const reasoning = choice?.reasoning_content || '';
+    return content || reasoning || '';
   }
 
   async ping(config: ModelConfig): Promise<boolean> {

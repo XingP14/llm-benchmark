@@ -584,3 +584,55 @@ describe('OllamaAdapter', () => {
     });
   });
 });
+
+describe('fetchWithTimeout (shared helper)', () => {
+  // 这套测试覆盖 src/adapters/adapter.ts 中新抽取的 fetchWithTimeout 辅助函数。
+  // 6 个适配器（openai/qwen/deepseek/glm/anthropic/ollama）现在共享此函数，
+  // 此处验证其三类路径：成功透传 / AbortError 友好化 / 其他错误原样上抛。
+
+  const { fetchWithTimeout, DEFAULT_API_TIMEOUT_MS } = require('../src/adapters/adapter');
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('exposes DEFAULT_API_TIMEOUT_MS = 300000 (5 分钟)', () => {
+    expect(DEFAULT_API_TIMEOUT_MS).toBe(300000);
+  });
+
+  it('should pass through the fetch Response on success and clear the timer', async () => {
+    const mockResponse = { ok: true, status: 200 };
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as any);
+
+    const result = await fetchWithTimeout('https://api.example.com/v1/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ping: 1 }),
+    });
+
+    expect(result).toBe(mockResponse);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // signal 必须被覆盖
+    const callInit = fetchSpy.mock.calls[0][1] as RequestInit;
+    expect(callInit.signal).toBeDefined();
+  });
+
+  it('should throw "API 请求超时 (300s)" when fetch rejects with AbortError', async () => {
+    const abortError: any = new Error('The user aborted a request');
+    abortError.name = 'AbortError';
+    jest.spyOn(globalThis, 'fetch').mockRejectedValue(abortError);
+
+    await expect(
+      fetchWithTimeout('https://api.example.com/slow', { method: 'POST' })
+    ).rejects.toThrow('API 请求超时 (300s)');
+  });
+
+  it('should re-throw non-AbortError errors verbatim (e.g. network failure)', async () => {
+    const netError = new Error('ECONNREFUSED');
+    jest.spyOn(globalThis, 'fetch').mockRejectedValue(netError);
+
+    await expect(
+      fetchWithTimeout('https://api.example.com/down', { method: 'POST' })
+    ).rejects.toThrow('ECONNREFUSED');
+  });
+});
