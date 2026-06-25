@@ -11,6 +11,17 @@ const JWT_SECRET = process.env.JWT_SECRET || 'llm-bench-secret';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 /**
+ * users 表 row 类型 — id/username/password_hash NOT NULL, created_at 默认可选
+ * (SQLite TEXT/DATETIME 默认 NULL 除非 DEFAULT CURRENT_TIMESTAMP, 但 .get() 收口为可选更安全)
+ */
+interface UserRow {
+  id: number;
+  username: string;
+  password_hash: string;
+  created_at?: string | null;
+}
+
+/**
  * 初始化管理员用户
  */
 export function initAdmin(): void {
@@ -32,7 +43,7 @@ router.post('/login', (req: Request, res: Response) => {
   }
 
   const db = getDatabase();
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as any;
+  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as UserRow | undefined;
 
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     res.status(401).json({ error: 'Invalid credentials' });

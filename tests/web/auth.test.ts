@@ -102,4 +102,45 @@ describe('Auth Routes', () => {
       expect(res.body.error).toBe('No token provided');
     });
   });
+
+  // Regression coverage for UserRow type narrowing in src/web/routes/auth.ts login handler
+  // (was `as any`, now typed `as UserRow | undefined` — verify .get() undefined path + required-field path)
+  describe('UserRow typed cast (regression for 06-26 typed auth cast)', () => {
+    it('should return 401 when user does not exist (undefined UserRow branch)', async () => {
+      // resetDatabase() in beforeEach wipes users; 'ghost' is guaranteed absent
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'ghost', password: 'whatever' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe('Invalid credentials');
+    });
+
+    it('should return 401 when password_hash is empty string (UserRow.password_hash falsy)', async () => {
+      // Schema enforces NOT NULL on password_hash, so we cannot insert NULL.
+      // Instead, insert empty string '' — schema allows, bcrypt.compareSync('whatever','') returns false.
+      // This exercises the short-circuit path `!user || !bcrypt.compareSync(password, user.password_hash)`.
+      // Under the typed `UserRow.password_hash: string` invariant, '' is still truthy as a string,
+      // so this case verifies the bcrypt branch, not the `!user.password_hash` falsy branch.
+      const { getDatabase } = require('../../src/web/db/database');
+      const db = getDatabase();
+      db.prepare("INSERT INTO users (username, password_hash) VALUES (?, '')").run('nohash');
+
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'nohash', password: 'whatever' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe('Invalid credentials');
+    });
+
+    it('should reject empty-string username (login validation layer, before DB)', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ username: '', password: 'admin123' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Username and password required');
+    });
+  });
 });
