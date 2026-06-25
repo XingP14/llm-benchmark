@@ -1,7 +1,7 @@
 // src/adapters/ollama-adapter.ts - Ollama 本地模型适配器（OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing } from './adapter';
 
 interface OllamaMessage {
   role: 'system' | 'user' | 'assistant';
@@ -81,14 +81,6 @@ export class OllamaAdapter implements LLMAdapter {
   }
 
   async ping(config: ModelConfig): Promise<boolean> {
-    try {
-      const testMessages: OllamaMessage[] = [
-        { role: 'user', content: 'Hi' },
-      ];
-      await this.chat(testMessages, config);
-      return true;
-    } catch {
-      return false;
-    }
+    return defaultPing(this.chat.bind(this), config);
   }
 }

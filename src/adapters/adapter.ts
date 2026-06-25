@@ -76,3 +76,45 @@ export async function fetchWithTimeout(
     clearTimeout(timer);
   }
 }
+
+/**
+ * ping 默认实现：通过 chat 发送一条 "Hi" 测试消息，捕获任何异常返回 false。
+ *
+ * 6 个适配器（openai / qwen / deepseek / glm / anthropic / ollama）原本各自
+ * 手写 9 行 byte-identical 模式：
+ *   async ping(config) {
+ *     try {
+ *       const testMessages: XxxMessage[] = [{ role: 'user', content: 'Hi' }];
+ *       await this.chat(testMessages, config);
+ *       return true;
+ *     } catch {
+ *       return false;
+ *     }
+ *   }
+ * 仅 `XxxMessage` 类型别名不同（各自 `role` 是窄字符串字面量联合），行为 100% 一致。
+ * 抽到此处后：
+ *   1. 消除 6×9 = 54 行复制 → 1 处定义
+ *   2. 测试消息 ["Hi"] 字面量集中维护，避免后续调整文案需 6 处对齐
+ *   3. 各适配器 `ping` 退化为单行委托：
+ *        async ping(config) { return defaultPing(this.chat.bind(this), config); }
+ *
+ * 泛型 `M extends { role: string; content: string }` 让 `chatFn` 的参数类型可以
+ * 由调用方推断为各适配器自己的窄 `Message[]`（如 `{ role: 'user' | 'assistant' | 'system' }`），
+ * 因此 `this.chat.bind(this)` 在 6 个适配器里都无需 `as any`。
+ *
+ * @param chatFn  适配器的 chat 方法（建议 .bind(this) 以保留 this 上下文）
+ * @param config  ModelConfig
+ * @returns       成功 resolve 任意值 → true；chat 抛错（401/网络/超时）→ false
+ */
+export async function defaultPing<M extends { role: string; content: string }>(
+  chatFn: (messages: M[], config: ModelConfig) => Promise<string>,
+  config: ModelConfig
+): Promise<boolean> {
+  try {
+    // "Hi" 字面量通过结构兼容隐式 widen 到 M（因 M 约束里 role 至少是 string）
+    await chatFn([{ role: 'user', content: 'Hi' } as unknown as M], config);
+    return true;
+  } catch {
+    return false;
+  }
+}

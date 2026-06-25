@@ -1,7 +1,7 @@
 // src/adapters/deepseek-adapter.ts - DeepSeek 适配器（OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing } from './adapter';
 
 interface DeepSeekMessage {
   role: 'system' | 'user' | 'assistant';
@@ -78,14 +78,6 @@ export class DeepSeekAdapter implements LLMAdapter {
   }
 
   async ping(config: ModelConfig): Promise<boolean> {
-    try {
-      const testMessages: DeepSeekMessage[] = [
-        { role: 'user', content: 'Hi' },
-      ];
-      await this.chat(testMessages, config);
-      return true;
-    } catch {
-      return false;
-    }
+    return defaultPing(this.chat.bind(this), config);
   }
 }

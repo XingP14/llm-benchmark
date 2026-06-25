@@ -636,3 +636,46 @@ describe('fetchWithTimeout (shared helper)', () => {
     ).rejects.toThrow('ECONNREFUSED');
   });
 });
+
+describe('defaultPing (shared helper)', () => {
+  // 覆盖 src/adapters/adapter.ts 中抽取的 defaultPing 辅助函数。
+  // 6 个适配器（openai/qwen/deepseek/glm/anthropic/ollama）的 ping() 现在统一委托给本函数，
+  // 此处验证三类行为：成功透传 chat 返回值 / 抛错时返回 false / 调用消息恰好为单条 {role:'user',content:'Hi'}。
+
+  const { defaultPing } = require('../src/adapters/adapter');
+  const baseConfig = {
+    name: 'test',
+    endpoint: 'https://api.example.com/v1',
+    apiKey: 'sk-test',
+    type: 'openai' as const,
+  };
+
+  it('returns true when chat resolves successfully', async () => {
+    const chatFn = jest.fn().mockResolvedValue('pong');
+    const result = await defaultPing(chatFn, baseConfig);
+    expect(result).toBe(true);
+  });
+
+  it('returns false when chat throws any error (401/500/timeout/network)', async () => {
+    const chatFn = jest.fn().mockRejectedValue(new Error('401 Unauthorized'));
+    const result = await defaultPing(chatFn, baseConfig);
+    expect(result).toBe(false);
+  });
+
+  it('calls chat with exactly one "Hi" test message of role=user', async () => {
+    const chatFn = jest.fn().mockResolvedValue('pong');
+    await defaultPing(chatFn, baseConfig);
+    expect(chatFn).toHaveBeenCalledTimes(1);
+    const [messages, config] = chatFn.mock.calls[0];
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toEqual({ role: 'user', content: 'Hi' });
+    expect(config).toBe(baseConfig);
+  });
+
+  it('forwards the config argument unchanged', async () => {
+    const chatFn = jest.fn().mockResolvedValue('pong');
+    const customConfig = { ...baseConfig, name: 'custom-model', apiKey: 'sk-custom' };
+    await defaultPing(chatFn, customConfig);
+    expect(chatFn.mock.calls[0][1]).toBe(customConfig);
+  });
+});

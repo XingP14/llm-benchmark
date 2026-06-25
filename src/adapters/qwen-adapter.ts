@@ -1,7 +1,7 @@
 // src/adapters/qwen-adapter.ts - 通义千问 Qwen 适配器（DashScope OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing } from './adapter';
 
 interface QwenMessage {
   role: 'system' | 'user' | 'assistant';
@@ -75,14 +75,6 @@ export class QwenAdapter implements LLMAdapter {
   }
 
   async ping(config: ModelConfig): Promise<boolean> {
-    try {
-      const testMessages: QwenMessage[] = [
-        { role: 'user', content: 'Hi' },
-      ];
-      await this.chat(testMessages, config);
-      return true;
-    } catch {
-      return false;
-    }
+    return defaultPing(this.chat.bind(this), config);
   }
 }

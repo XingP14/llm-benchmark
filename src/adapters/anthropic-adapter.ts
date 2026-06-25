@@ -1,7 +1,7 @@
 // src/adapters/anthropic-adapter.ts - Anthropic Claude 适配器
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing } from './adapter';
 
 interface AnthropicMessage {
   role: 'system' | 'user' | 'assistant';
@@ -84,14 +84,6 @@ export class AnthropicAdapter implements LLMAdapter {
   }
 
   async ping(config: ModelConfig): Promise<boolean> {
-    try {
-      const testMessages: AnthropicMessage[] = [
-        { role: 'user', content: 'Hi' },
-      ];
-      await this.chat(testMessages, config);
-      return true;
-    } catch {
-      return false;
-    }
+    return defaultPing(this.chat.bind(this), config);
   }
 }
