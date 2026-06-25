@@ -35,7 +35,7 @@ export const DIM_HEADERS: ReadonlyArray<DimHeader> = [
  * 集中实现避免双处副本产生漂移 (以往 06-20 cron refactor 之前的 bug)。
  */
 export function getDimCell(dimensions: DimensionScore | undefined, key: keyof DimensionScore): string {
-  const dim = (dimensions as any)?.[key];
+  const dim = dimensions?.[key];
   if (!dim || typeof dim.average !== 'number') return '-';
   return Number(dim.average).toFixed(1);
 }
@@ -92,7 +92,7 @@ export class Reporter {
 
       // 每个存在的维度都展示分类明细（v0.4.0 之前只列 dialogue / coding）
       DIM_HEADERS.forEach((d) => {
-        const dim = (result.dimensions as any)[d.key];
+        const dim = result.dimensions?.[d.key];
         if (!dim || !dim.details) return;
         md += `**${d.label}分类:**\n\n`;
         md += `| 类别 | 得分 |\n`;
@@ -189,7 +189,7 @@ export class Reporter {
                     </td>`;
 
       DIM_HEADERS.forEach((d) => {
-        const dim = (result.dimensions as any)[d.key];
+        const dim = result.dimensions?.[d.key];
         if (!dim || typeof dim.average !== 'number') {
           html += `<td><span class="dim-na">-</span></td>`;
         } else {
@@ -222,7 +222,7 @@ export class Reporter {
                 <p><strong>总分:</strong> ${result.totalScore}</p>`;
 
       DIM_HEADERS.forEach((d) => {
-        const dim = (result.dimensions as any)[d.key];
+        const dim = result.dimensions?.[d.key];
         if (!dim || typeof dim.average !== 'number') {
           html += `<p><strong>${d.label}:</strong> <span class="dim-na">-</span></p>`;
         } else {
@@ -233,7 +233,7 @@ export class Reporter {
 
       // 每个存在的维度都展示分类明细（v0.4.0 之前只列 dialogue / coding）
       DIM_HEADERS.forEach((d) => {
-        const dim = (result.dimensions as any)[d.key];
+        const dim = result.dimensions?.[d.key];
         if (!dim || !dim.details) return;
         html += `
                 <h4>${d.label}分类</h4>
@@ -284,7 +284,7 @@ export class Reporter {
         r.modelName,
         r.totalScore,
         ...DIM_HEADERS.map(({ key }) => {
-          const dim = (r.dimensions as any)[key];
+          const dim = r.dimensions?.[key];
           return dim && typeof dim.average === 'number' ? dim.average : '-';
         }),
         (r.duration / 1000).toFixed(2),
