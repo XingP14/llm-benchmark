@@ -1,7 +1,7 @@
 // src/adapters/glm-adapter.ts - 智谱 GLM 适配器（OpenAI 兼容）
 
 import { ModelConfig } from '../types';
-import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse } from './adapter';
+import { LLMAdapter, fetchWithTimeout, defaultPing, assertOkResponse, buildOpenAIChatBody } from './adapter';
 
 interface GLMMessage {
   role: 'system' | 'user' | 'assistant';
@@ -48,12 +48,7 @@ export class GLMAdapter implements LLMAdapter {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 2048,
-      }),
+      body: buildOpenAIChatBody(model, messages, 2048),
     });
 
     if (!response.ok) await assertOkResponse(response, 'GLM');

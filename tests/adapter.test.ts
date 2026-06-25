@@ -737,3 +737,65 @@ describe('assertOkResponse (shared helper)', () => {
     );
   });
 });
+
+describe('buildOpenAIChatBody (shared helper)', () => {
+  // 验证 src/adapters/adapter.ts 中新抽取的 buildOpenAIChatBody 辅助函数。
+  // 5 个 OpenAI 兼容适配器（openai/qwen/deepseek/glm/ollama）现在统一委托此函数构造请求 body。
+  // 覆盖：默认 max_tokens=4096 / glm 走 2048 / 字段顺序 model→messages→temperature→max_tokens /
+  //       temperature 硬编码 0.7 / JSON 输出 byte-identical（与原 5 处字面量一致）。
+
+  const { buildOpenAIChatBody } = require('../src/adapters/adapter');
+
+  it('produces the canonical 4-field body with default max_tokens=4096', () => {
+    const messages = [{ role: 'user', content: 'Hi' }];
+    const body = buildOpenAIChatBody('gpt-3.5-turbo', messages);
+    const parsed = JSON.parse(body);
+    expect(parsed).toEqual({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: 'Hi' }],
+      temperature: 0.7,
+      max_tokens: 4096,
+    });
+  });
+
+  it('respects caller-provided max_tokens override (glm uses 2048)', () => {
+    const messages = [{ role: 'user', content: 'Hi' }];
+    const body = buildOpenAIChatBody('glm-4', messages, 2048);
+    const parsed = JSON.parse(body);
+    expect(parsed.max_tokens).toBe(2048);
+    // 其他字段保持不变
+    expect(parsed.model).toBe('glm-4');
+    expect(parsed.temperature).toBe(0.7);
+  });
+
+  it('preserves field order model → messages → temperature → max_tokens (byte-identical with original 5 sites)', () => {
+    const messages = [{ role: 'user', content: 'Hi' }];
+    const body = buildOpenAIChatBody('deepseek-chat', messages);
+    // 字段顺序影响请求签名/e2e fixture 匹配，必须与原 5 处 JSON.stringify 字面量顺序一致
+    expect(body).toBe(
+      JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: 'Hi' }],
+        temperature: 0.7,
+        max_tokens: 4096,
+      })
+    );
+  });
+
+  it('accepts narrow Message shapes compatible with all 5 adapters (glm/openai/deepseek/qwen/ollama)', () => {
+    // 模拟 glm (role 仅为 'user'|'assistant'|'system') 等窄类型
+    // 注: require() 返回 untyped any, 故用 as cast 模拟 generic 调用以验证类型兼容
+    type GlmMessage = { role: 'user' | 'assistant' | 'system'; content: string };
+    const messages = [{ role: 'system', content: '你是助手' }, { role: 'user', content: '你好' }] as GlmMessage[];
+    const body = (buildOpenAIChatBody as <M extends { role: string; content: string }>(
+      model: string,
+      messages: M[],
+      maxTokens?: number
+    ) => string)('glm-4', messages, 2048);
+    const parsed = JSON.parse(body);
+    expect(parsed.messages).toHaveLength(2);
+    expect(parsed.messages[0].role).toBe('system');
+    // 中文 content 原样保留（UTF-8 直通）
+    expect(parsed.messages[0].content).toBe('你是助手');
+  });
+});

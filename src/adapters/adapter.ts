@@ -151,3 +151,46 @@ export async function assertOkResponse(response: Response, provider: string): Pr
   const errorText = await response.text();
   throw new Error(`${provider} API Error: ${response.status} - ${errorText}`);
 }
+
+/**
+ * 默认 OpenAI 兼容聊天请求参数。
+ * 5 个 OpenAI 兼容适配器（openai / qwen / deepseek / glm / ollama）原本各自
+ * 手写 7 行 byte-identical body 构造块：
+ *   body: JSON.stringify({
+ *     model: model,
+ *     messages: messages,
+ *     temperature: 0.7,
+ *     max_tokens: 4096,  // glm 用 2048
+ *   }),
+ *
+ * 仅 `max_tokens` 在 glm (2048) 与其余 4 适配器 (4096) 之间略有差异；temperature 0.7
+ * 是 OpenAI 系列推理模型 (deepseek-reasoner / o1 / qwen3-max) 公认不破坏生成多样性的
+ * 默认值，故硬编码于 helper 内（与原 5 处行为 1:1 保留）。
+ *
+ * 抽到此处后：
+ *   1. 消除 5×7 = 35 行复制 → 1 处定义
+ *   2. temperature / max_tokens 默认值集中维护，后续调整仅改一处
+ *   3. 5 个适配器 body 段退化为 1 行委托：
+ *        body: buildOpenAIChatBody(model, messages, 4096),
+ *
+ * 行为 1:1 保留：
+ *   - 字段顺序 (model, messages, temperature, max_tokens) 与原 5 处完全一致
+ *   - JSON.stringify 输出 byte-identical，便于请求签名/e2e 测试不破
+ *
+ * @param model        模型名（如 'gpt-3.5-turbo' / 'qwen-turbo' / 'glm-4'）
+ * @param messages     聊天消息数组（结构兼容各 adapter 的窄 Message 类型）
+ * @param maxTokens    最大生成 token 数（默认 4096；glm 用 2048；o1 系列建议 8192）
+ * @returns            已 JSON.stringify 后的请求 body 字符串，可直接传给 fetchWithTimeout
+ */
+export function buildOpenAIChatBody<M extends { role: string; content: string }>(
+  model: string,
+  messages: M[],
+  maxTokens: number = 4096
+): string {
+  return JSON.stringify({
+    model,
+    messages,
+    temperature: 0.7,
+    max_tokens: maxTokens,
+  });
+}
