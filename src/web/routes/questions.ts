@@ -1,6 +1,7 @@
 // src/web/routes/questions.ts - 题目路由
 
 import { Router, Request, Response } from 'express';
+import { CodeTestCase } from '../../types';
 import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calling';
@@ -25,7 +26,7 @@ router.get('/', (_req: Request, res: Response) => {
     type: q.type,
     category: q.category,
     content: q.content,
-    test_cases: (q as any).testCases?.map((tc: any) => ({
+    test_cases: q.testCases?.map((tc: CodeTestCase) => ({
       input: tc.input,
       expected_output: tc.expectedOutput,
       description: tc.description,
@@ -38,8 +39,8 @@ router.get('/', (_req: Request, res: Response) => {
     type: q.type,
     category: q.category,
     content: q.content,
-    available_tools: (q as any).availableTools,
-    expected_tool_call: (q as any).expectedToolCall,
+    available_tools: q.availableTools,
+    expected_tool_call: q.expectedToolCall,
     weight: q.weight,
   }));
 
@@ -48,8 +49,8 @@ router.get('/', (_req: Request, res: Response) => {
     type: q.type,
     category: q.category,
     content: q.content,
-    context_tokens: (q as any).contextTokens,
-    key_facts: (q as any).keyFacts,
+    context_tokens: q.contextTokens,
+    key_facts: q.keyFacts,
     weight: q.weight,
   }));
 
@@ -58,8 +59,8 @@ router.get('/', (_req: Request, res: Response) => {
     type: q.type,
     category: q.category,
     content: q.content,
-    turns: (q as any).turns,
-    consistency_check: (q as any).consistencyCheck,
+    turns: q.turns,
+    consistency_check: q.consistencyCheck,
     weight: q.weight,
   }));
 
