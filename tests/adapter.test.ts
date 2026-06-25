@@ -180,6 +180,20 @@ describe('AnthropicAdapter', () => {
       ).rejects.toThrow('Anthropic Error: Invalid request');
       jest.restoreAllMocks();
     });
+
+    it('should throw API 超时错误 (300s) on AbortError', async () => {
+      const abortError: any = new Error('Aborted');
+      abortError.name = 'AbortError';
+      jest.spyOn(globalThis, 'fetch').mockRejectedValue(abortError);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.anthropic.com', apiKey: 'sk-ant', type: 'anthropic' }
+        )
+      ).rejects.toThrow('API 请求超时 (300s)');
+      jest.restoreAllMocks();
+    });
   });
 });
 
@@ -255,6 +269,20 @@ describe('GLMAdapter', () => {
           { name: 'test', endpoint: 'https://api.zhipuai.com', apiKey: 'sk-glm', type: 'glm' }
         )
       ).rejects.toThrow('GLM Error: Model not found');
+      jest.restoreAllMocks();
+    });
+
+    it('should throw API 超时错误 (300s) on AbortError', async () => {
+      const abortError: any = new Error('Aborted');
+      abortError.name = 'AbortError';
+      jest.spyOn(globalThis, 'fetch').mockRejectedValue(abortError);
+
+      await expect(
+        adapter.chat(
+          [{ role: 'user', content: 'Hi' }],
+          { name: 'test', endpoint: 'https://api.zhipuai.com', apiKey: 'sk-glm', type: 'glm' }
+        )
+      ).rejects.toThrow('API 请求超时 (300s)');
       jest.restoreAllMocks();
     });
   });

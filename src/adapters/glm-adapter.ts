@@ -33,34 +33,50 @@ export class GLMAdapter implements LLMAdapter {
     const model = config.model || 'glm-4';
     const url = `${config.endpoint}/chat/completions`;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 2048,
-      }),
-    });
+    // 推理模型可能耗时较长，300秒超时（与 openai/qwen/deepseek 对齐，
+    // 此前 GLMAdapter 缺 AbortController，接口 hang 时无防御）
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 300000);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `GLM API Error: ${response.status} - ${errorText}`
-      );
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 2048,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `GLM API Error: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data = (await response.json()) as GLMResponse;
+
+      if (data.error) {
+        throw new Error(`GLM Error: ${data.error.message}`);
+      }
+
+      return data.choices[0]?.message?.content || '';
+    } catch (err: any) {
+      clearTimeout(timeout);
+      if (err.name === 'AbortError') {
+        throw new Error('API 请求超时 (300s)');
+      }
+      throw err;
     }
-
-    const data = await response.json() as GLMResponse;
-
-    if (data.error) {
-      throw new Error(`GLM Error: ${data.error.message}`);
-    }
-
-    return data.choices[0]?.message?.content || '';
   }
 
   async ping(config: ModelConfig): Promise<boolean> {
