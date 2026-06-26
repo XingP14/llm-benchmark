@@ -211,6 +211,11 @@ function listBenchmarks() {
   const { getAllLongContextBenchmarks } = require('./benchmarks/long-context');
   const { getAllMultiTurnBenchmarks } = require('./benchmarks/multi-turn');
 
+// 06-26 22:03 cron: drop 5 redundant `as any[]` casts in listAvailableBenchmarks.
+// Object.entries(Record<string, T[]>) returns [string, any][] per TS lib def, so
+// `questions` is typed `any` after destructuring; `questions.length` is safe
+// because groupBy always returns T[] values. This parallels 94783a7 (vscode
+// 4 as-any drops) and a1e1c6b (hub 16 as-any drops). 0 functional change.
   console.log('\n📋 可用评测题:\n');
 
   console.log('=== 对话能力评测 ===');
@@ -219,7 +224,7 @@ function listBenchmarks() {
 
   const dialogueByCategory = groupBy(dialogueBenchmarks, 'category');
   for (const [category, questions] of Object.entries(dialogueByCategory)) {
-    console.log(`  [${category}] - ${(questions as any[]).length} 题`);
+    console.log(`  [${category}] - ${questions.length} 题`);
   }
 
   console.log('\n=== 代码能力评测 ===');
@@ -228,7 +233,7 @@ function listBenchmarks() {
 
   const codeByCategory = groupBy(codeBenchmarks, 'category');
   for (const [category, questions] of Object.entries(codeByCategory)) {
-    console.log(`  [${category}] - ${(questions as any[]).length} 题`);
+    console.log(`  [${category}] - ${questions.length} 题`);
   }
 
   console.log('\n=== 工具调用 (Function Calling) 评测 ===');
@@ -237,7 +242,7 @@ function listBenchmarks() {
 
   const fcByCategory = groupBy(fcBenchmarks, 'category');
   for (const [category, questions] of Object.entries(fcByCategory)) {
-    console.log(`  [${category}] - ${(questions as any[]).length} 题`);
+    console.log(`  [${category}] - ${questions.length} 题`);
   }
 
   console.log('\n=== 长上下文理解评测 ===');
@@ -246,7 +251,7 @@ function listBenchmarks() {
 
   const lcByCategory = groupBy(lcBenchmarks, 'category');
   for (const [category, questions] of Object.entries(lcByCategory)) {
-    console.log(`  [${category}] - ${(questions as any[]).length} 题`);
+    console.log(`  [${category}] - ${questions.length} 题`);
   }
 
   console.log('\n=== 多轮对话一致性评测 ===');
@@ -255,7 +260,7 @@ function listBenchmarks() {
 
   const mtByCategory = groupBy(mtBenchmarks, 'category');
   for (const [category, questions] of Object.entries(mtByCategory)) {
-    console.log(`  [${category}] - ${(questions as any[]).length} 题`);
+    console.log(`  [${category}] - ${questions.length} 题`);
   }
 }
 
