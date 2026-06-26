@@ -12,6 +12,7 @@ import { QwenAdapter } from '../../adapters/qwen-adapter';
 import { OllamaAdapter } from '../../adapters/ollama-adapter';
 import { LLMAdapter } from '../../adapters/adapter';
 import { ModelConfig } from '../../types';
+import { errorMessage } from '../../errors';
 import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calling';
@@ -134,7 +135,7 @@ export class EvaluatorEngine {
             db.prepare(`
               INSERT INTO results (evaluation_id, config_id, question_id, question_type, category, model_output, score, reference_answer)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(evaluationId, configId, question.id, question.type, question.category, `Error: ${(err as Error).message}`, 0, question.referenceAnswer || '');
+            `).run(evaluationId, configId, question.id, question.type, question.category, `Error: ${errorMessage(err)}`, 0, question.referenceAnswer || '');
           }
 
           // 推送进度
@@ -163,7 +164,7 @@ export class EvaluatorEngine {
         .run('FAILED', new Date().toISOString(), evaluationId);
 
       taskManager.setFailed();
-      sendWS({ type: 'error', evaluation_id: evaluationId, message: (err as Error).message });
+      sendWS({ type: 'error', evaluation_id: evaluationId, message: errorMessage(err) });
     }
   }
 

@@ -6,6 +6,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { taskManager } from '../engine/task';
 import { EvaluatorEngine } from '../engine/evaluator';
 import { getWSSender } from '../websocket';
+import { errorMessage } from '../../errors';
 
 // Row interfaces mirroring SQLite schemas (src/web/db/database.ts)
 interface ConfigRow {
@@ -133,7 +134,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
     res.json({ evaluation_id: evaluationId, status: 'PENDING' });
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    res.status(400).json({ error: errorMessage(err) });
   }
 });
 

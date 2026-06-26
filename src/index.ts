@@ -5,6 +5,7 @@ import { version as pkgVersion } from '../package.json';
 import { Evaluator } from './core/evaluator';
 import { Reporter, DIM_HEADERS, getDimCell } from './core/reporter';
 import { LLMAdapter } from './adapters/adapter';
+import { errorMessage } from './errors';
 import { OpenAIAdapter } from './adapters/openai-adapter';
 import { AnthropicAdapter } from './adapters/anthropic-adapter';
 import { GLMAdapter } from './adapters/glm-adapter';
@@ -108,7 +109,7 @@ async function runBenchmark(args: string[]) {
     const outputDir = config.output || './results';
     Reporter.saveReport(results, outputDir);
   } catch (error) {
-    console.error('\n\n❌ 评测失败:', (error as Error).message);
+    console.error('\n\n❌ 评测失败:', errorMessage(error));
     process.exit(1);
   }
 }

@@ -7,6 +7,7 @@ import { MultiTurnQuestion } from '../benchmarks/multi-turn';
 import { LLMAdapter } from '../adapters/adapter';
 import { PythonSandbox } from '../sandbox/python-sandbox';
 import { TestResult } from '../sandbox/executor';
+import { errorMessage } from '../errors';
 
 /**
  * 评分器 - 使用 LLM 对答案进行评分
@@ -55,7 +56,7 @@ export class Scorer {
         score: 0,
         dimension: 'dialogue',
         modelOutput: modelOutput,
-        detail: `评分错误: ${(error as Error).message}`,
+        detail: `评分错误: ${errorMessage(error)}`,
       };
     }
   }
@@ -182,7 +183,7 @@ export class Scorer {
         score: 0,
         dimension: 'function_calling',
         modelOutput: modelOutput,
-        detail: `FC 评分错误: ${(err as Error).message}`,
+        detail: `FC 评分错误: ${errorMessage(err)}`,
       };
     }
   }
@@ -239,7 +240,7 @@ export class Scorer {
         score: 0,
         dimension: 'long_context',
         modelOutput: modelOutput,
-        detail: `LC 评分错误: ${(err as Error).message}`,
+        detail: `LC 评分错误: ${errorMessage(err)}`,
       };
     }
   }
@@ -300,7 +301,7 @@ export class Scorer {
         score: 0,
         dimension: 'multi_turn',
         modelOutput: modelOutput,
-        detail: `MT 评分错误: ${(err as Error).message}`,
+        detail: `MT 评分错误: ${errorMessage(err)}`,
       };
     }
   }
@@ -466,7 +467,7 @@ ${modelOutput}
         score: 0,
         dimension: 'coding',
         modelOutput: modelOutput,
-        detail: `评分错误: ${(error as Error).message}`,
+        detail: `评分错误: ${errorMessage(error)}`,
       };
     }
   }
@@ -538,7 +539,7 @@ ${modelOutput}
           input: tc.input,
           expectedOutput: tc.expectedOutput,
           description: tc.description,
-          actual: `执行错误: ${(error as Error).message}`,
+          actual: `执行错误: ${errorMessage(error)}`,
           passed: false,
         });
       }

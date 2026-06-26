@@ -11,6 +11,7 @@ import {
 import { LLMAdapter } from '../adapters/adapter';
 import { Scorer } from './scorer';
 import { getAllDialogueBenchmarks } from '../benchmarks/dialogue';
+import { errorMessage } from '../errors';
 import { getAllCodeBenchmarks, CodeBenchmarkQuestion } from '../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../benchmarks/function-calling';
 import { getAllLongContextBenchmarks } from '../benchmarks/long-context';
@@ -435,7 +436,7 @@ export class Evaluator {
         detail,
       };
     } catch (err) {
-      const msg = (err as Error).message || String(err);
+      const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
         questionId,
@@ -523,7 +524,7 @@ export class Evaluator {
         detail,
       };
     } catch (err) {
-      const msg = (err as Error).message || String(err);
+      const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
         questionId,
@@ -610,7 +611,7 @@ export class Evaluator {
         detail,
       };
     } catch (err) {
-      const msg = (err as Error).message || String(err);
+      const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
         questionId,
@@ -698,7 +699,7 @@ export class Evaluator {
         detail,
       };
     } catch (err) {
-      const msg = (err as Error).message || String(err);
+      const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
         questionId,
@@ -797,7 +798,7 @@ export class Evaluator {
         detail,
       };
     } catch (err) {
-      const msg = (err as Error).message || String(err);
+      const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
         questionId,
@@ -897,7 +898,7 @@ export class Evaluator {
         detail,
       };
     } catch (err) {
-      const msg = (err as Error).message || String(err);
+      const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
         questionId,
@@ -1008,7 +1009,7 @@ export class Evaluator {
         detail,
       };
     } catch (err) {
-      const msg = (err as Error).message || String(err);
+      const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
         questionId,
@@ -1112,7 +1113,7 @@ export class Evaluator {
         detail,
       };
     } catch (err) {
-      const msg = (err as Error).message || String(err);
+      const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
         questionId,
@@ -1172,14 +1173,14 @@ export class Evaluator {
         const score = await this.evaluateQuestion(question, model);
         scores.push(score);
       } catch (error) {
-        console.error(`    评测失败: ${(error as Error).message}`);
+        console.error(`    评测失败: ${errorMessage(error)}`);
         scores.push({
           questionId: question.id,
           category: question.category,
           score: 0,
           dimension: question.type,
           modelOutput: '',
-          detail: `评测错误: ${(error as Error).message}`,
+          detail: `评测错误: ${errorMessage(error)}`,
         });
       }
     }
