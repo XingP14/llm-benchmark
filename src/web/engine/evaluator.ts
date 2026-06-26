@@ -1,7 +1,9 @@
 // src/web/engine/evaluator.ts - 评测引擎
 
 import { getDatabase } from '../db/database';
+import type Database from 'better-sqlite3';
 import { taskManager } from './task';
+import type { WSSender, WSMessage } from '../websocket';
 import { OpenAIAdapter } from '../../adapters/openai-adapter';
 import { AnthropicAdapter } from '../../adapters/anthropic-adapter';
 import { GLMAdapter } from '../../adapters/glm-adapter';
@@ -19,7 +21,6 @@ import { BenchmarkQuestion } from '../../types';
 import { MultiTurnQuestion } from '../../benchmarks/multi-turn';
 import { PythonSandbox } from '../../sandbox/python-sandbox';
 
-export type WSSender = (data: any) => void;
 
 /**
  * configs 表的 SQLite 行 shape (与 src/web/db/database.ts 第 100 行 CREATE TABLE 一致).
@@ -169,7 +170,7 @@ export class EvaluatorEngine {
   /**
    * 取消评测
    */
-  private async cancelEvaluation(db: any, evaluationId: string, sendWS: WSSender): Promise<void> {
+  private async cancelEvaluation(db: Database.Database, evaluationId: string, sendWS: WSSender): Promise<void> {
     db.prepare('UPDATE evaluations SET status=?, completed_at=datetime(?) WHERE id=?')
       .run('CANCELLED', new Date().toISOString(), evaluationId);
     taskManager.setCompleted();

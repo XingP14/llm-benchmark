@@ -7,9 +7,29 @@ import { taskManager } from './engine/task';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'llm-bench-secret';
 
+/**
+ * WebSocket 消息 union — 覆盖 5 类推送 (start/cancelled/completed/progress/error).
+ * 与 src/web/engine/evaluator.ts 中 `sendWS({...})` 调用点 5 处 (start / progress / completed / error / cancelled) 一一对应.
+ * 此前 `data: any` 漏更, 编译期无法拦截 sendWS 多余/缺失字段; 窄化后所有 WS 推送字段在 tsc 阶段校验.
+ */
+export type WSMessage =
+  | { type: 'start'; evaluation_id: string }
+  | { type: 'cancelled'; evaluation_id: string }
+  | { type: 'completed'; evaluation_id: string }
+  | {
+      type: 'progress';
+      evaluation_id: string;
+      progress: number;
+      current: number;
+      total: number;
+      config_name: string;
+      question_id: string;
+    }
+  | { type: 'error'; evaluation_id: string; message: string };
+
 let sendToClient: WSSender | null = null;
 
-export type WSSender = (data: any) => void;
+export type WSSender = (data: WSMessage) => void;
 
 /**
  * 初始化 WebSocket
@@ -49,7 +69,7 @@ export function initWebSocket(server: Server): void {
     });
 
     // 设置发送器
-    sendToClient = (msg: any) => {
+    sendToClient = (msg: WSMessage) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(msg));
       }
