@@ -7,6 +7,51 @@ import { taskManager } from '../engine/task';
 import { EvaluatorEngine } from '../engine/evaluator';
 import { getWSSender } from '../websocket';
 
+// Row interfaces mirroring SQLite schemas (src/web/db/database.ts)
+interface ConfigRow {
+  id: number;
+  name: string;
+  type: string;
+}
+
+interface ResultRow {
+  evaluation_id: string;
+  config_id: number;
+  question_id: string;
+  question_type: 'dialogue' | 'coding' | 'function_calling' | 'long_context' | 'multi_turn';
+  category: string;
+  model_output: string | null;
+  score: number | null;
+  reference_answer: string | null;
+}
+
+interface EvaluationResultEntry {
+  config: { id: number; name: string; type: string };
+  total_score: number;
+  dialogue_score: number;
+  coding_score: number;
+  function_calling_score: number;
+  long_context_score: number;
+  multi_turn_score: number;
+  question_results: Array<{
+    question_id: string;
+    question_type: ResultRow['question_type'];
+    category: string;
+    model_output: string | null;
+    score: number | null;
+    reference_answer: string | null;
+  }>;
+}
+
+// Pull numeric scores for a given question type; drops nulls (parallels the
+// previous untyped behavior where null + number reduced to number via coercion).
+function scoresOf(results: ResultRow[], type: ResultRow['question_type']): number[] {
+  return results
+    .filter(r => r.question_type === type)
+    .map(r => r.score)
+    .filter((s): s is number => s !== null);
+}
+
 const router = Router();
 router.use(authMiddleware);
 
@@ -121,33 +166,23 @@ router.get('/:id/results', (req: AuthRequest, res: Response) => {
     FROM configs c
     JOIN evaluation_configs ec ON c.id = ec.config_id
     WHERE ec.evaluation_id = ?
-  `).all(req.params.id) as any[];
+  `).all(req.params.id) as ConfigRow[];
 
-  const results: any[] = [];
+  const results: EvaluationResultEntry[] = [];
 
   for (const config of configs) {
     const configResults = db.prepare('SELECT * FROM results WHERE evaluation_id=? AND config_id=?')
-      .all(req.params.id, config.id) as any[];
+      .all(req.params.id, config.id) as ResultRow[];
 
-    const dialogueScores = configResults
-      .filter(r => r.question_type === 'dialogue')
-      .map(r => r.score);
+    const dialogueScores = scoresOf(configResults, 'dialogue');
 
-    const codingScores = configResults
-      .filter(r => r.question_type === 'coding')
-      .map(r => r.score);
+    const codingScores = scoresOf(configResults, 'coding');
 
-    const fcScores = configResults
-      .filter(r => r.question_type === 'function_calling')
-      .map(r => r.score);
+    const fcScores = scoresOf(configResults, 'function_calling');
 
-    const lcScores = configResults
-      .filter(r => r.question_type === 'long_context')
-      .map(r => r.score);
+    const lcScores = scoresOf(configResults, 'long_context');
 
-    const mtScores = configResults
-      .filter(r => r.question_type === 'multi_turn')
-      .map(r => r.score);
+    const mtScores = scoresOf(configResults, 'multi_turn');
 
     const dialogueAvg = dialogueScores.length > 0
       ? Math.round(dialogueScores.reduce((a, b) => a + b, 0) / dialogueScores.length)

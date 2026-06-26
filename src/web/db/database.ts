@@ -11,6 +11,16 @@ let db: Database.Database | null = null;
 /**
  * 获取数据库连接
  */
+// SQLite PRAGMA table_info row shape (used by ALTER TABLE migrations)
+interface PragmaColumn {
+  cid: number;
+  name: string;
+  type: string;
+  notnull: 0 | 1;
+  dflt_value: unknown;
+  pk: 0 | 1;
+}
+
 export function getDatabase(): Database.Database {
   if (!db) {
     const dbDir = path.dirname(DB_PATH);
@@ -157,11 +167,11 @@ function initializeSchema(database: Database.Database): void {
 
   // 兼容已有库：补加 include_long_context 列
   if (db) {
-    const evalCols = db.prepare("PRAGMA table_info(evaluations)").all() as any[];
-    if (!evalCols.some((c: any) => c.name === 'include_long_context')) {
+    const evalCols = db.prepare("PRAGMA table_info(evaluations)").all() as PragmaColumn[];
+    if (!evalCols.some(c => c.name === 'include_long_context')) {
       db.exec("ALTER TABLE evaluations ADD COLUMN include_long_context INTEGER DEFAULT 0");
     }
-    if (!evalCols.some((c: any) => c.name === 'include_multi_turn')) {
+    if (!evalCols.some(c => c.name === 'include_multi_turn')) {
       db.exec("ALTER TABLE evaluations ADD COLUMN include_multi_turn INTEGER DEFAULT 0");
     }
   }
