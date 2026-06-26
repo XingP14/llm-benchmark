@@ -148,8 +148,8 @@ export class Scorer {
       const actualName: string = toolCall.name || '';
       const nameMatch = actualName === expectedName;
 
-      const expectedArgs: Record<string, unknown> = (expected.arguments ?? {}) as Record<string, unknown>;
-      const actualArgs: Record<string, unknown> = (toolCall.arguments ?? {}) as Record<string, unknown>;
+      const expectedArgs: Record<string, unknown> = expected.arguments ?? {};
+      const actualArgs: Record<string, unknown> = toolCall.arguments ?? {};
       const argMatch = this.matchArgs(expectedArgs, actualArgs);
 
       let score = 0;

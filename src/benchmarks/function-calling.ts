@@ -13,12 +13,12 @@ export interface FunctionCallingQuestion extends BenchmarkQuestion {
   availableTools: Array<{
     name: string;
     description: string;
-    parameters: Record<string, any>;
+    parameters: Record<string, unknown>;
   }>;
   /** 期望的工具调用 (与 availableTools 中 name 对应) */
   expectedToolCall: {
     name: string;
-    arguments: Record<string, any>;
+    arguments: Record<string, unknown>;
   };
   /** 评分时的容差选项 (如日期/时间允许 ±N 秒等) */
   tolerance?: Record<string, number>;

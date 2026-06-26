@@ -23,7 +23,7 @@ export interface ModelConfig {
   /** 可选: 具体模型名 (如 gpt-4, gpt-3.5-turbo) */
   model?: string;
   /** 可选: 额外参数 */
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
 }
 
 /**
