@@ -1,6 +1,6 @@
 // src/index.ts - 入口文件
 
-import { BenchmarkConfig, ModelConfig } from './types';
+import { BenchmarkConfig, ModelConfig, EvaluationResult } from './types';
 import { version as pkgVersion } from '../package.json';
 import { Evaluator } from './core/evaluator';
 import { Reporter, DIM_HEADERS, getDimCell } from './core/reporter';
@@ -264,7 +264,7 @@ function listBenchmarks() {
   }
 }
 
-function printSummary(results: any[]) {
+function printSummary(results: EvaluationResult[]) {
   // v0.4.0 起覆盖 5 维度：dialogue / coding 默认开启 (true)，
   // function_calling / long_context / multi_turn 可选 (默认 false，未启用时填 -)。
   // 统一从 src/core/reporter.ts 导入 DIM_HEADERS + getDimCell，与 Reporter 各报表入口
