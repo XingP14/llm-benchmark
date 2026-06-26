@@ -309,7 +309,7 @@ export class Scorer {
    * 从模型输出中提取首个 tool_call
    * 兼容: OpenAI tool_calls 数组 / 顶层 JSON / 文本内嵌 JSON
    */
-  private extractToolCall(text: string): { name: string; arguments: Record<string, any> } | null {
+  private extractToolCall(text: string): { name: string; arguments: Record<string, unknown> } | null {
     if (!text) return null;
     const trimmed = text.trim();
 
