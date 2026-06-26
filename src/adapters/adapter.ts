@@ -1,6 +1,7 @@
 // src/adapters/adapter.ts - 适配器接口与共享工具
 
 import { ModelConfig } from '../types';
+import { errorName, errorMessage } from '../errors';
 
 /**
  * LLM 适配器接口
@@ -67,11 +68,11 @@ export async function fetchWithTimeout(
       signal: controller.signal,
     });
     return response;
-  } catch (err: any) {
-    if (err && err.name === 'AbortError') {
+  } catch (err: unknown) {
+    if (errorName(err) === 'AbortError') {
       throw new Error('API 请求超时 (300s)');
     }
-    throw err;
+    throw new Error(errorMessage(err));
   } finally {
     clearTimeout(timer);
   }
