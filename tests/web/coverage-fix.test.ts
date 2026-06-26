@@ -144,7 +144,7 @@ describe('Coverage Fix - websocket.ts', () => {
     const sender = getWSSender();
     expect(typeof sender).toBe('function');
     // Should not throw
-    sender({ type: 'test' });
+    sender({ type: 'start', evaluation_id: 'noop-test' });
   });
 });
 
