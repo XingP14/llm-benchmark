@@ -148,8 +148,8 @@ export class Scorer {
       const actualName: string = toolCall.name || '';
       const nameMatch = actualName === expectedName;
 
-      const expectedArgs: Record<string, any> = expected.arguments || {};
-      const actualArgs: Record<string, any> = toolCall.arguments || {};
+      const expectedArgs: Record<string, unknown> = (expected.arguments ?? {}) as Record<string, unknown>;
+      const actualArgs: Record<string, unknown> = (toolCall.arguments ?? {}) as Record<string, unknown>;
       const argMatch = this.matchArgs(expectedArgs, actualArgs);
 
       let score = 0;
@@ -361,8 +361,8 @@ export class Scorer {
    *  - partial: 至少一半 expected key 匹配
    */
   private matchArgs(
-    expected: Record<string, any>,
-    actual: Record<string, any>
+    expected: Record<string, unknown>,
+    actual: Record<string, unknown>
   ): { full: boolean; partial: boolean; matched: number; total: number } {
     const expectedKeys = Object.keys(expected);
     if (expectedKeys.length === 0) {
@@ -377,18 +377,19 @@ export class Scorer {
     return { full, partial, matched, total: expectedKeys.length };
   }
 
-  private valueMatches(expected: any, actual: any): boolean {
+  private valueMatches(expected: unknown, actual: unknown): boolean {
     if (actual === undefined || actual === null) return false;
     if (Array.isArray(expected) && Array.isArray(actual)) {
       if (expected.length !== actual.length) return false;
       // 字符串数组按排序后比较 (顺序无关)
-      const norm = (v: any) => typeof v === 'string' ? v : JSON.stringify(v);
+      const norm = (v: unknown): string => typeof v === 'string' ? v : JSON.stringify(v);
       const a = [...expected].map(norm).sort();
       const b = [...actual].map(norm).sort();
       return a.every((v, i) => v === b[i]);
     }
     if (typeof expected === 'object' && expected !== null && typeof actual === 'object' && actual !== null) {
-      return this.matchArgs(expected, actual).full;
+      // narrow unknown→Record<string, unknown> at the recurse boundary; caller guarantees Record shape via matchArgs args
+      return this.matchArgs(expected as Record<string, unknown>, actual as Record<string, unknown>).full;
     }
     // 字符串：宽松包含（避免大小写 / 标点差异）
     if (typeof expected === 'string' && typeof actual === 'string') {
