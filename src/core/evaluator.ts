@@ -130,7 +130,10 @@ export class Evaluator {
       if (ext.terminal_bench?.enabled) {
         const subset = ext.terminal_bench.subset ?? 'full';
         const anchor = ext.terminal_bench.anchor_score != null ? `, anchor=${ext.terminal_bench.anchor_score}` : '';
-        enabled.push(`terminal_bench(api_base=${ext.terminal_bench.api_base ?? '(unset)'}, model_id=${ext.terminal_bench.model_id ?? '(unset)'}, subset=${subset}${anchor})`);
+        // v0.5.0 type 段真实化 (06-28 cron): surface the dispatch category label
+        // declared in src/types/index.ts so downstream log parsing can group
+        // benchmarks by type (agentic_coding / agentic_fullstack / ...).
+        enabled.push(`terminal_bench(type=${ext.terminal_bench.type ?? 'agentic_coding'}, api_base=${ext.terminal_bench.api_base ?? '(unset)'}, model_id=${ext.terminal_bench.model_id ?? '(unset)'}, subset=${subset}${anchor})`);
       }
       if (ext.aa_omniscience?.enabled) {
         const anchor = ext.aa_omniscience.anchor_score != null ? `, anchor=${ext.aa_omniscience.anchor_score}` : '';
@@ -141,7 +144,8 @@ export class Evaluator {
         const subset = ext.benchlm_agentic.subset ?? 'all';
         const native = ext.benchlm_agentic.native_evals || subset === 'native_evals_only' ? ' + Native Evals' : '';
         const anchor = ext.benchlm_agentic.anchor_score != null ? `, anchor=${ext.benchlm_agentic.anchor_score}` : '';
-        enabled.push(`benchlm_agentic(api_base=${ext.benchlm_agentic.api_base ?? '(unset)'}, model_id=${ext.benchlm_agentic.model_id ?? '(unset)'}, subset=${subset}${anchor}${native})`);
+        // v0.5.0 type 段真实化: surface agentic_fullstack category.
+        enabled.push(`benchlm_agentic(type=${ext.benchlm_agentic.type ?? 'agentic_fullstack'}, api_base=${ext.benchlm_agentic.api_base ?? '(unset)'}, model_id=${ext.benchlm_agentic.model_id ?? '(unset)'}, subset=${subset}${anchor}${native})`);
       }
       // v0.5.0 dispatch stub: Meta CyberSecEval 3 (2025-12 发布, 8 项风险跨 offensive security 3 大类, Claude Mythos 5 主战场)
       if (ext.cyberseceval3?.enabled) {
@@ -154,7 +158,8 @@ export class Evaluator {
         const agentic = ext.swe_bench_pro.agentic_mode === false ? ' (non-agentic)' : '';
         const timeout = ext.swe_bench_pro.timeout_ms != null ? `, timeout=${ext.swe_bench_pro.timeout_ms}ms` : '';
         const anchor = ext.swe_bench_pro.anchor_score != null ? `, anchor=${ext.swe_bench_pro.anchor_score}` : '';
-        enabled.push(`swe_bench_pro(api_base=${ext.swe_bench_pro.api_base ?? '(unset)'}, model_id=${ext.swe_bench_pro.model_id ?? '(unset)'}, subset=${subset}${agentic}${timeout}${anchor})`);
+        // v0.5.0 type 段真实化: surface agentic_swe category.
+        enabled.push(`swe_bench_pro(type=${ext.swe_bench_pro.type ?? 'agentic_swe'}, api_base=${ext.swe_bench_pro.api_base ?? '(unset)'}, model_id=${ext.swe_bench_pro.model_id ?? '(unset)'}, subset=${subset}${agentic}${timeout}${anchor})`);
       }
       // v0.5.0 dispatch: long_context_cluster real fetch (06-16 01:03 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/long_context_cluster/v1)
       if (ext.long_context_cluster?.enabled) {
@@ -162,7 +167,8 @@ export class Evaluator {
         const tasks = ext.long_context_cluster.tasks_total ?? 62;
         const timeout = ext.long_context_cluster.timeout_ms != null ? `, timeout=${ext.long_context_cluster.timeout_ms}ms` : '';
         const anchor = ext.long_context_cluster.anchor_score != null ? `, anchor=${ext.long_context_cluster.anchor_score}` : '';
-        enabled.push(`long_context_cluster(api_base=${ext.long_context_cluster.api_base ?? '(unset)'}, model_id=${ext.long_context_cluster.model_id ?? '(unset)'}, subset=${subset}, tasks=${tasks}${timeout}${anchor})`);
+        // v0.5.0 type 段真实化: surface long_context_retrieval category.
+        enabled.push(`long_context_cluster(type=${ext.long_context_cluster.type ?? 'long_context_retrieval'}, api_base=${ext.long_context_cluster.api_base ?? '(unset)'}, model_id=${ext.long_context_cluster.model_id ?? '(unset)'}, subset=${subset}, tasks=${tasks}${timeout}${anchor})`);
       }
       // v0.5.0 dispatch stub: process_aware_scoring (2026-06-13 22:13 立项 — Princeton SWE-Bench Pro 03-04 + Anthropic 06 「2026 Agent 元年」18 页报告)
       // 评测方法论从「结果分数」转「过程+结果」双轨: 5 过程信号 (commit_count / test_run_count / retry_count / file_coverage / trajectory_score) + pass/fail 双权重
@@ -173,7 +179,8 @@ export class Evaluator {
         const passWeight = ext.process_aware_scoring.pass_fail_weight ?? 0.7;
         const procWeight = ext.process_aware_scoring.process_weight ?? 0.3;
         const anchor = ext.process_aware_scoring.anchor_score != null ? `, anchor=${ext.process_aware_scoring.anchor_score}` : '';
-        enabled.push(`process_aware_scoring(api_base=${ext.process_aware_scoring.api_base ?? '(unset)'}, model_id=${ext.process_aware_scoring.model_id ?? '(unset)'}, subset=${subset}, mode=${mode}, agentic_benchmark=${bench}, weights=${passWeight}/${procWeight}${anchor})`);
+        // v0.5.0 type 段真实化: surface process_agentic category.
+        enabled.push(`process_aware_scoring(type=${ext.process_aware_scoring.type ?? 'process_agentic'}, api_base=${ext.process_aware_scoring.api_base ?? '(unset)'}, model_id=${ext.process_aware_scoring.model_id ?? '(unset)'}, subset=${subset}, mode=${mode}, agentic_benchmark=${bench}, weights=${passWeight}/${procWeight}${anchor})`);
       }
       // v0.5.0 model_id routing hint (2026-06-11): Mythos-class 模型 `claude-fable-5` (Anthropic GA, 2026-06-09)
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
