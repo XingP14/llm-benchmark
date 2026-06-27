@@ -24,11 +24,18 @@ test-data/
 *.db-shm
 *.db-wal
 
+# Python/tooling caches
+__pycache__/
+*.py[cod]
+.cache/
+.tmp/
+
 # Local config files (may contain API keys)
 config.json
 config-*.json
 config.local.json
 *.local.json
 
-# Local cron heartbeat logs (written by heartbeat job, not part of repo)
+# Local cron heartbeat logs and agent runtime notes.
+# These are host-local state, not release source.
 memory/
