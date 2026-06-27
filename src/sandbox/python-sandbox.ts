@@ -113,7 +113,7 @@ export class PythonSandbox implements SandboxExecutor {
           });
         });
       });
-    } catch (err) {
+    } catch (err: unknown) {
       return {
         success: false,
         output: '',

@@ -134,7 +134,7 @@ export class EvaluatorEngine {
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `).run(evaluationId, configId, question.id, question.type, question.category, output, score.score, question.referenceAnswer || '');
 
-          } catch (err) {
+          } catch (err: unknown) {
             logEvaluationError(`Error evaluating ${question.id}:`, err);
             // 存储错误结果
             db.prepare(`
@@ -163,7 +163,7 @@ export class EvaluatorEngine {
       taskManager.setCompleted();
       sendWS({ type: 'completed', evaluation_id: evaluationId });
 
-    } catch (err) {
+    } catch (err: unknown) {
       logEvaluationError('Evaluation error:', err);
       db.prepare('UPDATE evaluations SET status=?, completed_at=datetime(?) WHERE id=?')
         .run('FAILED', new Date().toISOString(), evaluationId);

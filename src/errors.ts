@@ -5,11 +5,13 @@
 // `catch (e: any)` sites in adapters/ and core/ to the modern TypeScript
 // pattern (unknown + runtime narrowing).
 //
-// Why: llm-benchmark/tsconfig.json has strict disabled, so bare
-// `catch (e)` would silently default to `any`. By (a) annotating
-// `: unknown` explicitly and (b) routing `.message` reads through a
-// typed helper, we get the same ergonomic string output while
-// future-proofing the codebase for a strict-mode upgrade.
+// Why: llm-benchmark/tsconfig.json now has strict enabled, so bare
+// `catch (e)` defaults to `unknown` automatically. By (a) annotating
+// `: unknown` explicitly (per the woclaw hub pattern) and (b) routing
+// `.message` reads through a typed helper, we get the same ergonomic
+// string output while making the unknown-narrowing visible at every
+// catch site (avoids future regressions if strict mode is ever
+// locally disabled for a single file).
 
 /** Safely extract a human-readable message from an unknown caught value. */
 export function errorMessage(e: unknown): string {

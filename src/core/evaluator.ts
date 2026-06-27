@@ -462,7 +462,7 @@ export class Evaluator {
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
@@ -550,7 +550,7 @@ export class Evaluator {
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
@@ -637,7 +637,7 @@ export class Evaluator {
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
@@ -725,7 +725,7 @@ export class Evaluator {
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
@@ -824,7 +824,7 @@ export class Evaluator {
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
@@ -924,7 +924,7 @@ export class Evaluator {
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
@@ -1035,7 +1035,7 @@ export class Evaluator {
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
@@ -1139,7 +1139,7 @@ export class Evaluator {
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = errorMessage(err);
       const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
       return {
@@ -1199,7 +1199,7 @@ export class Evaluator {
       try {
         const score = await this.evaluateQuestion(question, model);
         scores.push(score);
-      } catch (error) {
+      } catch (error: unknown) {
         logError(`    评测失败: ${errorMessage(error)}`);
         scores.push({
           questionId: question.id,

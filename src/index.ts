@@ -108,7 +108,7 @@ async function runBenchmark(args: string[]) {
 
     const outputDir = config.output || './results';
     Reporter.saveReport(results, outputDir);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('\n\n❌ 评测失败:', errorMessage(error));
     process.exit(1);
   }
@@ -291,7 +291,7 @@ function loadConfig(configPath: string): BenchmarkConfig {
   try {
     const content = fs.readFileSync(configPath, 'utf-8');
     return JSON.parse(content);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`无法加载配置文件: ${configPath}`);
     console.error('请先运行: llm-bench init');
     process.exit(1);

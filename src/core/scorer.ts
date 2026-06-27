@@ -48,7 +48,7 @@ export class Scorer {
         modelOutput: modelOutput,
         detail: scoreText,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`评分失败 [${question.id}]:`, error);
       return {
         questionId: question.id,
@@ -176,7 +176,7 @@ export class Scorer {
         modelOutput: modelOutput,
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return {
         questionId: question.id,
         category: question.category,
@@ -233,7 +233,7 @@ export class Scorer {
         modelOutput: modelOutput,
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return {
         questionId: question.id,
         category: question.category,
@@ -294,7 +294,7 @@ export class Scorer {
         modelOutput: modelOutput,
         detail,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       return {
         questionId: question.id,
         category: question.category,
@@ -460,7 +460,7 @@ ${modelOutput}
         modelOutput: modelOutput,
         detail: scoreText,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         questionId: question.id,
         category: question.category,
@@ -534,7 +534,7 @@ ${modelOutput}
           actual: actual,
           passed: passed,
         });
-      } catch (error) {
+      } catch (error: unknown) {
         results.push({
           input: tc.input,
           expectedOutput: tc.expectedOutput,

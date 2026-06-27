@@ -133,7 +133,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     engine.run(evaluationId, getWSSender()).catch(console.error);
 
     res.json({ evaluation_id: evaluationId, status: 'PENDING' });
-  } catch (err) {
+  } catch (err: unknown) {
     res.status(400).json({ error: errorMessage(err) });
   }
 });
