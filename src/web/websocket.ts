@@ -6,6 +6,11 @@ import jwt from 'jsonwebtoken';
 import { taskManager } from './engine/task';
 import { getJwtSecret } from './config';
 
+const shouldLog = process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID;
+const log = (...args: unknown[]): void => {
+  if (shouldLog) console.log(...args);
+};
+
 /**
  * WebSocket 消息 union — 覆盖 5 类推送 (start/cancelled/completed/progress/error).
  * 与 src/web/engine/evaluator.ts 中 `sendWS({...})` 调用点 5 处 (start / progress / completed / error / cancelled) 一一对应.
@@ -37,7 +42,7 @@ export function initWebSocket(server: Server): void {
   const wss = new WebSocketServer({ server, path: '/ws' });
 
   wss.on('connection', (ws, req) => {
-    console.log('WebSocket connection attempt');
+    log('WebSocket connection attempt');
 
     // 从 URL 参数获取 token
     const url = new URL(req.url || '', `http://${req.headers.host}`);
@@ -50,7 +55,7 @@ export function initWebSocket(server: Server): void {
 
     try {
       jwt.verify(token, getJwtSecret());
-      console.log('WebSocket authenticated');
+      log('WebSocket authenticated');
     } catch {
       ws.close(4002, 'Invalid token');
       return;
@@ -62,7 +67,7 @@ export function initWebSocket(server: Server): void {
         const msg = JSON.parse(data.toString());
         if (msg.type === 'cancel') {
           taskManager.requestCancel();
-          console.log('Cancel requested');
+          log('Cancel requested');
         }
       } catch {}
     });
@@ -76,11 +81,11 @@ export function initWebSocket(server: Server): void {
 
     ws.on('close', () => {
       sendToClient = null;
-      console.log('WebSocket disconnected');
+      log('WebSocket disconnected');
     });
   });
 
-  console.log('WebSocket server initialized');
+  log('WebSocket server initialized');
 }
 
 /**

@@ -4,6 +4,11 @@ import { ComparisonReport, DimensionScore, EvaluationResult } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const shouldLogReports = process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID;
+const logReport = (...args: unknown[]): void => {
+  if (shouldLogReports) console.log(...args);
+};
+
 /**
  * 维度顺序与中文标签（统一在 Reporter 中维护，src/index.ts printSummary / Reporter 各报表入口共享）
  * - dialogue / coding 默认开启 (true)
@@ -319,10 +324,10 @@ export class Reporter {
     const csvReport = this.generateCSV(results);
     fs.writeFileSync(path.join(outputDir, `${baseName}.csv`), csvReport);
 
-    console.log(`\n报告已保存到: ${outputDir}`);
-    console.log(`  - ${baseName}.json`);
-    console.log(`  - ${baseName}.md`);
-    console.log(`  - ${baseName}.html`);
-    console.log(`  - ${baseName}.csv (排行榜，可 Excel 打开)`);
+    logReport(`\n报告已保存到: ${outputDir}`);
+    logReport(`  - ${baseName}.json`);
+    logReport(`  - ${baseName}.md`);
+    logReport(`  - ${baseName}.html`);
+    logReport(`  - ${baseName}.csv (排行榜，可 Excel 打开)`);
   }
 }
