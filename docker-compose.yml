@@ -9,8 +9,9 @@ services:
     volumes:
       - ./data:/app/data
     environment:
-      - JWT_SECRET=${JWT_SECRET:-llm-bench-secret-change-in-production}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET before running docker compose}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?set ADMIN_PASSWORD before running docker compose}
       - PORT=3033
       - DB_PATH=/app/data/llm-bench.db
     restart: unless-stopped

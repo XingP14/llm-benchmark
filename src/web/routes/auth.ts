@@ -5,10 +5,9 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { getDatabase } from '../db/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { getAdminPassword, getJwtSecret, adminPasswordSource } from '../config';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'llm-bench-secret';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 /**
  * users 表 row 类型 — id/username/password_hash NOT NULL, created_at 默认可选
@@ -28,9 +27,9 @@ export function initAdmin(): void {
   const db = getDatabase();
   const existing = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
   if (!existing) {
-    const hash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
+    const hash = bcrypt.hashSync(getAdminPassword(), 10);
     db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run('admin', hash);
-    console.log(`Admin user created: admin / ${ADMIN_PASSWORD}`);
+    console.log(`Admin user created: admin (password source: ${adminPasswordSource()})`);
   }
 }
 
@@ -50,7 +49,7 @@ router.post('/login', (req: Request, res: Response) => {
     return;
   }
 
-  const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+  const token = jwt.sign({ userId: user.id, username: user.username }, getJwtSecret(), { expiresIn: '24h' });
   res.json({ token, username: user.username });
 });
 

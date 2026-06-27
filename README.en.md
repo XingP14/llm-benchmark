@@ -2,7 +2,6 @@
 
 🎯 Fast, local LLM intelligence benchmarking. Compare multiple models across multiple providers in one run.
 
-[![npm version](https://img.shields.io/npm/v/@xingp14/llm-benchmark.svg)](https://www.npmjs.com/package/@xingp14/llm-benchmark)
 [![CI](https://github.com/XingP14/llm-benchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/XingP14/llm-benchmark/actions/workflows/ci.yml)
 [![Docker Hub](https://img.shields.io/docker/v/xingp14/llm-benchmark?label=docker&sort=semver)](https://hub.docker.com/r/xingp14/llm-benchmark)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -21,34 +20,40 @@
 
 ## Installation
 
-### Option 1: `npx` one-shot (recommended, no install)
-
-```bash
-# Generate a starter config file in the current directory
-npx @xingp14/llm-benchmark init
-
-# Edit config.json to add your API keys
-
-# Run the evaluation
-npx @xingp14/llm-benchmark run --config config.json
-```
-
-### Option 2: Global install
-
-```bash
-npm install -g @xingp14/llm-benchmark
-llm-bench --version
-llm-bench init
-```
-
-### Option 3: From source
+### Option 1: From source (current recommendation)
 
 ```bash
 git clone https://github.com/XingP14/llm-benchmark.git
 cd llm-benchmark
-npm install
+npm ci
 npm run build
+
+# Optional: register the local llm-bench command
+npm link
+
+# Generate a starter config
+llm-bench init
 ```
+
+### Option 2: Without a global command
+
+```bash
+git clone https://github.com/XingP14/llm-benchmark.git
+cd llm-benchmark
+npm ci
+npm run build
+node dist/index.js init
+node dist/index.js run --config config.json
+```
+
+### Option 3: After npm publication
+
+```bash
+npx @xingp14/llm-benchmark init
+npm install -g @xingp14/llm-benchmark
+```
+
+> The package name is already configured, but the public npm package has not been published yet. Until then, use the source install or Docker.
 
 ## Quick start
 
@@ -103,12 +108,12 @@ npm run dev:web
 Open <http://localhost:3033> in your browser. Default admin account:
 
 - Username: `admin`
-- Password: from the `ADMIN_PASSWORD` environment variable, defaults to `admin123` (**change this in production**)
+- Password: from the `ADMIN_PASSWORD` environment variable; development falls back to `admin123` when it is unset
 
 ### Docker Compose
 
 ```bash
-# Optional: set environment variables
+# Required environment variables
 export JWT_SECRET="your-strong-jwt-secret"
 export ADMIN_PASSWORD="your-strong-password"
 
@@ -119,7 +124,7 @@ docker compose up -d
 docker compose logs -f
 ```
 
-`docker-compose.yml` maps host `192.168.160.14:3033` to container `3033` and persists the SQLite database to `./data/llm-bench.db`. Edit the `ports` section of `docker-compose.yml` to change the listen address.
+`docker-compose.yml` maps host `192.168.160.14:3033` to container `3033` and persists the SQLite database to `./data/llm-bench.db`. The container runs in production mode and refuses to start unless `JWT_SECRET` and `ADMIN_PASSWORD` are set. Edit the `ports` section of `docker-compose.yml` to change the listen address.
 
 ### Pull the prebuilt Docker image
 
@@ -508,12 +513,12 @@ npm run build
 ## Version history
 
 ### v0.4.0 (2026-06-02)
-- ✨ Renamed package to `@xingp14/llm-benchmark`, added `publishConfig.access: "public"` (verified with `npm publish --dry-run`: 95 files / 46.7 kB ✅)
+- ✨ Renamed package to `@xingp14/llm-benchmark`, added `publishConfig.access: "public"` (verified with `npm publish --dry-run`; public npm publication still requires maintainer action)
 - ✨ Added GitHub Actions CI workflow (Node 20 + lint + build + `npm test --bail`)
 - ✨ Added Docker Hub auto-build workflow (builds `xingp14/llm-benchmark` on every `v*` tag)
-- ✨ Added GitHub Actions / Docker Hub / npm version / License / Node badges at the top of README
+- ✨ Added GitHub Actions / Docker Hub / License / Node badges at the top of README
 - ✨ Added a new "Pull the prebuilt Docker image" subsection (with full `docker pull` / `docker run` / tag-pin examples)
-- ✨ Switched the quick-start to `npx @xingp14/llm-benchmark`
+- ✨ `npx @xingp14/llm-benchmark` quick-start will be available after npm publication
 - ✨ Added DeepSeek adapter (`type: 'deepseek'`, OpenAI-compatible, with `deepseek-chat` default + `deepseek-reasoner` reasoning fallback)
 - ✨ Added Qwen (DashScope) adapter (`type: 'qwen' | 'tongyi' | 'dashscope'`, default `qwen-turbo`, also supports `qwen-plus` / `qwen-max` / `qwen3-max`)
 - ✨ Added Ollama local-model adapter (`type: 'ollama' | 'local'`, default `http://localhost:11434` + `llama3.2`, no API key needed)

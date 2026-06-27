@@ -4,6 +4,7 @@ import express, { Express } from 'express';
 import request from 'supertest';
 import authRoutes from '../../src/web/routes/auth';
 import { resetDatabase, initAdminUser } from '../../src/web/db/database';
+import { getAdminPassword, getJwtSecret, validateRuntimeConfig } from '../../src/web/config';
 
 describe('Auth Routes', () => {
   let app: Express;
@@ -14,6 +15,46 @@ describe('Auth Routes', () => {
     app = express();
     app.use(express.json());
     app.use('/api/auth', authRoutes);
+  });
+
+  describe('runtime security config', () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalRequireSecure = process.env.LLM_BENCH_REQUIRE_SECURE_CONFIG;
+    const originalJwtSecret = process.env.JWT_SECRET;
+    const originalAdminPassword = process.env.ADMIN_PASSWORD;
+
+    afterEach(() => {
+      process.env.NODE_ENV = originalNodeEnv;
+      process.env.LLM_BENCH_REQUIRE_SECURE_CONFIG = originalRequireSecure;
+      process.env.JWT_SECRET = originalJwtSecret;
+      process.env.ADMIN_PASSWORD = originalAdminPassword;
+    });
+
+    it('should allow development defaults outside production', () => {
+      delete process.env.LLM_BENCH_REQUIRE_SECURE_CONFIG;
+      delete process.env.JWT_SECRET;
+      delete process.env.ADMIN_PASSWORD;
+      process.env.NODE_ENV = 'test';
+
+      expect(getJwtSecret()).toBe('llm-bench-dev-secret');
+      expect(getAdminPassword()).toBe('admin123');
+    });
+
+    it('should reject default secrets when secure config is required', () => {
+      process.env.LLM_BENCH_REQUIRE_SECURE_CONFIG = '1';
+      process.env.JWT_SECRET = 'llm-bench-secret';
+      process.env.ADMIN_PASSWORD = 'admin123';
+
+      expect(() => validateRuntimeConfig()).toThrow('JWT_SECRET must be set to a non-default value in production');
+    });
+
+    it('should accept explicit production secrets', () => {
+      process.env.LLM_BENCH_REQUIRE_SECURE_CONFIG = '1';
+      process.env.JWT_SECRET = 'a-long-random-jwt-secret';
+      process.env.ADMIN_PASSWORD = 'a-long-random-admin-password';
+
+      expect(() => validateRuntimeConfig()).not.toThrow();
+    });
   });
 
   beforeEach(() => {

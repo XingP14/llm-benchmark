@@ -4,8 +4,7 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { Server } from 'http';
 import jwt from 'jsonwebtoken';
 import { taskManager } from './engine/task';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'llm-bench-secret';
+import { getJwtSecret } from './config';
 
 /**
  * WebSocket 消息 union — 覆盖 5 类推送 (start/cancelled/completed/progress/error).
@@ -50,7 +49,7 @@ export function initWebSocket(server: Server): void {
     }
 
     try {
-      jwt.verify(token, JWT_SECRET);
+      jwt.verify(token, getJwtSecret());
       console.log('WebSocket authenticated');
     } catch {
       ws.close(4002, 'Invalid token');

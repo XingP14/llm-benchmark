@@ -2,8 +2,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'llm-bench-secret';
+import { getJwtSecret } from '../config';
 
 export interface AuthRequest extends Request {
   userId?: number;
@@ -22,7 +21,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   const token = authHeader.slice(7);
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { userId: number; username: string };
+    const payload = jwt.verify(token, getJwtSecret()) as { userId: number; username: string };
     req.userId = payload.userId;
     req.username = payload.username;
     next();

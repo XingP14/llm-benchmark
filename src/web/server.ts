@@ -10,6 +10,7 @@ import evaluationsRoutes from './routes/evaluations';
 import questionsRoutes from './routes/questions';
 import { initWebSocket } from './websocket';
 import { closeDatabase } from './db/database';
+import { adminPasswordSource, validateRuntimeConfig } from './config';
 
 const PORT = process.env.PORT || 3033;
 const PUBLIC_DIR = path.join(__dirname, '../../public');
@@ -53,6 +54,7 @@ app.use((req, res, _next) => {
 });
 
 // 初始化
+validateRuntimeConfig();
 initAdmin();
 initWebSocket(server);
 
@@ -62,7 +64,7 @@ server.listen(PORT, () => {
 🎯 LLM Benchmark Web Server
 ============================
 URL: http://localhost:${PORT}
-Default Admin: admin / ${process.env.ADMIN_PASSWORD || 'admin123'}
+Admin user: admin (password source: ${adminPasswordSource()})
   `);
 });
 

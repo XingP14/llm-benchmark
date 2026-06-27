@@ -4,7 +4,6 @@
 
 > 📖 **Other languages:** [English](./README.en.md) | 中文（本文件）
 
-[![npm version](https://img.shields.io/npm/v/@xingp14/llm-benchmark.svg)](https://www.npmjs.com/package/@xingp14/llm-benchmark)
 [![CI](https://github.com/XingP14/llm-benchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/XingP14/llm-benchmark/actions/workflows/ci.yml)
 [![Docker Hub](https://img.shields.io/docker/v/xingp14/llm-benchmark?label=docker&sort=semver)](https://hub.docker.com/r/xingp14/llm-benchmark)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -21,34 +20,40 @@
 
 ## 安装
 
-### 方式 1: npx 一键运行（推荐，无需安装）
-
-```bash
-# 初始化配置文件（会下载到当前目录）
-npx @xingp14/llm-benchmark init
-
-# 编辑 config.json 添加你的 API Key
-
-# 运行评测
-npx @xingp14/llm-benchmark run --config config.json
-```
-
-### 方式 2: 全局安装
-
-```bash
-npm install -g @xingp14/llm-benchmark
-llm-bench --version
-llm-bench init
-```
-
-### 方式 3: 从源码安装
+### 方式 1: 从源码安装（当前推荐）
 
 ```bash
 git clone https://github.com/XingP14/llm-benchmark.git
 cd llm-benchmark
-npm install
+npm ci
 npm run build
+
+# 可选：注册本机 llm-bench 命令
+npm link
+
+# 初始化配置文件
+llm-bench init
 ```
+
+### 方式 2: 不注册全局命令
+
+```bash
+git clone https://github.com/XingP14/llm-benchmark.git
+cd llm-benchmark
+npm ci
+npm run build
+node dist/index.js init
+node dist/index.js run --config config.json
+```
+
+### 方式 3: npm 发布后使用
+
+```bash
+npx @xingp14/llm-benchmark init
+npm install -g @xingp14/llm-benchmark
+```
+
+> 当前 npm 包名已经预留在项目配置中，但公开 npm registry 尚未发布该包。发布完成前请使用源码安装或 Docker。
 
 ## 快速开始
 
@@ -103,12 +108,12 @@ npm run dev:web
 打开浏览器访问 <http://localhost:3033>，默认管理员账户：
 
 - 用户名：`admin`
-- 密码：取自 `ADMIN_PASSWORD` 环境变量，默认 `admin123`（**生产环境务必修改**）
+- 密码：取自 `ADMIN_PASSWORD` 环境变量；开发环境未设置时使用 `admin123`
 
 ### Docker 一键部署
 
 ```bash
-# 设置环境变量（可选）
+# 设置环境变量（必填）
 export JWT_SECRET="your-strong-jwt-secret"
 export ADMIN_PASSWORD="your-strong-password"
 
@@ -119,7 +124,7 @@ docker compose up -d
 docker compose logs -f
 ```
 
-`docker-compose.yml` 默认将主机 `192.168.160.14:3033` 映射到容器 `3033`，数据持久化到 `./data/llm-bench.db`。如需修改监听地址，编辑 `docker-compose.yml` 的 `ports` 配置。
+`docker-compose.yml` 默认将主机 `192.168.160.14:3033` 映射到容器 `3033`，数据持久化到 `./data/llm-bench.db`。容器以生产模式启动，未设置 `JWT_SECRET` 或 `ADMIN_PASSWORD` 会拒绝启动。如需修改监听地址，编辑 `docker-compose.yml` 的 `ports` 配置。
 
 ### 拉取预构建 Docker 镜像
 
@@ -510,12 +515,12 @@ npm run build
 ## 版本历史
 
 ### v0.4.0 (2026-06-02)
-- ✨ 包名重命名为 `@xingp14/llm-benchmark`，新增 `publishConfig.access: "public"`（已通过 `npm publish --dry-run` 验证：95 files / 46.7 kB ✅）
+- ✨ 包名重命名为 `@xingp14/llm-benchmark`，新增 `publishConfig.access: "public"`（已通过 `npm publish --dry-run` 验证；公开 npm 发布仍需 maintainer 执行）
 - ✨ 新增 GitHub Actions CI workflow（Node 20 + lint + build + `npm test --bail`）
 - ✨ 新增 Docker Hub 自动构建 workflow（`v*` tag 触发，构建 `xingp14/llm-benchmark` 镜像）
-- ✨ README 顶部加 GitHub Actions / Docker Hub / npm version / License / Node 徽章
+- ✨ README 顶部加 GitHub Actions / Docker Hub / License / Node 徽章
 - ✨ README 新增「拉取预构建 Docker 镜像」子章节（`docker pull` / `docker run` / tag pin 完整示例）
-- ✨ 改用 `npx @xingp14/llm-benchmark` 一键运行引导
+- ✨ npm 发布完成后可使用 `npx @xingp14/llm-benchmark` 一键运行
 - ✨ 新增 DeepSeek adapter（`type: 'deepseek'`，OpenAI 兼容，含 `deepseek-chat` 默认 + `deepseek-reasoner` 推理回退）
 - ✨ 新增 通义千问 Qwen (DashScope) adapter（`type: 'qwen' | 'tongyi' | 'dashscope'`，默认 `qwen-turbo`，支持 `qwen-plus` / `qwen-max` / `qwen3-max`）
 - ✨ 新增 Ollama 本地模型 adapter（`type: 'ollama' | 'local'`，默认 `http://localhost:11434` + `llama3.2`，本地无需 API key）

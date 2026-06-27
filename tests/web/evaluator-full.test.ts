@@ -122,6 +122,7 @@ describe('EvaluatorEngine Full Tests', () => {
     });
 
     it('should handle individual question error gracefully', async () => {
+      const consoleSpy = jest.spyOn(console, 'error');
       const db = getDatabase();
 
       const configRes = db.prepare(`
@@ -154,6 +155,8 @@ describe('EvaluatorEngine Full Tests', () => {
       expect(results.length).toBeGreaterThan(0);
       expect(results[0].model_output).toContain('Error:');
       expect(results[0].score).toBe(0);
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
     });
 
     it('should handle cancellation during evaluation', async () => {
@@ -224,6 +227,7 @@ describe('EvaluatorEngine Full Tests', () => {
     });
 
     it('should handle outer try-catch error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error');
       const db = getDatabase();
 
       const configRes = db.prepare(`
@@ -248,9 +252,11 @@ describe('EvaluatorEngine Full Tests', () => {
       const evaluation = db.prepare('SELECT * FROM evaluations WHERE id=?').get(taskId) as any;
       expect(evaluation.status).toBe('FAILED');
       expect(wsMessages.some((m: any) => m.type === 'error')).toBe(true);
+      expect(consoleSpy).not.toHaveBeenCalled();
 
       // Restore
       taskManager.setRunning = originalSetRunning;
+      consoleSpy.mockRestore();
     });
   });
 });

@@ -22,6 +22,11 @@ import { BenchmarkQuestion } from '../../types';
 import { MultiTurnQuestion } from '../../benchmarks/multi-turn';
 import { PythonSandbox } from '../../sandbox/python-sandbox';
 
+function logEvaluationError(message: string, err: unknown): void {
+  if (process.env.NODE_ENV !== 'test' && process.env.JEST_WORKER_ID === undefined) {
+    console.error(message, err);
+  }
+}
 
 /**
  * configs 表的 SQLite 行 shape (与 src/web/db/database.ts 第 100 行 CREATE TABLE 一致).
@@ -130,7 +135,7 @@ export class EvaluatorEngine {
             `).run(evaluationId, configId, question.id, question.type, question.category, output, score.score, question.referenceAnswer || '');
 
           } catch (err) {
-            console.error(`Error evaluating ${question.id}:`, err);
+            logEvaluationError(`Error evaluating ${question.id}:`, err);
             // 存储错误结果
             db.prepare(`
               INSERT INTO results (evaluation_id, config_id, question_id, question_type, category, model_output, score, reference_answer)
@@ -159,7 +164,7 @@ export class EvaluatorEngine {
       sendWS({ type: 'completed', evaluation_id: evaluationId });
 
     } catch (err) {
-      console.error('Evaluation error:', err);
+      logEvaluationError('Evaluation error:', err);
       db.prepare('UPDATE evaluations SET status=?, completed_at=datetime(?) WHERE id=?')
         .run('FAILED', new Date().toISOString(), evaluationId);
 

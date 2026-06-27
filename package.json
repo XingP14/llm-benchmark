@@ -27,7 +27,7 @@
     "start": "ts-node src/index.ts",
     "start:web": "node dist/web/server.js",
     "dev:web": "ts-node src/web/server.ts",
-    "test": "jest --runInBand --forceExit --coverage",
+    "test": "jest --runInBand --coverage",
     "lint": "eslint src/**/*.ts",
     "prepublishOnly": "npm run build"
   },

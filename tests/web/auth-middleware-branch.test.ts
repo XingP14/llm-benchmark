@@ -67,7 +67,8 @@ describe('Auth Middleware Branch Coverage', () => {
     it('should hit catch branch - expired token', async () => {
       // Create an expired token
       const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET || 'llm-bench-secret';
+      const { getJwtSecret } = require('../../src/web/config');
+      const JWT_SECRET = getJwtSecret();
       const expiredToken = jwt.sign({ userId: 1, username: 'admin' }, JWT_SECRET, { expiresIn: '-1s' });
       
       const res = await request(app)

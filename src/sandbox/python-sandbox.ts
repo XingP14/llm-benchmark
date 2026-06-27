@@ -79,6 +79,19 @@ export class PythonSandbox implements SandboxExecutor {
 
         let stdout = '';
         let stderr = '';
+        let settled = false;
+
+        const timeoutHandle = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          proc.kill();
+          resolve({
+            success: false,
+            output: stdout.trim(),
+            error: '执行超时',
+            duration: Date.now() - start,
+          });
+        }, this.timeout);
 
         proc.stdout.on('data', (data) => {
           stdout += data.toString();
@@ -89,6 +102,9 @@ export class PythonSandbox implements SandboxExecutor {
         });
 
         proc.on('close', (code) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutHandle);
           resolve({
             success: code === 0,
             output: stdout.trim(),
@@ -96,17 +112,6 @@ export class PythonSandbox implements SandboxExecutor {
             duration: Date.now() - start,
           });
         });
-
-        // 超时处理
-        setTimeout(() => {
-          proc.kill();
-          resolve({
-            success: false,
-            output: stdout.trim(),
-            error: '执行超时',
-            duration: Date.now() - start,
-          });
-        }, this.timeout);
       });
     } catch (err) {
       return {

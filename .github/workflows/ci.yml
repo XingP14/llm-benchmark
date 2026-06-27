@@ -40,7 +40,4 @@ jobs:
         run: npm run build --if-present
 
       - name: Test
-        # 不用 npm test 因为 package.json scripts.test 启用了 --coverage，
-        # 干干 90% 达不到 95% 阈值会 block CI。CI 验证功能，coverage 在本地
-        # 手动跑 npm test 检查。
-        run: npx jest --runInBand --bail --forceExit
+        run: npm test
