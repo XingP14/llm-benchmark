@@ -13,6 +13,11 @@ import { DeepSeekAdapter } from './adapters/deepseek-adapter';
 import { QwenAdapter } from './adapters/qwen-adapter';
 import { OllamaAdapter } from './adapters/ollama-adapter';
 import * as fs from 'fs';
+import { getAllDialogueBenchmarks } from './benchmarks/dialogue';
+import { getAllCodeBenchmarks } from './benchmarks/coding';
+import { getAllFunctionCallingBenchmarks } from './benchmarks/function-calling';
+import { getAllLongContextBenchmarks } from './benchmarks/long-context';
+import { getAllMultiTurnBenchmarks } from './benchmarks/multi-turn';
 
 /**
  * 创建适配器
@@ -206,11 +211,6 @@ async function compareModels(args: string[]) {
 }
 
 function listBenchmarks() {
-  const { getAllDialogueBenchmarks } = require('./benchmarks/dialogue');
-  const { getAllCodeBenchmarks } = require('./benchmarks/coding');
-  const { getAllFunctionCallingBenchmarks } = require('./benchmarks/function-calling');
-  const { getAllLongContextBenchmarks } = require('./benchmarks/long-context');
-  const { getAllMultiTurnBenchmarks } = require('./benchmarks/multi-turn');
 
 // 06-26 22:03 cron: drop 5 redundant `as any[]` casts in listAvailableBenchmarks.
 // Object.entries(Record<string, T[]>) returns [string, any][] per TS lib def, so

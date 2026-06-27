@@ -3,7 +3,7 @@
 import { getDatabase } from '../db/database';
 import type Database from 'better-sqlite3';
 import { taskManager } from './task';
-import type { WSSender, WSMessage } from '../websocket';
+import type { WSSender } from '../websocket';
 import { OpenAIAdapter } from '../../adapters/openai-adapter';
 import { AnthropicAdapter } from '../../adapters/anthropic-adapter';
 import { GLMAdapter } from '../../adapters/glm-adapter';
@@ -13,6 +13,7 @@ import { OllamaAdapter } from '../../adapters/ollama-adapter';
 import { LLMAdapter } from '../../adapters/adapter';
 import { ModelConfig } from '../../types';
 import { errorMessage } from '../../errors';
+import { Scorer } from '../../core/scorer';
 import { getAllDialogueBenchmarks } from '../../benchmarks/dialogue';
 import { getAllCodeBenchmarks } from '../../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../../benchmarks/function-calling';
@@ -240,7 +241,7 @@ export class EvaluatorEngine {
   }
 
   private async scoreFunctionCalling(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
-    const { Scorer } = require('../../core/scorer');
+    // Scorer imported at module top
     // Web 端 scorer 复用 core 的 Scorer（adapter 用于在 web 端走 LLM 评分的场景；这里仅做工具调用结构匹配）
     const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
     const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
@@ -253,7 +254,7 @@ export class EvaluatorEngine {
    * 复用 core Scorer 的 keyFacts 命中算法
    */
   private async scoreLongContext(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
-    const { Scorer } = require('../../core/scorer');
+    // Scorer imported at module top
     const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
     const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
     const result = await scorer.scoreLongContext(question, output);
@@ -265,7 +266,7 @@ export class EvaluatorEngine {
    * 复用 core Scorer 的 required/forbidden 评分算法
    */
   private async scoreMultiTurn(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
-    const { Scorer } = require('../../core/scorer');
+    // Scorer imported at module top
     const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
     const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
     const result = await scorer.scoreMultiTurn(question, output);

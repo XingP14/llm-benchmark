@@ -3,6 +3,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import bcrypt from 'bcrypt';
 
 const DB_PATH = process.env.DB_PATH || './data/llm-bench.db';
 
@@ -74,7 +75,7 @@ export function resetDatabase(): void {
     db!.exec('DELETE FROM configs');
     db!.exec('DELETE FROM users');
 
-    const bcrypt = require('bcrypt');
+    // bcrypt imported at module top
     const hash = bcrypt.hashSync('admin123', 10);
     db!.prepare('INSERT OR REPLACE INTO users (id, username, password_hash) VALUES (1, ?, ?)').run('admin', hash);
   });
@@ -86,7 +87,7 @@ export function resetDatabase(): void {
  */
 export function initAdminUser(): void {
   const database = getDatabase();
-  const bcrypt = require('bcrypt');
+  // bcrypt imported at module top
   const hash = bcrypt.hashSync('admin123', 10);
   // 只在 admin 用户不存在时插入
   const existing = database.prepare('SELECT id FROM users WHERE username=?').get('admin');
