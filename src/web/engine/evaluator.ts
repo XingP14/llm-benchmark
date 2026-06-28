@@ -240,11 +240,27 @@ export class EvaluatorEngine {
     }
   }
 
-  private async scoreFunctionCalling(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
-    // Scorer imported at module top
-    // Web 端 scorer 复用 core 的 Scorer（adapter 用于在 web 端走 LLM 评分的场景；这里仅做工具调用结构匹配）
+  /**
+   * Web 端 Scorer 工厂: 为 scoreFunctionCalling / scoreLongContext / scoreMultiTurn
+   * 3 处 byte-identical 的 `dummyModel + new Scorer(this.createAdapter('openai'), dummyModel)`
+   * 2 行 boilerplate 提取单点 helper。
+   *
+   * dummyModel 是 web 端为 Scorer 提供的占位 ModelConfig (Scorer 走结构匹配而非真 LLM 调用),
+   * 5-dim 报表 (function_calling / long_context / multi_turn) 各自需要一个 Scorer 实例,
+   * 3 处 inline 副本会导致「dummyModel 字段 (type/apiKey/endpoint) 任何一处漂移」连锁失同步
+   * (parallels 2bb18e4 avgOf + 59753ba logEvaluationError + 6af9f47 console.error 5-dim 漏更续集)。
+   *
+   * 06-29 06:43 cron refactor: 集中到 webScorer(), 3 inline 副本 → 1 处定义, 行为 byte-identical
+   * (`new Scorer(this.createAdapter('openai'), { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' })`).
+   */
+  private webScorer(): Scorer {
     const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
-    const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
+    return new Scorer(this.createAdapter('openai'), dummyModel);
+  }
+
+  private async scoreFunctionCalling(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
+    // Web 端 scorer 复用 core 的 Scorer（adapter 用于在 web 端走 LLM 评分的场景；这里仅做工具调用结构匹配）
+    const scorer = this.webScorer();
     const result = await scorer.scoreFunctionCalling(question, output);
     return { score: result.score };
   }
@@ -254,9 +270,7 @@ export class EvaluatorEngine {
    * 复用 core Scorer 的 keyFacts 命中算法
    */
   private async scoreLongContext(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
-    // Scorer imported at module top
-    const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
-    const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
+    const scorer = this.webScorer();
     const result = await scorer.scoreLongContext(question, output);
     return { score: result.score };
   }
@@ -266,9 +280,7 @@ export class EvaluatorEngine {
    * 复用 core Scorer 的 required/forbidden 评分算法
    */
   private async scoreMultiTurn(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
-    // Scorer imported at module top
-    const dummyModel = { name: 'web', type: 'openai' as const, endpoint: '', apiKey: '' };
-    const scorer = new Scorer(this.createAdapter('openai'), dummyModel);
+    const scorer = this.webScorer();
     const result = await scorer.scoreMultiTurn(question, output);
     return { score: result.score };
   }
