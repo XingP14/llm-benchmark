@@ -1,6 +1,6 @@
 // tests/reporter.test.ts
 
-import { Reporter, DIM_HEADERS, getDimCell } from '../src/core/reporter';
+import { Reporter, DIM_HEADERS, getDimCell, getDimValue } from '../src/core/reporter';
 import { EvaluationResult } from '../src/types';
 
 const mockResults: EvaluationResult[] = [
@@ -251,6 +251,90 @@ describe('Reporter', () => {
       expect(getDimCell({ dialogue: { average: 90, total: 90, count: 1 } } as any, 'dialogue')).toBe('90.0');
       expect(getDimCell({ coding: { average: 92.456, total: 92, count: 1 } } as any, 'coding')).toBe('92.5');
       expect(getDimCell({ coding: { average: 0, total: 0, count: 0 } } as any, 'coding')).toBe('0.0');
+    });
+  });
+
+  // 06-29 03:23 cron: regression test gating 5-dim helper extraction (parallels the
+  // getDimCell 漏更续集 mode in reporter.ts generateHTML × 2 + generateCSV × 1).
+  // Asserts:
+  //   (1) getDimValue exists as module-level export, returns null for missing/invalid
+  //   (2) getDimValue returns the raw number for valid dimensions (used for HTML bar
+  //       width and CSV raw-cell, must NOT be toFixed(1))
+  //   (3) reporter.ts source contains zero inline `typeof dim.average !== 'number'`
+  //       副本 (would be 漏更 signal — only allowed sites are inside getDimValue +
+  //       getDimCell module-level helpers).
+  describe('getDimValue (raw number helper, 5-dim 漏更续集)', () => {
+    it('is exported as module-level function (parallels getDimCell export)', () => {
+      expect(typeof getDimValue).toBe('function');
+      // Same module, must be the helper, not a Reporter method
+      const reporterProto = Reporter as unknown as Record<string, unknown>;
+      expect(reporterProto.getDimValue).toBeUndefined();
+    });
+
+    it('returns null for missing/undefined dimension', () => {
+      expect(getDimValue(undefined, 'dialogue')).toBeNull();
+      const dims = { dialogue: undefined } as any;
+      expect(getDimValue(dims, 'dialogue')).toBeNull();
+    });
+
+    it('returns null for dimension without numeric average', () => {
+      const dims = { dialogue: { total: 100, count: 1 } } as any;
+      expect(getDimValue(dims, 'dialogue')).toBeNull();
+      // average 存在但非 number (e.g. string) 也要 null
+      const dims2 = { coding: { average: '90' as any, total: 90, count: 1 } } as any;
+      expect(getDimValue(dims2, 'coding')).toBeNull();
+    });
+
+    it('returns the raw numeric average (NOT toFixed(1))', () => {
+      // raw number 供 HTML bar width (style="width: 92.456%") 与 CSV 原始 cell 用,
+      // 不能跟 getDimCell 一样 toFixed(1) — 否则 CSV Excel 二次分析会丢精度
+      expect(getDimValue({ dialogue: { average: 90, total: 90, count: 1 } } as any, 'dialogue')).toBe(90);
+      expect(getDimValue({ coding: { average: 92.456, total: 92, count: 1 } } as any, 'coding')).toBe(92.456);
+      expect(getDimValue({ coding: { average: 0, total: 0, count: 0 } } as any, 'coding')).toBe(0);
+    });
+  });
+
+  describe('reporter.ts 5-dim 漏更 regression gate', () => {
+    it('zero inline `typeof dim.average` 副本 outside getDimValue/getDimCell helpers', () => {
+      // Read the source file at test time, assert all 4 inline sites in generateHTML
+      // (td) + generateHTML (detail-card) + generateCSV (row) have been routed through
+      // the helpers. Only getDimValue + getDimCell may reference the gate in actual code
+      // (comments mentioning the pattern are fine). Strategy: strip JSDoc /* ... */ blocks
+      // and // line comments, THEN strip the 2 helper bodies via brace-counting, THEN assert.
+      const fs = require('fs');
+      const path = require('path');
+      const raw = fs.readFileSync(
+        path.join(__dirname, '..', 'src', 'core', 'reporter.ts'),
+        'utf-8'
+      );
+      // Strip /* ... */ block comments (non-greedy, multiline)
+      let src = raw.replace(/\/\*[\s\S]*?\*\//g, '');
+      // Strip // ... line comments
+      src = src.replace(/^\s*\/\/.*$/gm, '');
+      const stripFunction = (s: string, signature: string): string => {
+        const idx = s.indexOf(signature);
+        if (idx === -1) return s;
+        const open = s.indexOf('{', idx);
+        if (open === -1) return s;
+        let depth = 1;
+        let i = open + 1;
+        while (i < s.length && depth > 0) {
+          if (s[i] === '{') depth++;
+          else if (s[i] === '}') depth--;
+          i++;
+        }
+        return s.slice(0, idx) + s.slice(i);
+      };
+      const stripped = stripFunction(
+        stripFunction(src, 'export function getDimValue'),
+        'export function getDimCell'
+      );
+      // The actual `if (!dim || typeof dim.average !== 'number')` form is the gate that
+      // was inlined 3 times (now routed through getDimValue). Zero 副本 after refactor.
+      expect(stripped).not.toMatch(/typeof\s+dim\.average\s+!==?\s+['"]number['"]/);
+      // The inverse `dim && typeof dim.average === 'number'` form was in generateCSV
+      // (now routed through getDimValue too).
+      expect(stripped).not.toMatch(/dim\s*&&\s*typeof\s+dim\.average\s+===\s+['"]number['"]/);
     });
   });
 });

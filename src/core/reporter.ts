@@ -34,15 +34,30 @@ export const DIM_HEADERS: ReadonlyArray<DimHeader> = [
 ];
 
 /**
+ * 从 EvaluationResult.dimensions 取一个维度的原始平均分。
+ * 缺失 / undefined / average 非 number 时返回 null。
+ * 这是 Reporter 各报表 (md / html td / html detail-card / csv) 唯一需要的存在性 +
+ * 数值判定逻辑, 集中实现避免 3 处 inline `if (!dim || typeof dim.average !== 'number')`
+ * 副本产生漂移 (06-29 03:23 cron refactor 之前的 bug, parallels 06-20 cron 提
+ * getDimCell 时漏更续集)。需要显示文本请用 getDimCell; 需要原始 number (例如 HTML
+ * 评分条 width) 请用 getDimValue。
+ */
+export function getDimValue(dimensions: DimensionScore | undefined, key: keyof DimensionScore): number | null {
+  const dim = dimensions?.[key];
+  if (!dim || typeof dim.average !== 'number') return null;
+  return dim.average;
+}
+
+/**
  * 从 EvaluationResult.dimensions 取一个维度的展示值。
  * 未启用 / 缺失时返回 '-'，存在 average 时返回保留 1 位小数。
- * 这是 Reporter 与 src/index.ts printSummary 唯一需要的取值逻辑，
- * 集中实现避免双处副本产生漂移 (以往 06-20 cron refactor 之前的 bug)。
+ * 这是 Reporter 与 src/index.ts printSummary 唯一需要的存在性 + 格式化逻辑,
+ * 内部走 getDimValue + toFixed(1) ?? '-', 与 5-dim 报表各入口共享同一份事实
+ * (避免 06-20 cron refactor 之前双处副本产生漂移的 bug 重演)。
  */
 export function getDimCell(dimensions: DimensionScore | undefined, key: keyof DimensionScore): string {
-  const dim = dimensions?.[key];
-  if (!dim || typeof dim.average !== 'number') return '-';
-  return Number(dim.average).toFixed(1);
+  const v = getDimValue(dimensions, key);
+  return v === null ? '-' : v.toFixed(1);
 }
 
 /**
@@ -193,17 +208,19 @@ export class Reporter {
                         <div class="score-bar"><div class="score-fill total" style="width: ${result.totalScore}%"></div></div>
                     </td>`;
 
+      // 06-29 03:23 cron: route 5-dim td cell through getDimValue (exists/number gate) +
+      // getDimCell (display string), parallels 06-20 cron getDimCell extraction. Replaces
+      // inline `if (!dim || typeof dim.average !== 'number')` 副本 (3rd inline site closed).
       DIM_HEADERS.forEach((d) => {
-        const dim = result.dimensions?.[d.key];
-        if (!dim || typeof dim.average !== 'number') {
+        const avg = getDimValue(result.dimensions, d.key);
+        if (avg === null) {
           html += `<td><span class="dim-na">-</span></td>`;
         } else {
-          const v = Number(dim.average).toFixed(1);
           const barClass = dimBarClass[d.key] || d.key.replace(/_/g, '-');
           html += `
                     <td>
-                        ${v}
-                        <div class="score-bar"><div class="score-fill ${barClass}" style="width: ${dim.average}%"></div></div>
+                        ${avg.toFixed(1)}
+                        <div class="score-bar"><div class="score-fill ${barClass}" style="width: ${avg}%"></div></div>
                     </td>`;
         }
       });
@@ -226,13 +243,15 @@ export class Reporter {
                 <h3>${result.modelName}</h3>
                 <p><strong>总分:</strong> ${result.totalScore}</p>`;
 
+      // 06-29 03:23 cron: detail-card 5-dim 走 getDimCell, 闭合第 2 处 inline `if
+      // (!dim || typeof dim.average !== 'number')` 副本; 维度缺失时 helper 已返回 '-'
+      // 但 detail-card 需要 dim-na 包装以便 CSS dim-na 灰显, 故保留包装 (与 td 一致)。
       DIM_HEADERS.forEach((d) => {
-        const dim = result.dimensions?.[d.key];
-        if (!dim || typeof dim.average !== 'number') {
+        const cell = getDimCell(result.dimensions, d.key);
+        if (cell === '-') {
           html += `<p><strong>${d.label}:</strong> <span class="dim-na">-</span></p>`;
         } else {
-          const v = Number(dim.average).toFixed(1);
-          html += `<p><strong>${d.label}:</strong> ${v}</p>`;
+          html += `<p><strong>${d.label}:</strong> ${cell}</p>`;
         }
       });
 
@@ -289,8 +308,11 @@ export class Reporter {
         r.modelName,
         r.totalScore,
         ...DIM_HEADERS.map(({ key }) => {
-          const dim = r.dimensions?.[key];
-          return dim && typeof dim.average === 'number' ? dim.average : '-';
+          // 06-29 03:23 cron: 5-dim CSV cell 走 getDimValue (raw number) ?? '-', 闭合第 4 处
+          // inline `dim && typeof dim.average === 'number'` 副本; CSV 需原始 number 供
+          // Excel/Sheets 二次分析, 不能走 getDimCell (toFixed(1) 会丢精度)。
+          const avg = getDimValue(r.dimensions, key);
+          return avg === null ? '-' : avg;
         }),
         (r.duration / 1000).toFixed(2),
         r.scores.length,
