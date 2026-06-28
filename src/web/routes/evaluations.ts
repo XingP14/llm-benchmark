@@ -4,7 +4,7 @@ import { Router, Response } from 'express';
 import { getDatabase } from '../db/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { taskManager } from '../engine/task';
-import { EvaluatorEngine } from '../engine/evaluator';
+import { EvaluatorEngine, logEvaluationError } from '../engine/evaluator';
 import { getWSSender } from '../websocket';
 import { errorMessage } from '../../errors';
 
@@ -130,7 +130,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     }
 
     // 异步执行
-    engine.run(evaluationId, getWSSender()).catch(console.error);
+    engine.run(evaluationId, getWSSender()).catch((err: unknown) => logEvaluationError('Engine run failed for evaluation ' + evaluationId + ':', err));
 
     res.json({ evaluation_id: evaluationId, status: 'PENDING' });
   } catch (err: unknown) {

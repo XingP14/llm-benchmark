@@ -23,7 +23,7 @@ import { BenchmarkQuestion } from '../../types';
 import { MultiTurnQuestion } from '../../benchmarks/multi-turn';
 import { PythonSandbox } from '../../sandbox/python-sandbox';
 
-function logEvaluationError(message: string, err: unknown): void {
+export function logEvaluationError(message: string, err: unknown): void {
   if (process.env.NODE_ENV !== 'test' && process.env.JEST_WORKER_ID === undefined) {
     console.error(message, err);
   }
