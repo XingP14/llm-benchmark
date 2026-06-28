@@ -53,6 +53,18 @@ function scoresOf(results: ResultRow[], type: ResultRow['question_type']): numbe
     .filter((s): s is number => s !== null);
 }
 
+// Average of a numeric score list, rounded to nearest integer (0 for empty list).
+// Used by the 5 question-type fields on the per-config results block in
+// /:id/results; all 5 call sites are byte-identical so the inline ternary +
+// reduce/length + Math.round pattern was hoisted here (parallels woclaw
+// f622f24 sendJsonError / 59753ba logEvaluationError / 845c4ba
+// printBenchmarkSection 5-dim 漏更 cleanup).
+function avgOf(scores: number[]): number {
+  return scores.length > 0
+    ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+    : 0;
+}
+
 const router = Router();
 router.use(authMiddleware);
 
@@ -185,30 +197,14 @@ router.get('/:id/results', (req: AuthRequest, res: Response) => {
 
     const mtScores = scoresOf(configResults, 'multi_turn');
 
-    const dialogueAvg = dialogueScores.length > 0
-      ? Math.round(dialogueScores.reduce((a, b) => a + b, 0) / dialogueScores.length)
-      : 0;
-
-    const codingAvg = codingScores.length > 0
-      ? Math.round(codingScores.reduce((a, b) => a + b, 0) / codingScores.length)
-      : 0;
-
-    const fcAvg = fcScores.length > 0
-      ? Math.round(fcScores.reduce((a, b) => a + b, 0) / fcScores.length)
-      : 0;
-
-    const lcAvg = lcScores.length > 0
-      ? Math.round(lcScores.reduce((a, b) => a + b, 0) / lcScores.length)
-      : 0;
-
-    const mtAvg = mtScores.length > 0
-      ? Math.round(mtScores.reduce((a, b) => a + b, 0) / mtScores.length)
-      : 0;
+    const dialogueAvg = avgOf(dialogueScores);
+    const codingAvg = avgOf(codingScores);
+    const fcAvg = avgOf(fcScores);
+    const lcAvg = avgOf(lcScores);
+    const mtAvg = avgOf(mtScores);
 
     const allScores = [...dialogueScores, ...codingScores, ...fcScores, ...lcScores, ...mtScores];
-    const totalAvg = allScores.length > 0
-      ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
-      : 0;
+    const totalAvg = avgOf(allScores);
 
     results.push({
       config: { id: config.id, name: config.name, type: config.type },
