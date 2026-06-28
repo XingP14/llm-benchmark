@@ -211,56 +211,38 @@ async function compareModels(args: string[]) {
 }
 
 function listBenchmarks() {
-
-// 06-26 22:03 cron: drop 5 redundant `as any[]` casts in listAvailableBenchmarks.
-// Object.entries(Record<string, T[]>) returns [string, any][] per TS lib def, so
-// `questions` is typed `any` after destructuring; `questions.length` is safe
-// because groupBy always returns T[] values. This parallels 94783a7 (vscode
-// 4 as-any drops) and a1e1c6b (hub 16 as-any drops). 0 functional change.
+  // 06-29 02:04 cron: extract printBenchmarkSection helper to dedupe 5x
+  // (console.log label) + (console.log count) + (groupBy category) + (for-of print)
+  // pattern across dialogue / coding / function-calling / long-context / multi-turn
+  // sections (each had byte-identical 4-statement body). Same category-grouping
+  // semantics; groupBy<T>('category') works on every benchmark question type since
+  // all 5 (BenchmarkQuestion / CodeBenchmarkQuestion / FunctionCallingQuestion /
+  // LongContextQuestion / MultiTurnQuestion) declare `category: string`.
+  // parallels 06-26 22:03 cron 5 as-any drops in same function (this round targets
+  // the structural repetition, not the cast leak). 0 functional change.
   console.log('\n📋 可用评测题:\n');
+  printBenchmarkSection('对话能力评测', getAllDialogueBenchmarks());
+  printBenchmarkSection('代码能力评测', getAllCodeBenchmarks());
+  printBenchmarkSection('工具调用 (Function Calling) 评测', getAllFunctionCallingBenchmarks());
+  printBenchmarkSection('长上下文理解评测', getAllLongContextBenchmarks());
+  printBenchmarkSection('多轮对话一致性评测', getAllMultiTurnBenchmarks());
+}
 
-  console.log('=== 对话能力评测 ===');
-  const dialogueBenchmarks = getAllDialogueBenchmarks();
-  console.log(`共 ${dialogueBenchmarks.length} 题\n`);
-
-  const dialogueByCategory = groupBy(dialogueBenchmarks, 'category');
-  for (const [category, questions] of Object.entries(dialogueByCategory)) {
-    console.log(`  [${category}] - ${questions.length} 题`);
-  }
-
-  console.log('\n=== 代码能力评测 ===');
-  const codeBenchmarks = getAllCodeBenchmarks();
-  console.log(`共 ${codeBenchmarks.length} 题\n`);
-
-  const codeByCategory = groupBy(codeBenchmarks, 'category');
-  for (const [category, questions] of Object.entries(codeByCategory)) {
-    console.log(`  [${category}] - ${questions.length} 题`);
-  }
-
-  console.log('\n=== 工具调用 (Function Calling) 评测 ===');
-  const fcBenchmarks = getAllFunctionCallingBenchmarks();
-  console.log(`共 ${fcBenchmarks.length} 题\n`);
-
-  const fcByCategory = groupBy(fcBenchmarks, 'category');
-  for (const [category, questions] of Object.entries(fcByCategory)) {
-    console.log(`  [${category}] - ${questions.length} 题`);
-  }
-
-  console.log('\n=== 长上下文理解评测 ===');
-  const lcBenchmarks = getAllLongContextBenchmarks();
-  console.log(`共 ${lcBenchmarks.length} 题\n`);
-
-  const lcByCategory = groupBy(lcBenchmarks, 'category');
-  for (const [category, questions] of Object.entries(lcByCategory)) {
-    console.log(`  [${category}] - ${questions.length} 题`);
-  }
-
-  console.log('\n=== 多轮对话一致性评测 ===');
-  const mtBenchmarks = getAllMultiTurnBenchmarks();
-  console.log(`共 ${mtBenchmarks.length} 题\n`);
-
-  const mtByCategory = groupBy(mtBenchmarks, 'category');
-  for (const [category, questions] of Object.entries(mtByCategory)) {
+/**
+ * Print one benchmark section: section header + total count + per-category
+ * breakdown. Generic over any benchmark question type with `category: string`
+ * (BenchmarkQuestion / CodeBenchmarkQuestion / FunctionCallingQuestion /
+ * LongContextQuestion / MultiTurnQuestion all qualify). Replaces the 5x
+ * duplicated 4-statement print pattern previously inlined in listBenchmarks().
+ */
+function printBenchmarkSection<T extends { category: string }>(
+  label: string,
+  benchmarks: T[],
+): void {
+  console.log(`\n=== ${label} ===`);
+  console.log(`共 ${benchmarks.length} 题\n`);
+  const byCategory = groupBy(benchmarks, 'category');
+  for (const [category, questions] of Object.entries(byCategory)) {
     console.log(`  [${category}] - ${questions.length} 题`);
   }
 }
