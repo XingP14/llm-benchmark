@@ -182,5 +182,71 @@ describe('Types', () => {
       expect(stubLongbench.long_context_cluster?.subset).toBe('longbench_v2');
       expect(stubLongbench.long_context_cluster?.tasks_total).toBe(21);
     });
+
+    // 06-29 06:03 cron: 5 type-stub 真实化 step-6 of 5 — 锁定 5 维 dispatch type 字面量 (terminal_bench / benchlm_agentic / swe_bench_pro / long_context_cluster / process_aware_scoring; 06-20 cron 已在 src/types/index.ts 加 type?: 字段, evaluator.ts L136/148/162/171/183 也已 surface, 本 test 锁定 type 字段被外界构造时接受 5 维字面量值, 防止 JSDoc 漂移 + 字面量改写时静默回归)
+    it('external_benchmarks_roadmap dispatch type field accepts 5 category literals (06-29 type-stub step-6)', () => {
+      type Ext = NonNullable<BenchmarkConfig['_external_benchmarks_roadmap']>;
+      // 5 维同时存在, 锁定 type 字面量被 tsc 接受 (compile-time) + 运行时值正确 (runtime)
+      const stub: Ext = {
+        terminal_bench: {
+          enabled: true,
+          type: 'agentic_coding',
+          api_base: 'https://llm-benchmark.local/api/v1/terminal_bench/v2',
+          model_id: 'claude-fable-5',
+          subset: 'hard',
+          timeout_ms: 30000,
+        },
+        benchlm_agentic: {
+          enabled: true,
+          type: 'agentic_fullstack',
+          api_base: 'https://llm-benchmark.local/api/v1/benchlm_agentic/v1',
+          model_id: 'claude-fable-5',
+          subset: 'all',
+          timeout_ms: 30000,
+        },
+        swe_bench_pro: {
+          enabled: true,
+          type: 'agentic_swe',
+          api_base: 'https://llm-benchmark.local/api/v1/swe_bench_pro/v1',
+          model_id: 'claude-fable-5',
+          subset: 'verified',
+          agentic_mode: true,
+          timeout_ms: 30000,
+        },
+        long_context_cluster: {
+          enabled: true,
+          type: 'long_context_retrieval',
+          api_base: 'https://llm-benchmark.local/api/v1/long_context_cluster/v1',
+          model_id: 'claude-fable-5',
+          subset: 'all',
+          tasks_total: 62,
+          timeout_ms: 30000,
+        },
+        process_aware_scoring: {
+          enabled: true,
+          type: 'process_agentic',
+          api_base: 'https://llm-benchmark.local/api/v1/process_aware_scoring/v1',
+          model_id: 'claude-fable-5',
+          subset: 'all_process_signals',
+          mode: 'all',
+          agentic_benchmark: 'swe_bench_pro',
+          pass_fail_weight: 0.7,
+          process_weight: 0.3,
+          timeout_ms: 30000,
+        },
+      };
+      // 5 维 type 字段字面量被锁定
+      expect(stub.terminal_bench?.type).toBe('agentic_coding');
+      expect(stub.benchlm_agentic?.type).toBe('agentic_fullstack');
+      expect(stub.swe_bench_pro?.type).toBe('agentic_swe');
+      expect(stub.long_context_cluster?.type).toBe('long_context_retrieval');
+      expect(stub.process_aware_scoring?.type).toBe('process_agentic');
+      // 也验证 type 字段可省略 (optional), 默认走 evaluator.ts L136/148/162/171/183 ?? 'xxx' 兜底
+      const stubOptional: Ext = {
+        terminal_bench: { enabled: true, api_base: 'x', model_id: 'y' },
+      };
+      expect(stubOptional.terminal_bench?.type).toBeUndefined();
+    });
+
   });
 });
