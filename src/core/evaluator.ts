@@ -117,7 +117,7 @@ export class Evaluator {
     log(`\n开始并行评测 ${this.config.models.length} 个模型...`);
 
     // v0.5.0+ 外部基准 dispatch 路由入口 (沿 06-09 23:03 ROADMAP 段从示例到实现)
-    // PR 进度 (2026-06-16 01:03): type 段 ✅ 全 18 项 / dispatch stub ✅ 8 项 / **8 项 real fetch** (webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + **long_context_cluster 06-16 01:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** — 下一里程碑 v0.6.0
+    // PR 进度 (2026-06-16 01:03): type 段 ✅ 全 18 项 / dispatch ✅ 8 项 (8/8 real fetch — 早期 dispatcher skeleton 框架已全部替换为真实 fetch 实现, 沿 webdev_arena 06-14 03:23 cron + cyberseceval3 06-14 22:23 cron + aa_omniscience 06-15 00:03 cron + terminal_bench 06-15 03:03 cron + benchlm_agentic 06-15 04:03 cron + swe_bench_pro 06-15 05:23 cron + process_aware_scoring 06-15 06:43 cron + **long_context_cluster 06-16 01:03 cron**, 沿 webdev_arena 模式 POST + timeout/4xx/5xx 三段 try/catch + scores[] 注入, 8/8 真实化) / web 钩子点 JSDoc ✅ (06-12 01:03) / **v0.5.0 dispatch PR 完整 (8/8)** — 下一里程碑 v0.6.0
     // 完整 PR 在后续 cron 轮次累进: 各平台 fetch + adapter + 评分聚合
     // 真实 fetch 段在 line ~187+ (webdev_arena) / ~215+ (cyberseceval3) / ... 通过 await Promise.all(results.map(...)) 调度,
     // 早期规划的 webdevArenaFetchTasks 骨架数组已废弃 (06-20 05:43 cron 修 lint, @typescript-eslint/no-unused-vars)
@@ -139,7 +139,7 @@ export class Evaluator {
         const anchor = ext.aa_omniscience.anchor_score != null ? `, anchor=${ext.aa_omniscience.anchor_score}` : '';
         enabled.push(`aa_omniscience(api_base=${ext.aa_omniscience.api_base ?? '(unset)'}, model_id=${ext.aa_omniscience.model_id ?? '(unset)'}${anchor})`);
       }
-      // v0.5.0 dispatch stub: BenchLM.ai agentic eval (2026-06-07 发布, 248 模型 × 225 基准, agentic 主战场)
+      // v0.5.0 dispatch (real fetch 06-15 04:03 cron): BenchLM.ai agentic eval (2026-06-07 发布, 248 模型 × 225 基准, agentic 主战场)
       if (ext.benchlm_agentic?.enabled) {
         const subset = ext.benchlm_agentic.subset ?? 'all';
         const native = ext.benchlm_agentic.native_evals || subset === 'native_evals_only' ? ' + Native Evals' : '';
@@ -147,12 +147,12 @@ export class Evaluator {
         // v0.5.0 type 段真实化: surface agentic_fullstack category.
         enabled.push(`benchlm_agentic(type=${ext.benchlm_agentic.type ?? 'agentic_fullstack'}, api_base=${ext.benchlm_agentic.api_base ?? '(unset)'}, model_id=${ext.benchlm_agentic.model_id ?? '(unset)'}, subset=${subset}${anchor}${native})`);
       }
-      // v0.5.0 dispatch stub: Meta CyberSecEval 3 (2025-12 发布, 8 项风险跨 offensive security 3 大类, Claude Mythos 5 主战场)
+      // v0.5.0 dispatch (real fetch 06-14 22:23 cron): Meta CyberSecEval 3 (2025-12 发布, 8 项风险跨 offensive security 3 大类, Claude Mythos 5 主战场)
       if (ext.cyberseceval3?.enabled) {
         const cats = ext.cyberseceval3.risk_categories?.join('|') ?? 'all-8';
         enabled.push(`cyberseceval3(api_base=${ext.cyberseceval3.api_base ?? '(unset)'}, model_id=${ext.cyberseceval3.model_id ?? '(unset)'}, risk_categories=${cats})`);
       }
-      // v0.5.0 dispatch stub → real fetch (06-15 05:23 cron): SWE-bench Pro (Scale AI, 2026-06-02, Mythos-tier 主标杆, 80.3% Fable-5)
+      // v0.5.0 dispatch (real fetch 06-15 05:23 cron): SWE-bench Pro (Scale AI, 2026-06-02, Mythos-tier 主标杆, 80.3% Fable-5)
       if (ext.swe_bench_pro?.enabled) {
         const subset = ext.swe_bench_pro.subset ?? 'verified';
         const agentic = ext.swe_bench_pro.agentic_mode === false ? ' (non-agentic)' : '';
@@ -170,7 +170,7 @@ export class Evaluator {
         // v0.5.0 type 段真实化: surface long_context_retrieval category.
         enabled.push(`long_context_cluster(type=${ext.long_context_cluster.type ?? 'long_context_retrieval'}, api_base=${ext.long_context_cluster.api_base ?? '(unset)'}, model_id=${ext.long_context_cluster.model_id ?? '(unset)'}, subset=${subset}, tasks=${tasks}${timeout}${anchor})`);
       }
-      // v0.5.0 dispatch stub: process_aware_scoring (2026-06-13 22:13 立项 — Princeton SWE-Bench Pro 03-04 + Anthropic 06 「2026 Agent 元年」18 页报告)
+      // v0.5.0 dispatch (real fetch 06-15 06:43 cron): process_aware_scoring (2026-06-13 22:13 立项 — Princeton SWE-Bench Pro 03-04 + Anthropic 06 「2026 Agent 元年」18 页报告)
       // 评测方法论从「结果分数」转「过程+结果」双轨: 5 过程信号 (commit_count / test_run_count / retry_count / file_coverage / trajectory_score) + pass/fail 双权重
       if (ext.process_aware_scoring?.enabled) {
         const subset = ext.process_aware_scoring.subset ?? 'all_process_signals';
@@ -186,7 +186,7 @@ export class Evaluator {
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`
       // 见 README 「路线图 / Roadmap (v0.5.0 candidates)」表 Mythos-class 模型接入 段
       if (enabled.length > 0) {
-        logInfo(`[v0.5.0 dispatch skeleton] external benchmarks enabled: ${enabled.join('; ')} (skeleton only — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic + swe_bench_pro + process_aware_scoring + long_context_cluster 全部 8 项已升级为 real fetch, **v0.5.0 dispatch PR 完整 8/8**)`);
+        logInfo(`[v0.5.0 dispatch] external benchmarks enabled: ${enabled.join('; ')} (全部 8 项 real fetch per 06-16 01:03 cron — webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench + benchlm_agentic + swe_bench_pro + process_aware_scoring + long_context_cluster, **v0.5.0 dispatch PR 完整 8/8**)`);
       }
     }
 
