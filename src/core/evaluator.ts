@@ -201,195 +201,123 @@ export class Evaluator {
     // - 仅当 ext.webdev_arena.enabled && (model_id 匹配或未配 model_id 走全部 model)
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 webdev_arena QuestionScore (questionId=`webdev_arena_${model.name}`, category=`webdev_arena`, dimension=`coding` 走 v0.4.0 默认, score = elo_score * 0.9 + pass_rate * 10 归一到 0-100)
-    if (this.config._external_benchmarks_roadmap?.webdev_arena?.enabled) {
-      const wda = this.config._external_benchmarks_roadmap.webdev_arena;
-      const apiBase = wda.api_base ?? 'https://webdevarena.com/api/v1/eval';
-      const timeoutMs = wda.timeout_ms ?? 30000;
-      await Promise.all(
-        results.map(async (result) => {
-          // model_id 过滤: 配了 wda.model_id 只评那个; 未配走全部
-          if (wda.model_id && result.model.model !== wda.model_id && result.modelName !== wda.model_id) {
-            return;
-          }
-          const score = await this.fetchWebdevArenaScore(apiBase, result.model, timeoutMs, wda.anchor_score);
-          result.scores.push(score);
-          log(`  [${result.modelName}] webdev_arena score: ${score.score} (${score.detail ?? 'no detail'})`);
-        })
-      );
-    }
+    await this.dispatchV050External(
+      results, 'webdev_arena',
+      this.config._external_benchmarks_roadmap?.webdev_arena,
+      'https://webdevarena.com/api/v1/eval',
+      (apiBase, model, timeoutMs) => this.fetchWebdevArenaScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.webdev_arena!.anchor_score),
+    );
 
     // v0.5.0 dispatch: cyberseceval3 real fetch (06-14 22:23 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/cyberseceval3/v3)
     // - 仅当 ext.cyberseceval3.enabled && (model_id 匹配或未配 model_id 走全部 model)
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 cyberseceval3 QuestionScore (questionId=`cyberseceval3_${model.name}`, category=`cyberseceval3`, dimension=`safety` 走 v0.4.0 默认, score = safety_score * 0.7 + coverage_rate * 30 归一到 0-100)
     // - 注: CyberSecEval3 官方 (Meta, 2025-12 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Meta 真实 API
-    if (this.config._external_benchmarks_roadmap?.cyberseceval3?.enabled) {
-      const cse3 = this.config._external_benchmarks_roadmap.cyberseceval3;
-      const apiBase = cse3.api_base ?? 'https://llm-benchmark.local/api/v1/cyberseceval3/v3';
-      const timeoutMs = (cse3 as { timeout_ms?: number }).timeout_ms ?? 30000;
-      const cats = cse3.risk_categories?.join(',') ?? 'all-8';
-      await Promise.all(
-        results.map(async (result) => {
-          // model_id 过滤: 配了 cse3.model_id 只评那个; 未配走全部
-          if (cse3.model_id && result.model.model !== cse3.model_id && result.modelName !== cse3.model_id) {
-            return;
-          }
-          const score = await this.fetchCyberseceval3Score(apiBase, result.model, timeoutMs, cats);
-          result.scores.push(score);
-          log(`  [${result.modelName}] cyberseceval3 score: ${score.score} (${score.detail ?? 'no detail'})`);
-        })
-      );
-    }
+    await this.dispatchV050External(
+      results, 'cyberseceval3',
+      this.config._external_benchmarks_roadmap?.cyberseceval3,
+      'https://llm-benchmark.local/api/v1/cyberseceval3/v3',
+      (apiBase, model, timeoutMs) => {
+        const cse3 = this.config._external_benchmarks_roadmap!.cyberseceval3!;
+        const cats = cse3.risk_categories?.join(',') ?? 'all-8';
+        return this.fetchCyberseceval3Score(apiBase, model, timeoutMs, cats);
+      },
+    );
 
     // v0.5.0 dispatch: aa_omniscience real fetch (06-15 00:03 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/aa_omniscience/v1)
     // - 仅当 ext.aa_omniscience.enabled && (model_id 匹配或未配 model_id 走全部 model)
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 aa_omniscience QuestionScore (questionId=`aa_omniscience_${model.name}`, category=`aa_omniscience`, dimension=`long_context` 走 v0.4.0 默认, score = accuracy_score * 0.7 + (1 - hallucination_rate) * 30 归一到 0-100)
     // - 注: Artificial Analysis Omniscience (2026-05-25 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 AA 真实 API
-    if (this.config._external_benchmarks_roadmap?.aa_omniscience?.enabled) {
-      const aao = this.config._external_benchmarks_roadmap.aa_omniscience;
-      const apiBase = aao.api_base ?? 'https://llm-benchmark.local/api/v1/aa_omniscience/v1';
-      const timeoutMs = aao.timeout_ms ?? 30000;
-      const anchorScore = aao.anchor_score;
-      await Promise.all(
-        results.map(async (result) => {
-          // model_id 过滤: 配了 aao.model_id 只评那个; 未配走全部
-          if (aao.model_id && result.model.model !== aao.model_id && result.modelName !== aao.model_id) {
-            return;
-          }
-          const score = await this.fetchAAOmniscienceScore(apiBase, result.model, timeoutMs, anchorScore);
-          result.scores.push(score);
-          log(`  [${result.modelName}] aa_omniscience score: ${score.score} (${score.detail ?? 'no detail'})`);
-        })
-      );
-    }
+    await this.dispatchV050External(
+      results, 'aa_omniscience',
+      this.config._external_benchmarks_roadmap?.aa_omniscience,
+      'https://llm-benchmark.local/api/v1/aa_omniscience/v1',
+      (apiBase, model, timeoutMs) => this.fetchAAOmniscienceScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.aa_omniscience!.anchor_score),
+    );
 
     // v0.5.0 dispatch: terminal_bench real fetch (06-15 03:03 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/terminal_bench/v2)
     // - 仅当 ext.terminal_bench.enabled && (model_id 匹配或未配 model_id 走全部 model)
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 terminal_bench QuestionScore (questionId=`terminal_bench_${model.name}`, category=`terminal_bench`, dimension=`coding` 走 v0.4.0 默认, score = task_pass_rate * 70 + (1 - avg_duration_s/3600) * 30 归一到 0-100)
     // - 注: Terminal-Bench 2.0 (tbench.ai, 2026-06 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 tbench.ai 真实 API
-    if (this.config._external_benchmarks_roadmap?.terminal_bench?.enabled) {
-      const tb = this.config._external_benchmarks_roadmap.terminal_bench;
-      const apiBase = tb.api_base ?? 'https://llm-benchmark.local/api/v1/terminal_bench/v2';
-      const timeoutMs = tb.timeout_ms ?? 30000;
-      const anchorScore = tb.anchor_score;
-      const subset = tb.subset ?? 'full';
-      await Promise.all(
-        results.map(async (result) => {
-          // model_id 过滤: 配了 tb.model_id 只评那个; 未配走全部
-          if (tb.model_id && result.model.model !== tb.model_id && result.modelName !== tb.model_id) {
-            return;
-          }
-          const score = await this.fetchTerminalBenchScore(apiBase, result.model, timeoutMs, anchorScore, subset);
-          result.scores.push(score);
-          log(`  [${result.modelName}] terminal_bench score: ${score.score} (${score.detail ?? 'no detail'})`);
-        })
-      );
-    }
+    await this.dispatchV050External(
+      results, 'terminal_bench',
+      this.config._external_benchmarks_roadmap?.terminal_bench,
+      'https://llm-benchmark.local/api/v1/terminal_bench/v2',
+      (apiBase, model, timeoutMs) => {
+        const tb = this.config._external_benchmarks_roadmap!.terminal_bench!;
+        return this.fetchTerminalBenchScore(apiBase, model, timeoutMs, tb.anchor_score, tb.subset ?? 'full');
+      },
+    );
 
     // v0.5.0 dispatch: benchlm_agentic real fetch (06-15 04:03 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/benchlm_agentic/v1)
     // - 仅当 ext.benchlm_agentic.enabled && (model_id 匹配或未配 model_id 走全部 model)
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 benchlm_agentic QuestionScore (questionId=`benchlm_agentic_${model.name}`, category=`benchlm_agentic`, dimension=`coding` 走 v0.4.0 默认, score = agentic_pass_rate * 50 + design2code_score * 0.25 + vision2web_score * 0.25 归一到 0-100; native_evals 启用时附加 +5 奖励)
     // - 注: BenchLM.ai (benchlm.ai, 2026-06-07 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 BenchLM.ai 真实 API
-    if (this.config._external_benchmarks_roadmap?.benchlm_agentic?.enabled) {
-      const bla = this.config._external_benchmarks_roadmap.benchlm_agentic;
-      const apiBase = bla.api_base ?? 'https://llm-benchmark.local/api/v1/benchlm_agentic/v1';
-      const timeoutMs = bla.timeout_ms ?? 30000;
-      const anchorScore = bla.anchor_score;
-      const nativeEvals = bla.native_evals ?? false;
-      const subset = bla.subset ?? 'all';
-      await Promise.all(
-        results.map(async (result) => {
-          // model_id 过滤: 配了 bla.model_id 只评那个; 未配走全部
-          if (bla.model_id && result.model.model !== bla.model_id && result.modelName !== bla.model_id) {
-            return;
-          }
-          const score = await this.fetchBenchlmAgenticScore(apiBase, result.model, timeoutMs, anchorScore, nativeEvals, subset);
-          result.scores.push(score);
-          log(`  [${result.modelName}] benchlm_agentic score: ${score.score} (${score.detail ?? 'no detail'})`);
-        })
-      );
-    }
+    await this.dispatchV050External(
+      results, 'benchlm_agentic',
+      this.config._external_benchmarks_roadmap?.benchlm_agentic,
+      'https://llm-benchmark.local/api/v1/benchlm_agentic/v1',
+      (apiBase, model, timeoutMs) => {
+        const bla = this.config._external_benchmarks_roadmap!.benchlm_agentic!;
+        return this.fetchBenchlmAgenticScore(apiBase, model, timeoutMs, bla.anchor_score, bla.native_evals ?? false, bla.subset ?? 'all');
+      },
+    );
 
     // v0.5.0 dispatch: swe_bench_pro real fetch (06-15 05:23 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/swe_bench_pro/v1)
     // - 仅当 ext.swe_bench_pro.enabled && (model_id 匹配或未配 model_id 走全部 model)
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 swe_bench_pro QuestionScore (questionId=`swe_bench_pro_${model.name}`, category=`swe_bench_pro`, dimension=`coding` 走 v0.4.0 默认, score = pass_rate * 0.7 + patch_score * 0.2 + files_modified_normalized * 0.1 归一到 0-100; agentic_mode 关闭时纯 pass_rate)
     // - 注: SWE-bench Pro (Scale AI, 2026-06-02, claude-fable-5 首条数据 80.3%) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Scale AI 真实 API
-    if (this.config._external_benchmarks_roadmap?.swe_bench_pro?.enabled) {
-      const sbp = this.config._external_benchmarks_roadmap.swe_bench_pro;
-      const apiBase = sbp.api_base ?? 'https://llm-benchmark.local/api/v1/swe_bench_pro/v1';
-      const timeoutMs = sbp.timeout_ms ?? 30000;
-      const anchorScore = sbp.anchor_score;
-      const subset = sbp.subset ?? 'verified';
-      const agenticMode = sbp.agentic_mode !== false;
-      await Promise.all(
-        results.map(async (result) => {
-          // model_id 过滤: 配了 sbp.model_id 只评那个; 未配走全部
-          if (sbp.model_id && result.model.model !== sbp.model_id && result.modelName !== sbp.model_id) {
-            return;
-          }
-          const score = await this.fetchSweBenchProScore(apiBase, result.model, timeoutMs, anchorScore, subset, agenticMode);
-          result.scores.push(score);
-          log(`  [${result.modelName}] swe_bench_pro score: ${score.score} (${score.detail ?? 'no detail'})`);
-        })
-      );
-    }
+    await this.dispatchV050External(
+      results, 'swe_bench_pro',
+      this.config._external_benchmarks_roadmap?.swe_bench_pro,
+      'https://llm-benchmark.local/api/v1/swe_bench_pro/v1',
+      (apiBase, model, timeoutMs) => {
+        const sbp = this.config._external_benchmarks_roadmap!.swe_bench_pro!;
+        return this.fetchSweBenchProScore(apiBase, model, timeoutMs, sbp.anchor_score, sbp.subset ?? 'verified', sbp.agentic_mode !== false);
+      },
+    );
 
     // v0.5.0 dispatch: process_aware_scoring real fetch (06-15 06:43 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/process_aware_scoring/v1)
     // - 仅当 ext.process_aware_scoring.enabled && (model_id 匹配或未配 model_id 走全部 model)
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 process_aware_scoring QuestionScore (questionId=`process_aware_scoring_${model.name}`, category=`process_aware_scoring`, dimension=`coding` 走 v0.4.0 默认, score = process_score 0-100 (过程维度综合分) 复合 pass_fail_weight + process_weight)
     // - 注: Process-Aware Scoring (Princeton SWE-Bench Pro 03-04 trajectory + Anthropic 「2026 Agent 元年」18 页报告) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Princeton/Anthropic 真实 API
-    if (this.config._external_benchmarks_roadmap?.process_aware_scoring?.enabled) {
-      const pas = this.config._external_benchmarks_roadmap.process_aware_scoring;
-      const apiBase = pas.api_base ?? 'https://llm-benchmark.local/api/v1/process_aware_scoring/v1';
-      const timeoutMs = pas.timeout_ms ?? 30000;
-      const anchorScore = pas.anchor_score;
-      const subset = pas.subset ?? 'all_process_signals';
-      const mode = pas.mode ?? 'all';
-      const agenticBench = pas.agentic_benchmark ?? 'swe_bench_pro';
-      const passWeight = pas.pass_fail_weight ?? 0.7;
-      const procWeight = pas.process_weight ?? 0.3;
-      await Promise.all(
-        results.map(async (result) => {
-          // model_id 过滤: 配了 pas.model_id 只评那个; 未配走全部
-          if (pas.model_id && result.model.model !== pas.model_id && result.modelName !== pas.model_id) {
-            return;
-          }
-          const score = await this.fetchProcessAwareScoringScore(apiBase, result.model, timeoutMs, anchorScore, subset, mode, agenticBench, passWeight, procWeight);
-          result.scores.push(score);
-          log(`  [${result.modelName}] process_aware_scoring score: ${score.score} (${score.detail ?? 'no detail'})`);
-        })
-      );
-    }
+    await this.dispatchV050External(
+      results, 'process_aware_scoring',
+      this.config._external_benchmarks_roadmap?.process_aware_scoring,
+      'https://llm-benchmark.local/api/v1/process_aware_scoring/v1',
+      (apiBase, model, timeoutMs) => {
+        const pas = this.config._external_benchmarks_roadmap!.process_aware_scoring!;
+        return this.fetchProcessAwareScoringScore(
+          apiBase, model, timeoutMs,
+          pas.anchor_score,
+          pas.subset ?? 'all_process_signals',
+          pas.mode ?? 'all',
+          pas.agentic_benchmark ?? 'swe_bench_pro',
+          pas.pass_fail_weight ?? 0.7,
+          pas.process_weight ?? 0.3,
+        );
+      },
+    );
 
     // v0.5.0 dispatch: long_context_cluster real fetch (06-16 01:03 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/long_context_cluster/v1)
     // - 仅当 ext.long_context_cluster.enabled && (model_id 匹配或未配 model_id 走全部 model)
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 long_context_cluster QuestionScore (questionId=`long_context_cluster_${model.name}`, category=`long_context_cluster`, dimension=`long_context` 走 v0.4.0 默认, score = subset_pass_rate * 0.7 + (1 - tokens_used_normalized) * 0.3 归一到 0-100; 4 基准 LongBench v2 + Babilong + InfiniteBench + Phonebook, harness 0.4.0 PR #3256 同源)
     // - 注: Long Context Cluster (harness 0.4.0 PR #3256 同源, 62 tasks, 4 基准 LongBench v2 21 + Babilong 13 + InfiniteBench 18 + Phonebook 10) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 harness 真实 API
-    if (this.config._external_benchmarks_roadmap?.long_context_cluster?.enabled) {
-      const lcc = this.config._external_benchmarks_roadmap.long_context_cluster;
-      const apiBase = lcc.api_base ?? 'https://llm-benchmark.local/api/v1/long_context_cluster/v1';
-      const timeoutMs = lcc.timeout_ms ?? 30000;
-      const anchorScore = lcc.anchor_score;
-      const subset = lcc.subset ?? 'all';
-      const tasksTotal = lcc.tasks_total ?? 62;
-      await Promise.all(
-        results.map(async (result) => {
-          // model_id 过滤: 配了 lcc.model_id 只评那个; 未配走全部
-          if (lcc.model_id && result.model.model !== lcc.model_id && result.modelName !== lcc.model_id) {
-            return;
-          }
-          const score = await this.fetchLongContextClusterScore(apiBase, result.model, timeoutMs, anchorScore, subset, tasksTotal);
-          result.scores.push(score);
-          log(`  [${result.modelName}] long_context_cluster score: ${score.score} (${score.detail ?? 'no detail'})`);
-        })
-      );
-    }
+    await this.dispatchV050External(
+      results, 'long_context_cluster',
+      this.config._external_benchmarks_roadmap?.long_context_cluster,
+      'https://llm-benchmark.local/api/v1/long_context_cluster/v1',
+      (apiBase, model, timeoutMs) => {
+        const lcc = this.config._external_benchmarks_roadmap!.long_context_cluster!;
+        return this.fetchLongContextClusterScore(apiBase, model, timeoutMs, lcc.anchor_score, lcc.subset ?? 'all', lcc.tasks_total ?? 62);
+      },
+    );
 
     return results;
   }
@@ -1362,5 +1290,37 @@ export class Evaluator {
     }
 
     return details;
+  }
+
+  /**
+   * v0.5.0 dispatch 通用 helper: 8 项外部 benchmark dispatch 块共享同一套
+   * (1) enabled 守卫
+   * (2) api_base + timeout_ms 默认值 (api_base per-benchmark, timeout_ms 统一 30000)
+   * (3) model_id 过滤 (配了 cfg.model_id 只评那个; 未配走全部 model)
+   * (4) Promise.all(results.map(async (result) => { ... fetch })) 并行
+   * (5) result.scores.push + log 行 (统一格式 `[${result.modelName}] ${benchmarkName} score: ...`)
+   * 06-29 22:43 cron 抽出, parallels 14c64d4 webScorer() 模式 (那步抽的是 scoreFunctionCalling/scoreLongContext/scoreMultiTurn 3x byte-identical dummyModel+new Scorer boilerplate; 本步抽的是 8x 共享的 enabled/apiBase/timeoutMs/model_id/Promise.all/scores.push/log 调度骨架).
+   * 每个调用点用闭包 curry 出 fetcher (apiBase, model, timeoutMs) => fetchXxxScore(apiBase, model, timeoutMs, ...extraArgs), 把 per-benchmark 的 extra args (anchorScore/subset/mode/cats/nativeEvals/tasksTotal/...) 在 fetcher 闭包里绑死.
+   */
+  private async dispatchV050External(
+    results: EvaluationResult[],
+    benchmarkName: string,
+    cfg: { enabled?: boolean; api_base?: string; timeout_ms?: number; model_id?: string } | undefined,
+    defaultApiBase: string,
+    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number) => Promise<QuestionScore>,
+  ): Promise<void> {
+    if (!cfg?.enabled) return;
+    const apiBase = cfg.api_base ?? defaultApiBase;
+    const timeoutMs = cfg.timeout_ms ?? 30000;
+    await Promise.all(
+      results.map(async (result) => {
+        if (cfg.model_id && result.model.model !== cfg.model_id && result.modelName !== cfg.model_id) {
+          return;
+        }
+        const score = await fetcher(apiBase, result.model, timeoutMs);
+        result.scores.push(score);
+        log(`  [${result.modelName}] ${benchmarkName} score: ${score.score} (${score.detail ?? 'no detail'})`);
+      })
+    );
   }
 }
