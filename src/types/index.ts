@@ -188,6 +188,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   webdev_arena?: {
     enabled: boolean;
+    /** dispatch 类别标签: 'agentic_coding' — 全栈 web dev / Design2Code / Vision2Web 评测 (与 terminal_bench.type='agentic_coding' / benchlm_agentic.type='agentic_fullstack' / swe_bench_pro.type='agentic_swe' / process_aware_scoring.type='process_agentic' / long_context_cluster.type='long_context_retrieval' 对位, 06-30 06:13 cron 补齐 — 8/8 dispatch type 字段完整) */
+    type?: 'agentic_coding';
     api_base?: string;
     model_id?: string;
     /** HTTP 请求超时 (ms, default 30000) */
@@ -218,6 +220,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   aa_omniscience?: {
     enabled: boolean;
+    /** dispatch 类别标签: 'long_context_retrieval' — 知识检索 + 幻觉率长上下文评测 (与 terminal_bench.type='agentic_coding' / swe_bench_pro.type='agentic_swe' / benchlm_agentic.type='agentic_fullstack' / process_aware_scoring.type='process_agentic' / long_context_cluster.type='long_context_retrieval' / webdev_arena.type='agentic_coding' 对位, 06-30 06:13 cron 补齐) */
+    type?: 'long_context_retrieval';
     api_base?: string;
     model_id?: string;
     /** HTTP 请求超时 (ms, default 30000) */
@@ -247,6 +251,8 @@ export interface ExternalBenchmarkRoadmap {
   /** Meta CyberSecEval 3: LLM 安全 / 8 项风险 (offensive security: 自动化社工 / 手动 offensive cyber / 自主 offensive cyber) */
   cyberseceval3?: {
     enabled: boolean;
+    /** dispatch 类别标签: 'safety_evaluation' — 8 项 LLM 安全 / offensive security 风险评测 (与 terminal_bench.type='agentic_coding' / swe_bench_pro.type='agentic_swe' / benchlm_agentic.type='agentic_fullstack' / process_aware_scoring.type='process_agentic' / long_context_cluster.type='long_context_retrieval' / webdev_arena.type='agentic_coding' / aa_omniscience.type='long_context_retrieval' 对位, 06-30 06:13 cron 补齐 — 8/8 dispatch type 字段完整) */
+    type?: 'safety_evaluation';
     api_base?: string;
     model_id?: string;
     /** 评测风险维度 (default: 全部 8 项) */

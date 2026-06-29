@@ -125,7 +125,8 @@ export class Evaluator {
       const ext = this.config._external_benchmarks_roadmap;
       const enabled: string[] = [];
       if (ext.webdev_arena?.enabled) {
-        enabled.push(`webdev_arena(api_base=${ext.webdev_arena.api_base ?? '(unset)'}, model_id=${ext.webdev_arena.model_id ?? '(unset)'})`);
+        // v0.5.0 type 段真实化 (06-30 06:13 cron step-7): surface agentic_coding category for 8/8 parity with 5-dim step-6
+        enabled.push(`webdev_arena(type=${ext.webdev_arena.type ?? 'agentic_coding'}, api_base=${ext.webdev_arena.api_base ?? '(unset)'}, model_id=${ext.webdev_arena.model_id ?? '(unset)'})`);
       }
       if (ext.terminal_bench?.enabled) {
         const subset = ext.terminal_bench.subset ?? 'full';
@@ -137,7 +138,8 @@ export class Evaluator {
       }
       if (ext.aa_omniscience?.enabled) {
         const anchor = ext.aa_omniscience.anchor_score != null ? `, anchor=${ext.aa_omniscience.anchor_score}` : '';
-        enabled.push(`aa_omniscience(api_base=${ext.aa_omniscience.api_base ?? '(unset)'}, model_id=${ext.aa_omniscience.model_id ?? '(unset)'}${anchor})`);
+        // v0.5.0 type 段真实化 (06-30 06:13 cron step-7): surface long_context_retrieval category for 8/8 parity
+        enabled.push(`aa_omniscience(type=${ext.aa_omniscience.type ?? 'long_context_retrieval'}, api_base=${ext.aa_omniscience.api_base ?? '(unset)'}, model_id=${ext.aa_omniscience.model_id ?? '(unset)'}${anchor})`);
       }
       // v0.5.0 dispatch (real fetch 06-15 04:03 cron): BenchLM.ai agentic eval (2026-06-07 发布, 248 模型 × 225 基准, agentic 主战场)
       if (ext.benchlm_agentic?.enabled) {
@@ -150,7 +152,8 @@ export class Evaluator {
       // v0.5.0 dispatch (real fetch 06-14 22:23 cron): Meta CyberSecEval 3 (2025-12 发布, 8 项风险跨 offensive security 3 大类, Claude Mythos 5 主战场)
       if (ext.cyberseceval3?.enabled) {
         const cats = ext.cyberseceval3.risk_categories?.join('|') ?? 'all-8';
-        enabled.push(`cyberseceval3(api_base=${ext.cyberseceval3.api_base ?? '(unset)'}, model_id=${ext.cyberseceval3.model_id ?? '(unset)'}, risk_categories=${cats})`);
+        // v0.5.0 type 段真实化 (06-30 06:13 cron step-7): surface safety_evaluation category for 8/8 parity
+        enabled.push(`cyberseceval3(type=${ext.cyberseceval3.type ?? 'safety_evaluation'}, api_base=${ext.cyberseceval3.api_base ?? '(unset)'}, model_id=${ext.cyberseceval3.model_id ?? '(unset)'}, risk_categories=${cats})`);
       }
       // v0.5.0 dispatch (real fetch 06-15 05:23 cron): SWE-bench Pro (Scale AI, 2026-06-02, Mythos-tier 主标杆, 80.3% Fable-5)
       if (ext.swe_bench_pro?.enabled) {

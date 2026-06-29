@@ -248,5 +248,98 @@ describe('Types', () => {
       expect(stubOptional.terminal_bench?.type).toBeUndefined();
     });
 
+    // 06-30 06:13 cron: 5 type-stub 真实化 step-7 of 5 — 锁定 8/8 dispatch type 字面量 (扩展 5→8, 补 webdev_arena / aa_omniscience / cyberseceval3 三处 type 字段; src/types/index.ts 加 type?: 'agentic_coding' | 'long_context_retrieval' | 'safety_evaluation' 三处, evaluator.ts L129/142/156 也已 surface type= 字段, 本 test 锁定 8 维字面量 + 可选性, 防止 9/8 漏 + JSDoc 漂移)
+    it('external_benchmarks_roadmap dispatch type field accepts 8 category literals (06-30 type-stub step-7)', () => {
+      type Ext = NonNullable<BenchmarkConfig['_external_benchmarks_roadmap']>;
+      // 8 维同时存在, 锁定 type 字面量被 tsc 接受 (compile-time) + 运行时值正确 (runtime)
+      const stub: Ext = {
+        webdev_arena: {
+          enabled: true,
+          type: 'agentic_coding', // 06-30 06:13 cron step-7 新增 (web 全栈 + Design2Code)
+          api_base: 'https://webdevarena.com/api/v1/eval',
+          model_id: 'claude-fable-5',
+          timeout_ms: 30000,
+        },
+        terminal_bench: {
+          enabled: true,
+          type: 'agentic_coding',
+          api_base: 'https://llm-benchmark.local/api/v1/terminal_bench/v2',
+          model_id: 'claude-fable-5',
+          subset: 'hard',
+          timeout_ms: 30000,
+        },
+        aa_omniscience: {
+          enabled: true,
+          type: 'long_context_retrieval', // 06-30 06:13 cron step-7 新增 (知识检索 + 幻觉率)
+          api_base: 'https://llm-benchmark.local/api/v1/aa_omniscience/v1',
+          model_id: 'claude-fable-5',
+          timeout_ms: 30000,
+        },
+        benchlm_agentic: {
+          enabled: true,
+          type: 'agentic_fullstack',
+          api_base: 'https://llm-benchmark.local/api/v1/benchlm_agentic/v1',
+          model_id: 'claude-fable-5',
+          subset: 'all',
+          timeout_ms: 30000,
+        },
+        cyberseceval3: {
+          enabled: true,
+          type: 'safety_evaluation', // 06-30 06:13 cron step-7 新增 (8 项 LLM 安全 / offensive security)
+          api_base: 'https://llm-benchmark.local/api/v1/cyberseceval3/v3',
+          model_id: 'claude-fable-5',
+          risk_categories: ['automated_social_engineering', 'manual_offensive_cyber'],
+        },
+        swe_bench_pro: {
+          enabled: true,
+          type: 'agentic_swe',
+          api_base: 'https://llm-benchmark.local/api/v1/swe_bench_pro/v1',
+          model_id: 'claude-fable-5',
+          subset: 'verified',
+          agentic_mode: true,
+          timeout_ms: 30000,
+        },
+        long_context_cluster: {
+          enabled: true,
+          type: 'long_context_retrieval',
+          api_base: 'https://llm-benchmark.local/api/v1/long_context_cluster/v1',
+          model_id: 'claude-fable-5',
+          subset: 'all',
+          tasks_total: 62,
+          timeout_ms: 30000,
+        },
+        process_aware_scoring: {
+          enabled: true,
+          type: 'process_agentic',
+          api_base: 'https://llm-benchmark.local/api/v1/process_aware_scoring/v1',
+          model_id: 'claude-fable-5',
+          subset: 'all_process_signals',
+          mode: 'all',
+          agentic_benchmark: 'swe_bench_pro',
+          pass_fail_weight: 0.7,
+          process_weight: 0.3,
+          timeout_ms: 30000,
+        },
+      };
+      // 8 维 type 字段字面量被锁定 (3 新增 + 5 step-6 验证)
+      expect(stub.webdev_arena?.type).toBe('agentic_coding');
+      expect(stub.terminal_bench?.type).toBe('agentic_coding');
+      expect(stub.aa_omniscience?.type).toBe('long_context_retrieval');
+      expect(stub.benchlm_agentic?.type).toBe('agentic_fullstack');
+      expect(stub.cyberseceval3?.type).toBe('safety_evaluation');
+      expect(stub.swe_bench_pro?.type).toBe('agentic_swe');
+      expect(stub.long_context_cluster?.type).toBe('long_context_retrieval');
+      expect(stub.process_aware_scoring?.type).toBe('process_agentic');
+      // 也验证 3 个新增 type 字段可省略 (optional), 默认走 evaluator.ts L129/142/156 ?? 'xxx' 兜底
+      const stubOptional: Ext = {
+        webdev_arena: { enabled: true, api_base: 'x', model_id: 'y' },
+        aa_omniscience: { enabled: true, api_base: 'x', model_id: 'y' },
+        cyberseceval3: { enabled: true, api_base: 'x', model_id: 'y' },
+      };
+      expect(stubOptional.webdev_arena?.type).toBeUndefined();
+      expect(stubOptional.aa_omniscience?.type).toBeUndefined();
+      expect(stubOptional.cyberseceval3?.type).toBeUndefined();
+    });
+
   });
 });
