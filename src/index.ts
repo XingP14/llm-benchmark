@@ -275,6 +275,7 @@ function loadConfig(configPath: string): BenchmarkConfig {
     return JSON.parse(content);
   } catch (error: unknown) {
     console.error(`无法加载配置文件: ${configPath}`);
+    console.error(`原因: ${errorMessage(error)}`);
     console.error('请先运行: llm-bench init');
     process.exit(1);
   }
@@ -385,7 +386,7 @@ function showHelp() {
 
 export { runBenchmark, loadConfig };
 
-main().catch((error) => {
-  console.error('Fatal error:', error);
+main().catch((error: unknown) => {
+  console.error('Fatal error:', errorMessage(error));
   process.exit(1);
 });

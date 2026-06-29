@@ -39,3 +39,7 @@ config.local.json
 # Local cron heartbeat logs and agent runtime notes.
 # These are host-local state, not release source.
 memory/
+
+# Backup files (editor autosave, refactor .bak artifacts)
+*.bak
+*.bak.ts
