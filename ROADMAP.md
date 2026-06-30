@@ -1,5 +1,21 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+
+## 🩺 07-01 06:23 轮 (2026-07-01) — llm-benchmark (V3 tick, 候选池 0 + 距 b4e0439 < 1h, 06-09 调研立项流程触发, llm-benchmark 优先)
+
+- **触发**: 07-01 06:23 Asia/Shanghai cron tick (V3 节奏 27 tick/天, 夜间 22-07 时段内), 时间窗口 06-09 内合法.
+- **轮转检查**:
+  - woclaw: 07-01 06:07 bbf2489 → 06:23 距 ~16min, **LOCKED** (< 1h gate)
+  - llm-benchmark: 07-01 05:46 b4e0439 → 06:23 距 ~37min, **LOCKED** (< 1h gate)
+- **候选池状态 (按 hint 列表 06-23 审查)**:
+  - woclaw: 0 (sync-skill-frontmatter.mjs ✅ bf31638/520a1c7 + 7 子包 SKILL.md parity ✅ bbf2489 + docs/ci-failures.md 残留 ✅ 06-28 5:23 + encryption 链路 12/12 ✅ f238696 + 7 子包 LICENSE/files 5/5 ✅ + vscode EventEmitter.fire() args ✅ eventemitter.test.js + npm publish 0.4.0 ✅ — 全部 done)
+  - llm-benchmark: 0 (v0.5.0 type 段 5 处 stub 真实化 ✅ 5f90396+0ffb136 8/8 + tsc 残留 clean ✅ + coverage 阈值 90/70/90/85 ✅ + Docker workflow concurrency ✅ + reporter 5-dim 默认 comment ✅ 6af9f47 + npm publish 0.4.0 ✅ + CI 24h GREEN — 全部 done, 候选池 0)
+- **判定**: 双 LOCKED + 双候选池 0 → 06-09 调研立项流程触发, 按规则"06-09 调研流程 + llm-benchmark 优先" → 走 llm-benchmark 调研 + 立 step-v6.0-2.
+- **调研 (1.5min)**: 06-19 ROADMAP 段 L66-74 `src/core/evaluator.ts` `run()` JSDoc 段 (06-11 06:23 完成) 明确标注 "📊 Confidence interval: 当前 v0.4.0 输出为 mean, 未输出 std/95% CI; 5 题维度 std 较大, 决策前建议至少跑 3 轮取均值" + "可加 'bootstrap 95% CI' 真输出到 JSON / CSV 报告" + 06-19 ROADMAP 调研 L13 段 (07-01 00:24 轮) 已锚 v0.6 三大主战场 (a) v0.5→v0.6 real fetch 扩展 8/8→16/16 / (b) v0.6 web harness multimodal real fetch / (c) **v0.6 confidence interval bootstrap 95% CI** (06-19 ROADMAP evaluator.ts JSDoc 段标注). step-v6.0-1 已立 06-19 立的 6 项 v0.5 type stub 升级到 v0.6 real fetch dispatch (3 项: lm_eval_task_conflict_resolver_real_v1 + livebench_2026_h1_quarterly_v3_real_fetch_v1 + aa_stirrup_agent_framework_real_fetch_v1). **本轮 step-v6.0-2 锚 v0.6 主战场 (c) bootstrap 95% CI 真输出**, 与 step-v6.0-1 (a) real fetch 扩展 + 后续 v0.6 (b) multimodal real fetch 形成 v0.6 「real fetch 扩展 × bootstrap 95% CI × multimodal real fetch」3 步走.
+- **挑选立项** (5min 内只立 docs(roadmap), 必含 'next: step-X.Y'):
+  - `next: step-v6.0-2` — **v0.6.0 5-dim bootstrap 95% confidence interval 真输出 (沿 06-19 ROADMAP evaluator.ts JSDoc 段标注)**. 范围: (1) `src/core/evaluator.ts` 加 `bootstrap95CI(scores: number[], nResamples = 1000): { mean: number; ciLower: number; ciUpper: number; std: number }` 纯函数 helper, 沿 5-dim 各 dim + totalAvg 分别算 95% CI (percentile method: 排序 resample means 后取 2.5%/97.5% 分位数); (2) `src/types/index.ts` `DimensionScore` 增 `ci_lower?: number; ci_upper?: number; std?: number` 3 字段 (optional, 0 functional 破坏); (3) `src/core/reporter.ts` 5-dim Markdown / HTML / CSV 报表加 95% CI 副标 `mean ± std [ci_lower, ci_upper]` (与现 getDimValue/getDimCell 共用同一份事实); (4) `tests/bootstrap-95-ci.test.ts` ≥6 回归 tests: 5-dim helper 5×3=15 fields 锁定 + 边界 ([80]=80, [60,80]=[70,70], 单题 n=1 不炸) + 0 改 raw scores 数组 + reporter 副标格式 + types optional 字段; 5min 步骤不可全完成 (估 30-45min 跨 6-9 轮), 5min 内**只立 next: + 详细步骤描述**, 等下次 UNLOCK 后从步骤 1 (helper 纯函数) 起逐步推. 估 30-45min 跨 6-9 轮 cron; 价值: 把 06-19 ROADMAP 06-11 06:23 JSDoc 注释的"v0.5.0 bootstrap 95% CI 后续"从 JSDoc 注释升级为真输出, 让 v0.6 报表 5-dim 每格附 `mean ± std [ci_lower, ci_upper]`, 决策前可直接读 95% CI 三角验证 (沿 DigitalApplied 9 月文「confidence interval 是最被忽视的决策列」三警告 + LiveBench 抗污染 + BenchLM.ai 248×225 + lm-evaluation-harness v0.4.0「+ CI reporting」4 harness cross-val 闭环).
+- **遗留**: 0 (本轮 docs(roadmap) only, 立 next: step-v6.0-2, 等 ≥1h UNLOCK 后从步骤 1 (bootstrap95CI helper) 起逐步推)
+- **下次轮转**: L→W 序列 → **woclaw** (本轮 picked=llm-benchmark, llm-benchmark docs(roadmap) 立 next: step-v6.0-2 候选池归 0 → 1 真 pending; 次轮 cron 触发点 woclaw 06:07 bbf2489 → 07:01 06:43 距 ~36min 仍 < 1h LOCKED, 看 07:01 07:03 tick 是否 UNLOCK; llm-benchmark 05:46 b4e0439 → 06:43 距 ~57min 仍 < 1h LOCKED, 看 07:01 07:03 tick 是否 UNLOCK)
 ## 🩺 07-01 00:24 轮 (2026-07-01) — llm-benchmark (V3 tick, 候选池 0 + git 干净 → 06-09 调研立项流程触发, llm-benchmark 优先)
 
 - **触发**: 07-01 00:24 Asia/Shanghai cron tick (V3 节奏 27 tick/天, 实际 commit 推迟到 00:24, 00:03 tick 内容合并入此轮), 时间窗口 22:00-07:00 内合法.
