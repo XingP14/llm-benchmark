@@ -49,7 +49,7 @@ export class Scorer {
         detail: scoreText,
       };
     } catch (error: unknown) {
-      console.error(`评分失败 [${question.id}]:`, error);
+      console.error(`评分失败 [${question.id}]:`, errorMessage(error));
       return {
         questionId: question.id,
         category: question.category,
