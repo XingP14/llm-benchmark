@@ -1,5 +1,23 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 07-01 00:24 轮 (2026-07-01) — llm-benchmark (V3 tick, 候选池 0 + git 干净 → 06-09 调研立项流程触发, llm-benchmark 优先)
+
+- **触发**: 07-01 00:24 Asia/Shanghai cron tick (V3 节奏 27 tick/天, 实际 commit 推迟到 00:24, 00:03 tick 内容合并入此轮), 时间窗口 22:00-07:00 内合法.
+- **轮转检查**:
+  - woclaw: 06-30 22:14 0eb893c → 07-01 00:03 距 ~1h49min, **UNLOCKED**; 但本轮先推 llm-benchmark (L→W 序列 + llm-benchmark 候选池 0 触发 06-09 调研)
+  - llm-benchmark: 06-30 22:39 ef8ec6b → 07-01 00:03 距 ~1h24min, **UNLOCKED**; git status --short 空
+- **候选池状态 (07-01 00:03)**:
+  - woclaw: 0 (上次 06-30 22:14 0eb893c refactor(rest_server): pin sendJsonSuccess carve-out comment block drift fix + new test + remove .tmp leftover 已 done, 本次 UNLOCKED)
+  - llm-benchmark: 0 (06-30 22:39 ef8ec6b refactor(web/engine): logEvaluationError L28 errorMessage migration 已 done, console.error(...,err) 全 src 0 site 饱和)
+- **判定**: 双空 → 06-09 调研立项流程触发条件具备, 按规则"06-09 调研流程 + llm-benchmark 优先" → 走 llm-benchmark 调研 + 立 1 项.
+- **调研 (1.5min)**: llm-benchmark v0.5.0 type 段 ✅ 49 项 + 8/8 real fetch 完整 + console.error 全 src/ errorMessage 饱和 (06-30 cron chain), npm publish 0.4.0 已验证, 341/341 tests PASS + coverage 阈值全过 (branches 70 / functions 85 / lines 90 / statements 90). 下一步进入 **v0.6.0 候选池**, 2026 H2 三大主战场待锚: (a) v0.5 → v0.6 dispatch real fetch 扩展 (8/8 → 16/16); (b) v0.6 web harness multimodal real fetch; (c) v0.6 confidence interval bootstrap 95% CI (06-19 ROADMAP evaluator.ts JSDoc 段标注).
+
+- **挑选立项** (5min 内可完成, docs(roadmap) only, 必含 'next: step-X.Y'):
+  - `next: step-v6.0-1` — **v0.6.0 type 段补 `lm_eval_task_conflict_resolver_real_v1` (CSDN 2026-03-30 任务冲突 resolver, 跨 60+ 学术基准 numpy/torch/datasets 跨 version resolver 真实 fetch)** + `livebench_2026_h1_quarterly_v3_real_fetch_v1` (LiveBench 06 月 leaderboard 真实 POST, 抗污染双月 cadence) + `aa_stirrup_agent_framework_real_fetch_v1` (AA Stirrup 跨 Python+TypeScript agent framework, MIT 433+16 stars, 真实 fetch 验证). v0.6.0 阶段把 06-19 06-20 立的 6 项 type stub 升级到 real fetch dispatch, 配合 v0.5 type 段 49 项 type stub (1 real fetch 8/8), 形成「v0.5 type 段完整 + v0.6 real fetch 扩展」2 步走.
+
+- **遗留**: 0 (本轮 docs(roadmap) only, 立 next: step-v6.0-1, 等 v0.5 完成 npm publish 后再推进 v0.6 real fetch 扩展)
+- **下次轮转**: L→W 序列 → **woclaw** (本轮 picked=llm-benchmark, llm-benchmark docs(roadmap) 立 next: step-v6.0-1 候选池归 0 → 1 真 pending; 次轮 cron 触发点 woclaw UNLOCK 后推 woclaw 候选)
+
 ## 🩺 03:43 轮 (2026-06-19) — llm-benchmark (06-09 调研立项流程触发, 双项目候选池 0, llm-benchmark 优先)
 
 **轮转依据**: 当前 03:43 cron 触发: woclaw 0.28h 距上次 commit < 1h **LOCKED**, llm-benchmark 2.51h 距上次 commit ≥ 1h **UNLOCKED**; 两项目上次 commit 距本轮均 LOCKED/UNLOCKED 不同; 候选池均 0 (woclaw 02:03 Fable 5 4 件套 ✅ 03:23 完成 + llm-benchmark 06:23 aa_coding_agent_bench_v1 + aa_tts_leaderboard_v1 ✅ 06:23 完成 → 候选池 0+0); 06-09 调研立项流程触发条件具备, 按规则"06-04 1h 规则不适用 → 06-09 调研流程 + llm-benchmark 优先" → 走 双项目市场调研 + 各立 1 项 + commit/push 流程; 总 5min 硬上限 (调研 < 3min + 立项 < 2min)。
