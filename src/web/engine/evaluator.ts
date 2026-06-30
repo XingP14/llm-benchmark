@@ -25,7 +25,7 @@ import { PythonSandbox } from '../../sandbox/python-sandbox';
 
 export function logEvaluationError(message: string, err: unknown): void {
   if (process.env.NODE_ENV !== 'test' && process.env.JEST_WORKER_ID === undefined) {
-    console.error(message, err);
+    console.error(message, errorMessage(err));
   }
 }
 
