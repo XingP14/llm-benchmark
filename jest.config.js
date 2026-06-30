@@ -22,6 +22,7 @@ module.exports = {
     // tested modules (每个目录/文件都有对应 *.test.ts)
     'src/adapters/**/*.ts',
     'src/core/reporter.ts',
+    'src/core/scorer.ts',
     
     'src/errors.ts',
     'src/sandbox/python-sandbox.ts',
