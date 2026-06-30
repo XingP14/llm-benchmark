@@ -1,6 +1,7 @@
 // src/sandbox/python-sandbox.ts - Python 沙盒执行器
 
 import { SandboxExecutor, ExecutionResult } from './executor';
+import { errorMessage } from '../errors';
 import { spawn } from 'child_process';
 
 export class PythonSandbox implements SandboxExecutor {
@@ -117,7 +118,7 @@ export class PythonSandbox implements SandboxExecutor {
       return {
         success: false,
         output: '',
-        error: String(err),
+        error: errorMessage(err),
         duration: Date.now() - start,
       };
     }
