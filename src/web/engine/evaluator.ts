@@ -311,7 +311,7 @@ export class EvaluatorEngine {
   /**
    * 代码评分
    */
-  private async scoreCoding(question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
+  private async scoreCoding(_question: BenchmarkQuestion, output: string): Promise<{ score: number }> {
     // 基本语法检查
     const hasDef = output.includes('def ');
     const hasReturn = output.includes('return') || output.includes('print');
