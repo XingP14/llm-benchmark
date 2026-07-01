@@ -29,19 +29,20 @@ describe('evaluator dispatchV050External helper (8-site dedupe)', () => {
     expect(matches!.length).toBe(1);
   });
 
-  it('helper signature canonical: 5 params (results, benchmarkName, cfg, defaultApiBase, fetcher)', () => {
+  it('helper signature canonical: 5 params (results, benchmarkName, cfg, defaultApiBase, fetcher) + cfg.type + fetcher dispatchType 4th arg (v0.5.0 step-v6.0-3 wire-up)', () => {
     const m = src.match(/private async dispatchV050External\(\s*([\s\S]*?)\): Promise<void>/);
     expect(m).not.toBeNull();
     const params = m![1];
     expect(params).toMatch(/results:\s*EvaluationResult\[\]/);
     expect(params).toMatch(/benchmarkName:\s*string/);
     expect(params).toMatch(/cfg:\s*\{[^}]*enabled\?:\s*boolean/);
+    expect(params).toMatch(/cfg:\s*\{[^}]*type\?:\s*string/); // 07-01 23:43 cron: type field wired into dispatch helper
     expect(params).toMatch(/cfg:\s*\{[^}]*api_base\?:\s*string/);
     expect(params).toMatch(/cfg:\s*\{[^}]*timeout_ms\?:\s*number/);
     expect(params).toMatch(/cfg:\s*\{[^}]*model_id\?:\s*string/);
     expect(params).toMatch(/cfg:[\s\S]*\|\s*undefined/); // cfg: { ... } | undefined
     expect(params).toMatch(/defaultApiBase:\s*string/);
-    expect(params).toMatch(/fetcher:\s*\(apiBase:\s*string,\s*model:\s*ModelConfig,\s*timeoutMs:\s*number\)\s*=>\s*Promise<QuestionScore>/);
+    expect(params).toMatch(/fetcher:\s*\(apiBase:\s*string,\s*model:\s*ModelConfig,\s*timeoutMs:\s*number,\s*dispatchType:\s*string\)\s*=>\s*Promise<QuestionScore>/);
   });
 
   it('helper body canonical: enabled guard + api_base ?? default + timeout_ms ?? 30000 + Promise.all + model_id filter + scores.push + log', () => {

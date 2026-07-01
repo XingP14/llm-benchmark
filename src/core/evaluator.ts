@@ -250,7 +250,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/terminal_bench/v2',
       (apiBase, model, timeoutMs) => {
         const tb = this.config._external_benchmarks_roadmap!.terminal_bench!;
-        return this.fetchTerminalBenchScore(apiBase, model, timeoutMs, tb.anchor_score, tb.subset ?? 'full');
+        return this.fetchTerminalBenchScore(apiBase, model, timeoutMs, tb.anchor_score, tb.subset ?? 'full', tb.type ?? 'agentic_coding');
       },
     );
 
@@ -265,7 +265,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/benchlm_agentic/v1',
       (apiBase, model, timeoutMs) => {
         const bla = this.config._external_benchmarks_roadmap!.benchlm_agentic!;
-        return this.fetchBenchlmAgenticScore(apiBase, model, timeoutMs, bla.anchor_score, bla.native_evals ?? false, bla.subset ?? 'all');
+        return this.fetchBenchlmAgenticScore(apiBase, model, timeoutMs, bla.anchor_score, bla.native_evals ?? false, bla.subset ?? 'all', bla.type ?? 'agentic_fullstack');
       },
     );
 
@@ -280,7 +280,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/swe_bench_pro/v1',
       (apiBase, model, timeoutMs) => {
         const sbp = this.config._external_benchmarks_roadmap!.swe_bench_pro!;
-        return this.fetchSweBenchProScore(apiBase, model, timeoutMs, sbp.anchor_score, sbp.subset ?? 'verified', sbp.agentic_mode !== false);
+        return this.fetchSweBenchProScore(apiBase, model, timeoutMs, sbp.anchor_score, sbp.subset ?? 'verified', sbp.agentic_mode !== false, sbp.type ?? 'agentic_swe');
       },
     );
 
@@ -303,6 +303,7 @@ export class Evaluator {
           pas.agentic_benchmark ?? 'swe_bench_pro',
           pas.pass_fail_weight ?? 0.7,
           pas.process_weight ?? 0.3,
+          pas.type ?? 'process_agentic',
         );
       },
     );
@@ -318,7 +319,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/long_context_cluster/v1',
       (apiBase, model, timeoutMs) => {
         const lcc = this.config._external_benchmarks_roadmap!.long_context_cluster!;
-        return this.fetchLongContextClusterScore(apiBase, model, timeoutMs, lcc.anchor_score, lcc.subset ?? 'all', lcc.tasks_total ?? 62);
+        return this.fetchLongContextClusterScore(apiBase, model, timeoutMs, lcc.anchor_score, lcc.subset ?? 'all', lcc.tasks_total ?? 62, lcc.type ?? 'long_context_retrieval');
       },
     );
 
@@ -598,7 +599,8 @@ export class Evaluator {
     model: ModelConfig,
     timeoutMs: number,
     anchorScore?: number,
-    subset: string = 'full'
+    subset: string = 'full',
+    dispatchType: string = 'agentic_coding'
   ): Promise<QuestionScore> {
     const questionId = `terminal_bench_${model.name}`;
     const basePayload = {
@@ -606,6 +608,7 @@ export class Evaluator {
       model_id: model.model ?? model.name,
       timeout_ms: timeoutMs,
       subset,
+      dispatch_type: dispatchType,
     };
     try {
       const controller = new AbortController();
@@ -687,7 +690,8 @@ export class Evaluator {
     timeoutMs: number,
     anchorScore?: number,
     nativeEvals: boolean = false,
-    subset: 'all' | 'design2code_only' | 'vision2web_only' | 'native_evals_only' = 'all'
+    subset: 'all' | 'design2code_only' | 'vision2web_only' | 'native_evals_only' = 'all',
+    dispatchType: string = 'agentic_fullstack'
   ): Promise<QuestionScore> {
     const questionId = `benchlm_agentic_${model.name}`;
     const basePayload = {
@@ -696,6 +700,7 @@ export class Evaluator {
       timeout_ms: timeoutMs,
       native_evals: nativeEvals,
       subset, // 06-20 03:03 cron: 与 terminal_bench.subset / swe_bench_pro.subset / long_context_cluster.subset / cyberseceval3.risk_categories 对位
+      dispatch_type: dispatchType,
     };
     try {
       const controller = new AbortController();
@@ -786,7 +791,8 @@ export class Evaluator {
     timeoutMs: number,
     anchorScore?: number,
     subset: string = 'verified',
-    agenticMode: boolean = true
+    agenticMode: boolean = true,
+    dispatchType: string = 'agentic_swe'
   ): Promise<QuestionScore> {
     const questionId = `swe_bench_pro_${model.name}`;
     const basePayload = {
@@ -795,6 +801,7 @@ export class Evaluator {
       timeout_ms: timeoutMs,
       subset,
       agentic_mode: agenticMode,
+      dispatch_type: dispatchType,
     };
     try {
       const controller = new AbortController();
@@ -890,7 +897,8 @@ export class Evaluator {
     mode: string = 'all',
     agenticBenchmark: string = 'swe_bench_pro',
     passFailWeight: number = 0.7,
-    processWeight: number = 0.3
+    processWeight: number = 0.3,
+    dispatchType: string = 'process_agentic'
   ): Promise<QuestionScore> {
     const questionId = `process_aware_scoring_${model.name}`;
     const basePayload = {
@@ -902,6 +910,7 @@ export class Evaluator {
       pass_fail_weight: passFailWeight,
       process_weight: processWeight,
       timeout_ms: timeoutMs,
+      dispatch_type: dispatchType,
     };
     try {
       const controller = new AbortController();
@@ -997,7 +1006,8 @@ export class Evaluator {
     timeoutMs: number,
     anchorScore?: number,
     subset: string = 'all',
-    tasksTotal: number = 62
+    tasksTotal: number = 62,
+    dispatchType: string = 'long_context_retrieval'
   ): Promise<QuestionScore> {
     const questionId = `long_context_cluster_${model.name}`;
     const basePayload = {
@@ -1006,6 +1016,7 @@ export class Evaluator {
       subset,
       tasks_total: tasksTotal,
       timeout_ms: timeoutMs,
+      dispatch_type: dispatchType,
     };
     try {
       const controller = new AbortController();
@@ -1282,9 +1293,9 @@ export class Evaluator {
   private async dispatchV050External(
     results: EvaluationResult[],
     benchmarkName: string,
-    cfg: { enabled?: boolean; api_base?: string; timeout_ms?: number; model_id?: string } | undefined,
+    cfg: { enabled?: boolean; type?: string; api_base?: string; timeout_ms?: number; model_id?: string } | undefined,
     defaultApiBase: string,
-    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number) => Promise<QuestionScore>,
+    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: string) => Promise<QuestionScore>,
   ): Promise<void> {
     if (!cfg?.enabled) return;
     const apiBase = cfg.api_base ?? defaultApiBase;
@@ -1294,7 +1305,7 @@ export class Evaluator {
         if (cfg.model_id && result.model.model !== cfg.model_id && result.modelName !== cfg.model_id) {
           return;
         }
-        const score = await fetcher(apiBase, result.model, timeoutMs);
+        const score = await fetcher(apiBase, result.model, timeoutMs, cfg?.type ?? "agentic_coding");
         result.scores.push(score);
         log(`  [${result.modelName}] ${benchmarkName} score: ${score.score} (${score.detail ?? 'no detail'})`);
       })
