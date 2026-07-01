@@ -61,6 +61,60 @@ export function getDimCell(dimensions: DimensionScore | undefined, key: keyof Di
 }
 
 /**
+ * v0.6.0 step-v6.0-4 helper: 从 EvaluationResult.dimensions 取一个维度的 bootstrap 95% CI
+ * (mean / std / ciLower / ciUpper / n / nResamples)。dim 缺失 / ci 未计算 (v0.4 早期数据或
+ * score 数为 0 时 evaluator.ts 故意不写入 ci 字段) 时返回 null。
+ *
+ * 这是 Reporter 各报表 (md / html td / html detail-card / csv) 唯一需要存在性 + CI 字段
+ * 判定逻辑, 集中实现避免 5 处 inline `dim.ci && dim.ci.n > 0` 副本产生漂移 (parallels 06-20
+ * cron getDimCell 提取 + 06-29 03:23 cron getDimValue / getDimCell refactor 同源)。需要显示
+ * 文本请用 getDimCiCell; 需要原始 Bootstrap95CI 对象 (例如未来机器读 JSON 报表) 请用
+ * getDimCi。
+ *
+ * 注意: 与 getDimValue 不同 — getDimValue 只看 average 是否 number; getDimCi 要求 ci 字段
+ * 存在 + n > 0 (避免 std=NaN / CI=[0,0] 退化值进报表)。这是与 02:43 cron step-v6.0-4 立项
+ * JSDoc 一致的事实契约: "n=1 时降级为单点 mean ± 0 [mean, mean]", 由 reporter 渲染层 (后续
+ * step-v6.0-4 step2/3) 负责。
+ */
+export interface ReporterDimCi {
+  mean: number;
+  std: number;
+  ciLower: number;
+  ciUpper: number;
+  n: number;
+  nResamples: number;
+}
+
+export function getDimCi(
+  dimensions: DimensionScore | undefined,
+  key: keyof DimensionScore,
+): ReporterDimCi | null {
+  const dim = dimensions?.[key];
+  if (!dim || !dim.ci || typeof dim.ci.n !== 'number' || dim.ci.n <= 0) return null;
+  return {
+    mean: dim.ci.mean,
+    std: dim.ci.std,
+    ciLower: dim.ci.ciLower,
+    ciUpper: dim.ci.ciUpper,
+    n: dim.ci.n,
+    nResamples: dim.ci.nResamples,
+  };
+}
+
+/**
+ * v0.6.0 step-v6.0-4 helper: 取一个维度的 CI 展示字符串 "mean ±std [ciLower, ciUpper]"
+ * (各保留 1 位小数)。dim 缺失 / ci 未计算 / n=0 时返回 '-'。这是 Reporter 与未来 console
+ * 报表各入口共享同一份事实的入口 (parallels getDimCell / getDimValue 模式)。
+ *
+ * 默认精度 1 位小数 — 与 getDimCell 一致, 报表层 (md/html/csv) 风格统一。
+ */
+export function getDimCiCell(dimensions: DimensionScore | undefined, key: keyof DimensionScore): string {
+  const ci = getDimCi(dimensions, key);
+  if (ci === null) return '-';
+  return `${ci.mean.toFixed(1)} ±${ci.std.toFixed(1)} [${ci.ciLower.toFixed(1)}, ${ci.ciUpper.toFixed(1)}]`;
+}
+
+/**
  * 报告生成器 - 生成可视化对比报告
  */
 export class Reporter {
