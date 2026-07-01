@@ -146,12 +146,16 @@ export interface DimensionScore {
     count: number;
     average: number;
     details: Record<string, number>;
+    /** v0.6.0+ (optional) bootstrap 95% CI over per-question scores (via bootstrap95CI helper in core/evaluator.ts); absent when 0 scores */
+    ci?: { mean: number; std: number; ciLower: number; ciUpper: number; n: number; nResamples: number };
   };
   coding: {
     total: number;
     count: number;
     average: number;
     details: Record<string, number>;
+    /** v0.6.0+ (optional) bootstrap 95% CI over per-question scores (via bootstrap95CI helper in core/evaluator.ts); absent when 0 scores */
+    ci?: { mean: number; std: number; ciLower: number; ciUpper: number; n: number; nResamples: number };
   };
   /** v0.4.0+ 新增：工具调用评分汇总（可选，启用 function_calling 评测时存在） */
   function_calling?: {
@@ -159,6 +163,8 @@ export interface DimensionScore {
     count: number;
     average: number;
     details: Record<string, number>;
+    /** v0.6.0+ (optional) bootstrap 95% CI over per-question scores (via bootstrap95CI helper in core/evaluator.ts); absent when 0 scores */
+    ci?: { mean: number; std: number; ciLower: number; ciUpper: number; n: number; nResamples: number };
   };
   /** v0.4.0+ 新增：长上下文理解评分汇总（可选，启用 long_context 评测时存在） */
   long_context?: {
@@ -166,6 +172,8 @@ export interface DimensionScore {
     count: number;
     average: number;
     details: Record<string, number>;
+    /** v0.6.0+ (optional) bootstrap 95% CI over per-question scores (via bootstrap95CI helper in core/evaluator.ts); absent when 0 scores */
+    ci?: { mean: number; std: number; ciLower: number; ciUpper: number; n: number; nResamples: number };
   };
   /** v0.4.0+ 新增：多轮对话一致性评分汇总（可选，启用 multi_turn 评测时存在） */
   multi_turn?: {
@@ -173,6 +181,8 @@ export interface DimensionScore {
     count: number;
     average: number;
     details: Record<string, number>;
+    /** v0.6.0+ (optional) bootstrap 95% CI over per-question scores (via bootstrap95CI helper in core/evaluator.ts); absent when 0 scores */
+    ci?: { mean: number; std: number; ciLower: number; ciUpper: number; n: number; nResamples: number };
   };
 }
 

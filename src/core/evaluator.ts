@@ -1208,74 +1208,48 @@ export class Evaluator {
   }
 
   private calculateDimensions(scores: QuestionScore[]): DimensionScore {
-    const dialogueScores = scores.filter((s) => s.dimension === 'dialogue');
-    const codingScores = scores.filter((s) => s.dimension === 'coding');
-    const fcScores = scores.filter((s) => s.dimension === 'function_calling');
-    const lcScores = scores.filter((s) => s.dimension === 'long_context');
-    const mtScores = scores.filter((s) => s.dimension === 'multi_turn');
+    const dimScores = (dim: string) =>
+      scores.filter((s) => s.dimension === dim);
 
     return {
-      dialogue: {
-        total: dialogueScores.reduce((sum, s) => sum + s.score, 0),
-        count: dialogueScores.length,
-        average:
-          dialogueScores.length > 0
-            ? Math.round(
-                dialogueScores.reduce((sum, s) => sum + s.score, 0) /
-                  dialogueScores.length
-              )
-            : 0,
-        details: this.calculateCategoryDetails(dialogueScores),
-      },
-      coding: {
-        total: codingScores.reduce((sum, s) => sum + s.score, 0),
-        count: codingScores.length,
-        average:
-          codingScores.length > 0
-            ? Math.round(
-                codingScores.reduce((sum, s) => sum + s.score, 0) /
-                  codingScores.length
-              )
-            : 0,
-        details: this.calculateCategoryDetails(codingScores),
-      },
-      function_calling: {
-        total: fcScores.reduce((sum, s) => sum + s.score, 0),
-        count: fcScores.length,
-        average:
-          fcScores.length > 0
-            ? Math.round(
-                fcScores.reduce((sum, s) => sum + s.score, 0) /
-                  fcScores.length
-              )
-            : 0,
-        details: this.calculateCategoryDetails(fcScores),
-      },
-      long_context: {
-        total: lcScores.reduce((sum, s) => sum + s.score, 0),
-        count: lcScores.length,
-        average:
-          lcScores.length > 0
-            ? Math.round(
-                lcScores.reduce((sum, s) => sum + s.score, 0) /
-                  lcScores.length
-              )
-            : 0,
-        details: this.calculateCategoryDetails(lcScores),
-      },
-      multi_turn: {
-        total: mtScores.reduce((sum, s) => sum + s.score, 0),
-        count: mtScores.length,
-        average:
-          mtScores.length > 0
-            ? Math.round(
-                mtScores.reduce((sum, s) => sum + s.score, 0) /
-                  mtScores.length
-              )
-            : 0,
-        details: this.calculateCategoryDetails(mtScores),
-      },
+      dialogue: this.buildDimEntry(dimScores('dialogue')),
+      coding: this.buildDimEntry(dimScores('coding')),
+      function_calling: this.buildDimEntry(dimScores('function_calling')),
+      long_context: this.buildDimEntry(dimScores('long_context')),
+      multi_turn: this.buildDimEntry(dimScores('multi_turn')),
     };
+  }
+
+  /**
+   * v0.6.0 step-v6.0-2 caller: 5-dim buildDimEntry helper (parallels 9e8f7ff dispatchV050External +
+   * 14c64d4 webScorer + 2bb18e4 avgOf + 6af9f47 5-dim console-error 漏更 cleanup chain) —
+   * 5 个 dim entry (dialogue / coding / function_calling / long_context / multi_turn)
+   * 共享同一套 (total / count / average / details) 4 字段构造, 抽成 1 个 helper 让 calculateDimensions
+   * 从 73 行降到 11 行 (-62), 同时挂上 bootstrap95CI 真输出 (b3cb35e helper 已有但 22:44 漏更
+   * calculateDimensions 没接线). 07-01 cron 把 helper 实际填入 ci 字段 (5 维都接, n>=2 才填, 空 dim 不挂).
+   *
+   * 输出字段:
+   * - total / count / average: 与 v0.5.0 完全一致 (byte-identical contract)
+   * - details: calculateCategoryDetails 保持原行为
+   * - ci (v0.6.0+ optional): bootstrap95CI over per-question scores, n>=2 时挂上, n<2 时省略
+   *   (跟 type stub `ci?: {...}` 兼容 — 0/1 维 5 字段齐但 ci undefined, 不让 reporter 跑空白 CI)
+   */
+  private buildDimEntry(dimScores: QuestionScore[]): DimensionScore['dialogue'] {
+    const total = dimScores.reduce((sum, s) => sum + s.score, 0);
+    const count = dimScores.length;
+    const average =
+      count > 0 ? Math.round(total / count) : 0;
+    const details = this.calculateCategoryDetails(dimScores);
+    const entry: DimensionScore['dialogue'] = {
+      total,
+      count,
+      average,
+      details,
+    };
+    if (count >= 2) {
+      entry.ci = bootstrap95CI(dimScores.map((s) => s.score));
+    }
+    return entry;
   }
 
   private calculateCategoryDetails(
