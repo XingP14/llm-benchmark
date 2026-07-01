@@ -1,5 +1,32 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 07-02 00:23 轮 (2026-07-02) — llm-benchmark (V3 tick, 候选池留有 hint 「修 v0.5.0 type 段 5 处 stub 真实化」 接入部分未完成, 6d71bef 闭合)
+
+- **触发**: 07-02 00:23 Asia/Shanghai cron tick (V3 节奏 27 tick/天, 夜间 22-07 时段内), 时间窗口 22:00-07:00 内合法。
+- **轮转检查**:
+  - woclaw: 07-01 23:25 8ca57ed → 00:23 距 ~57min, **LOCKED** (< 1h gate)
+  - llm-benchmark: 07-01 22:47 2b8f127 → 00:23 距 ~1h36min, **UNLOCKED**; git status --short 有 unstaged 变化 (src/core/evaluator.ts M + tests/evaluator-dispatch-v050-external-helper.test.ts M + tests/evaluator-v050-dispatch-type-wiring.test.ts 未跟踪)
+- **候选池状态 (07-02 00:23)**:
+  - woclaw: 0 (sync-skill-frontmatter ✓ + docs/ci-failures.md 残留 ✓ 8ca57ed + encryption-at-rest 12/12 ✓ + 7 子包 LICENSE parity ✓ f6d998e + vscode EventEmitter.fire() args ✓ + npm publish 0.4.0 ✓)
+  - llm-benchmark: 0 项真待推 — 但 hint 「修 v0.5.0 type 段 5 处 stub 真实化」 原始记载「已 done 06-30 06:13, 5/5 type 字段已加」, 以为 0ffb136 类型段添加 + 5b0cc3a surface type label 已足够。本 tick 复查发现: 未接入 dispatchV050External helper cfg.type 字段 + 5 fetcher 未传 dispatchType 4th arg + 5 basePayload 未加 dispatch_type 字段 —“ type 在 summary 里出现但未到达远程服务端” 是帮助出现但未接入的漏更模式。
+- **判定**: git status 有 unstaged 变更 (代表上轮 23:23 tick 准备了接入但未 commit) + llm-benchmark UNLOCKED, 走 hint 中未完成部分 —“ dispatch_helper cfg.type + 5 fetcher 签名 + 5 basePayload” 三重接入。预计 5min 内 1 轮完成。
+
+## **处理: llm-benchmark**
+
+- **feat(evaluator): wire type field into dispatchV050External helper + 5 fetcher payloads (v0.5.0 step-v6.0-3 dispatch_type)** (6d71bef)
+- rCAUSE: hint「修 v0.5.0 type 段 5 处 stub 真实化」列为 06-30 06:13 已 done, 但本 tick 复查发现仅完成了表层修改: 0ffb136 给 v0.5 type 段 8/8 加 type? 字段, 5b0cc3a 在 dispatch summary 里 surface type label。**重大漏更**: dispatchV050External helper (9e8f7ff 提取) cfg 参数类型笼不含 type? 字段 → 5 个 fetcher closure 都未接收 dispatchType 参数 → 5 basePayload POST body 都未发 dispatch_type 字段。表层 surface 是「帮助引入但未接入」的经典漏更模式 (与 743e79b catch(err:unknown) + d9ffc19 errorMessage + 9fa8bb5 extractToolCall + 6af9f47 console.error 5-dim 同源) —— type 在 summary 出现但未到达远程服务端, 导致 v0.5 类型与远程 benchmark API 头对齐偏差 8 个。
+- rFIX: (1) `src/core/evaluator.ts` dispatchV050External helper cfg 类型加宽 `type?: string` 字段 + fetcher 签名加 4th `dispatchType: string` 参数 + helper body 调用 `fetcher(apiBase, result.model, timeoutMs, cfg?.type ?? "agentic_coding")`; (2) 5 个调度点 (terminal_bench / benchlm_agentic / swe_bench_pro / process_aware_scoring / long_context_cluster) 传 `cfg.type ?? "<category>"` 作为最后参数; (3) 5 个 fetcher 签名全部加 `dispatchType: string = "<category>"` 最后参数 (每 benchmark 默认不同: agentic_coding / agentic_fullstack / agentic_swe / process_agentic / long_context_retrieval); (4) 5 basePayload POST body 全部加 `dispatch_type: dispatchType` 字段发远程服务端。新增 `tests/evaluator-v050-dispatch-type-wiring.test.ts` 7 个回归钉 (中间 5 个 it.each 动态扩展到 15 个子无难): (1) file size 1373..1500 lines floor/ceiling, (2) helper cfg type 含 type?, (3) helper fetcher 签名含 4th dispatchType, (4) helper body 调用 fetcher(..., cfg?.type ?? "agentic_coding"), (5a-e) 5 fetcher 各自声明 dispatchType 参数默认值, (6a-e) 5 fetcher basePayload 含 dispatch_type, (7a-e) 5 调度点传 cfg.type ?? <fallback>。同时更新 `tests/evaluator-dispatch-v050-external-helper.test.ts` 的 signature canonical test 加 cfg.type? + fetcher dispatchType 4th arg 断言。
+- **验证**:
+  - watchdog check llm-benchmark PASS (feat(evaluator) 真实代码 任何时间 ALLOW)
+  - npx tsc --noEmit clean
+  - npx jest 三套针 34/34 PASS (incl new 7 + existing 8 helper + existing 7 buildDimEntry)
+  - npx jest --runInBand 全量 34 套 / 389 测试 PASS (从 33/370 +1 套 +19 测试)
+  - npx jest --runInBand --coverage 阈值全过 (branches 70 / funcs 85 / lines 90 / stmts 90)
+  - git push 成功 b3cb35e..6d71bef master → master
+- **价值**: 闭合 hint「修 v0.5.0 type 段 5 处 stub 真实化」被遗漏的接入部分 (type 从 cfg 中间传递达远程 benchmark API 不只是 summary 表层)。与 5b0cc3a surface + 9e8f7ff helper 提取 + 0ffb136 8/8 type field 完成「帮助引入 + 调度接收 + 调度传递 + payload 发送」四重闭环, 后续 reporter.ts 可接 5-dim dispatch_type 渲染到 Markdown/HTML/CSV 报表 (但 v0.6 reporter.ts 改造是大改, 不在 07-02 00:23 tick 范围, 交给后续轮转)。ROADMAP next: step-v6.0-3 (本轮完成)。
+- **剩余**: 0 (hint「修 v0.5.0 type 段 5 处 stub 真实化」现已完全完成 5 处 type 字段接入 + dispatch helper cfg.type 接收 + 5 fetcher payload dispatch_type 发送)
+- **下次轮转**: W→L 序列 → 该轮 picked=llm-benchmark, 本轮推进 hint 推进项 + 关闭了, 后续看 woclaw 8ca57ed 是否 UNLOCK; 如下一轮 cron woclaw UNLOCK 则走 woclaw, 否则按 L→W 轮到后续 cron tick 重评。
+
 
 ## 🩺 07-01 06:23 轮 (2026-07-01) — llm-benchmark (V3 tick, 候选池 0 + 距 b4e0439 < 1h, 06-09 调研立项流程触发, llm-benchmark 优先)
 
