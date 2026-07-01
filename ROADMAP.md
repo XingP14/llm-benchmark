@@ -1,5 +1,23 @@
 # LLM-Benchmark 路线图 / Roadmap
 
+## 🩺 07-02 02:43 轮 (2026-07-02) — llm-benchmark (V3 tick, 06-09 调研立项流程触发, 双项目 LOCKED + 双候选池 0, llm-benchmark 优先 docs(roadmap))
+
+- **触发**: 07-02 02:43 Asia/Shanghai cron tick (V3 节奏 27 tick/天, 夜间 22-07 时段内), 时间窗口 22:00-07:00 内合法.
+- **轮转检查**:
+  - woclaw: 07-02 01:45 c592110 → 02:43 距 ~58min, **LOCKED** (< 1h gate)
+  - llm-benchmark: 07-02 02:08 5b6170b → 02:43 距 ~35min, **LOCKED** (< 1h gate)
+- **候选池状态 (07-02 02:43)**:
+  - woclaw: 0 (sync-skill-frontmatter.mjs ✓ + docs/ci-failures.md 残留 ✓ 8ca57ed + encryption-at-rest 12/12 ✓ + 7 子包 LICENSE parity ✓ f6d998e + vscode EventEmitter.fire() args ✓ + npm publish 0.4.0 ✓ — 全部 done)
+  - llm-benchmark: 0 (v0.5.0 type 段 5 处 stub 真实化 ✅ 6d71bef (dispatch_helper cfg.type + 5 fetcher payload dispatch_type) + tsc 残留 clean ✅ + coverage 阈值 ✅ + Docker workflow concurrency ✅ + reporter 5-dim 默认 comment ✅ 6af9f47/5b6170b + npm publish 0.4.0 ✅ + CI 24h GREEN — 全部 done, 候选池 0)
+- **判定**: 双 LOCKED + 双候选池 0 → 06-09 调研立项流程触发, 按规则"06-09 调研流程 + llm-benchmark 优先" → 走 llm-benchmark 调研 + 立 1 项 step-v6.0-4.
+- **调研 (1min)**: 06-19 ROADMAP evaluator.ts run() JSDoc 标注 v0.6.0 三大主战场 (a) v0.5→v0.6 real fetch 扩展 / (b) v0.6 web harness multimodal real fetch / (c) v0.6 confidence interval bootstrap 95% CI 真输出. 06-19 ROADMAP 立的 step-v6.0-1/2/3 三步: (1) step-v6.0-1 (8769f27) v0.6.0 type 段补 3 项 v0.5 stub → real fetch dispatch (lm_eval_task_conflict_resolver_real_v1 / livebench_2026_h1_quarterly_v3_real_fetch_v1 / aa_stirrup_agent_framework_real_fetch_v1); (2) step-v6.0-2 (b3cb35e) bootstrap95CI helper + Bootstrap95CI interface (6 fields) + 15 回归测试; (3) step-v6.0-3 (6d71bef) 闭合 hint「修 v0.5.0 type 段 5 处 stub 真实化」被遗漏的接入部分 (dispatchV050External helper cfg.type? + 5 fetcher dispatchType 4th arg + 5 basePayload dispatch_type POST 字段), 形成"helper 引入 + 调度接收 + 调度传递 + payload 发送"四重闭环. **本轮 step-v6.0-4 锚 v0.6 主战场 (c) 报表层闭环**: bootstrap95CI helper 已就绪 + 5 fetcher dispatch_type payload 已发远程服务端, 但 **reporter.ts 5-dim Markdown/HTML/CSV 报表未渲染 ci_lower/ci_upper/dispatch_type 字段** — data 在 evaluator.ts 已计算但报表层未消费, 表层展示仍是单点 mean (与 6af9f47 5-dim console-error 漏更模式同源, "helper 引入但调用点未迁移"). reporter.ts 361 行 5 个 dim × 3 报表 (Markdown overall ranking L95 + Markdown detail L106-110 + HTML 行 + CSV 列), 范围中等 (估 30-45min 跨 3-5 轮 cron), 不在 1 轮范围, **5min 内只立 next: + 详细步骤描述**.
+
+- **挑选立项 (docs(roadmap) only, 必含 'next: step-X.Y', 当日 ≤ 2 docs(roadmap) gate 已 1/2 (4b3cb66 01:23 已用 1/2 slot))**:
+  - `next: step-v6.0-4` — **v0.6.0 reporter.ts 5-dim 报表接 ci_lower/ci_upper/dispatch_type 渲染 (沿 6d71bef 5 fetcher dispatch_type payload + b3cb35e bootstrap95CI 闭环报表层)**. 范围: (1) `src/core/reporter.ts` `getDimValue` 加 ciLower/ciUpper 返回 (复用 buildDimEntry L1373-1380 ci?: Bootstrap95CI 数据); (2) `getDimCell` 渲染从单 `${avg}` → `${avg} ±${std} [${ciLower}, ${ciUpper}]` (n=1 时降级为单点); (3) Markdown overall ranking L95 + detail block L106-110 + HTML 行 + CSV 列 (4 处) 全部走 getDimCell 自动接 ci 字段; (4) dispatch_type label 接 5 fetcher payload (在结果维度里加 dispatch_type?: string 字段, 从 QuestionScore 透到 reporter, 5-dim 副标附 `(type=${dispatchType})`); (5) `tests/reporter-5dim-ci-dispatch-type-rendering.test.ts` ≥8 回归测试: getDimCell 5-dim 字符串格式 + n=1 降级 + ciLower/ciUpper 边界 + Markdown/HTML/CSV 4 处调用点 + dispatch_type 渲染 + types optional 字段 + bootstrap95CI 副作用 0 + tsc clean. 估 30-45min 跨 3-5 轮 cron, 5min 内**只立 next: + 详细步骤描述**, 等 ≥1h UNLOCK 后从步骤 1 (getDimValue ciLower/ciUpper 返回) 起逐步推. 价值: 闭合 v0.6.0 三大主战场 (c) confidence interval bootstrap 95% CI 的报表层 (从 evaluator helper 计算 → reporter 5-dim 渲染 → Markdown/HTML/CSV 报表每格附 `mean ± std [ci_lower, ci_upper]` + `(type=agentic_coding/agentic_fullstack/...)` 副标), 让 v0.6.0 决策前可直接读 95% CI 三角 + dispatch_type 维度验证 (沿 DigitalApplied 9 月文「confidence interval 是最被忽视的决策列」三警告 + 6d71bef dispatch_type 远程对齐闭环).
+
+- **遗留**: 0 (本轮 docs(roadmap) only, 立 next: step-v6.0-4, 等 ≥1h UNLOCK 后从步骤 1 (getDimValue ciLower/ciUpper 返回) 起逐步推; 当日 docs(roadmap) 1/2 已用 → 剩 1 slot; 当日真待推 0, 等 woclaw UNLOCK 后看 woclaw 是否也需走 06-09 调研)
+- **下次轮转**: W→L 序列 → **woclaw** (本轮 picked=llm-benchmark 立 next: step-v6.0-4, llm-benchmark 候选池 0 → 1 真 pending step-v6.0-4 步骤 1-5; 次轮 cron 触发点 woclaw 01:45 c592110 → 07-02 03:03 距 ~78min UNLOCKED, 可推 woclaw 候选; llm-benchmark 02:08 5b6170b → 03:03 距 ~55min LOCKED, 看 woclaw 进度; 若 woclaw UNLOCK 则走 woclaw, 否则按 L→W 轮到后续 cron tick 重评)
+
 ## 🩺 07-02 00:23 轮 (2026-07-02) — llm-benchmark (V3 tick, 候选池留有 hint 「修 v0.5.0 type 段 5 处 stub 真实化」 接入部分未完成, 6d71bef 闭合)
 
 - **触发**: 07-02 00:23 Asia/Shanghai cron tick (V3 节奏 27 tick/天, 夜间 22-07 时段内), 时间窗口 22:00-07:00 内合法。
