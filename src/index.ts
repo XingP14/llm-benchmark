@@ -264,6 +264,10 @@ function printSummary(results: EvaluationResult[]) {
 
   sorted.forEach((result, index) => {
     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
+    // 06-29 03:23 cron: printSummary 5-dim cell 走 getDimCell (display string),
+    // parallels 06-20 cron getDimCell extraction. 闭合第 5 处 inline
+    // `if (!dim || typeof dim.average !== 'number')` 副本 (printSummary 之前
+    // 直接读 result.dimensions?.[d.key].average ?? '-', 现统一走 helper)。
     const cells = [medal, result.modelName, `**${result.totalScore}**`, ...DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key))];
     console.log('| ' + cells.join(' | ') + ' |');
   });

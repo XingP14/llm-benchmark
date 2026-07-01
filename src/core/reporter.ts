@@ -92,6 +92,9 @@ export class Reporter {
 
     sorted.forEach((result, index) => {
       const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
+      // 06-29 03:23 cron: Markdown overall-ranking 5-dim cell 走 getDimCell (display
+      // string), parallels 06-20 cron getDimCell extraction. 闭合第 1 处 inline
+      // `if (!dim || typeof dim.average !== 'number')` 副本。
       const dimCells = DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key));
       md += `| ${medal} | ${result.modelName} | ${result.totalScore} | ${dimCells.join(' | ')} | ${(result.duration / 1000).toFixed(1)}s |\n`;
     });
@@ -103,8 +106,11 @@ export class Reporter {
     for (const result of results) {
       md += `### ${result.modelName}\n\n`;
       md += `- **总分**: ${result.totalScore}\n`;
-      // 5 维度概览（v0.4.0 起覆盖 5 维度：dialogue / coding 默认开启，
-      // function_calling / long_context / multi_turn 可选，未启用时填 -）
+      // 06-29 03:23 cron: Markdown detail block 5-dim cell 走 getDimCell (display
+      // string), parallels 06-20 cron getDimCell extraction. 闭合第 2 处 inline
+      // `if (!dim || typeof dim.average !== 'number')` 副本 (5 维度: dialogue /
+      // coding 默认开启, function_calling / long_context / multi_turn 可选,
+      // 未启用时填 '-' 由 helper 统一处理)。
       DIM_HEADERS.forEach((d) => {
         md += `- **${d.label}**: ${getDimCell(result.dimensions, d.key)}\n`;
       });

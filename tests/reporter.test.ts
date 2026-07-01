@@ -337,4 +337,106 @@ describe('Reporter', () => {
       expect(stripped).not.toMatch(/dim\s*&&\s*typeof\s+dim\.average\s+===\s+['"]number['"]/);
     });
   });
+
+  // 07-02 02:03 cron: 5-dim attribution-comment parity gate.
+  // Every helper call site for 5-dim tables (Reporter + index.ts printSummary) must
+  // carry a `06-29 03:23 cron` (or newer 06-29/06-30) attribution comment within
+  // the 6 lines preceding the helper call. Otherwise a future refactor could
+  // accidentally drop the refactor attribution from some sites while keeping it
+  // in others (parallels 5b0cc3a / 6af9f47 / 9fa8bb5 / 9e8f7ff «documented-but-
+  // partially-stale-attribution-comment» bug class). Strategy: read source files,
+  // find every `getDimCell(...dimensions` / `getDimValue(...dimensions` call, then
+  // assert each call site has a `06-29 03:23 cron` (or `06-29 02:04 cron`,
+  // 06-30 etc.) comment marker within 6 lines above the call.
+  describe('5-dim helper call site attribution parity (07-02 02:03 cron regression gate)', () => {
+    it('every getDimCell/getDimValue 5-dim call site has 06-29 cron attribution comment', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const reporterSrc = fs.readFileSync(
+        path.join(__dirname, '..', 'src', 'core', 'reporter.ts'),
+        'utf-8'
+      );
+      const indexSrc = fs.readFileSync(
+        path.join(__dirname, '..', 'src', 'index.ts'),
+        'utf-8'
+      );
+
+      // Find all `getDimCell(..., dimensions` and `getDimValue(..., dimensions` calls.
+      // Match the helper name + open-paren + lookbehind-style: scan all lines,
+      // collect (lineNumber, helperName, lineText) tuples.
+      const sites: { file: string; line: number; helper: string; text: string }[] = [];
+      const scanFile = (filePath: string, src: string): void => {
+        const lines = src.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          const t = lines[i];
+          const m = t.match(/\b(getDimCell|getDimValue)\s*\(/);
+          if (!m) continue;
+          // Skip helper definitions themselves (export function getDimCell/getDimValue)
+          if (/^export\s+function\s+/.test(t)) continue;
+          // Skip the import line (import { ... getDimCell ... } from ...)
+          if (/^import\s+\{/.test(t)) continue;
+          sites.push({
+            file: filePath,
+            line: i + 1,
+            helper: m[1],
+            text: t.trim(),
+          });
+        }
+      };
+      scanFile('src/core/reporter.ts', reporterSrc);
+      scanFile('src/index.ts', indexSrc);
+
+      const lines_by_file = new Map<string, string[]>();
+      lines_by_file.set('src/core/reporter.ts', reporterSrc.split('\n'));
+      lines_by_file.set('src/index.ts', indexSrc.split('\n'));
+
+      // Exclude calls that live INSIDE the helper bodies themselves (e.g.
+      // getDimCell body calls getDimValue). Those are internal helper composition,
+      // not 5-dim table call sites. Strategy: for each site, walk back to find
+      // the enclosing `export function <name>` (or `function <name>`) header;
+      // if the enclosing function is `getDimCell` or `getDimValue`, skip the site.
+      const filteredSites = sites.filter((site) => {
+        const lines = lines_by_file.get(site.file)!;
+        for (let i = site.line - 1; i >= 0; i--) {
+          const t = lines[i];
+          // Match top-level `export function <name>(...)` 
+          const fm = t.match(/^(export\s+)?function\s+(\w+)\s*\(/);
+          if (fm) {
+            return fm[2] !== 'getDimCell' && fm[2] !== 'getDimValue';
+          }
+          // Match class-static-method `static <name>(...)` — inside Reporter class
+          const sm = t.match(/^\s*static\s+(\w+)\s*\(/);
+          if (sm) {
+            return sm[1] !== 'getDimCell' && sm[1] !== 'getDimValue';
+          }
+        }
+        // No enclosing function/method found before file start — assume it's top-level
+        return true;
+      });
+
+      // We expect >= 6 5-dim helper call sites (5 in reporter.ts + >=1 in src/index.ts printSummary).
+      expect(filteredSites.length).toBeGreaterThanOrEqual(6);
+
+      // For each site, look at the 6 lines above and assert at least one contains
+      // a `06-29 03:23 cron` or `06-29 02:04 cron` or `06-29` attribution marker.
+      // We accept any `06-29 ... cron` because the refactor series ran on 06-29
+      // across multiple cron ticks (02:04 printBenchmarkSection, 03:23 reporter
+      // helpers). If we ever re-touch the helpers, future crons can update the
+      // attribution inline; the gate is about preventing silent drift.
+      const failures: string[] = [];
+      for (const site of filteredSites) {
+        const lines = lines_by_file.get(site.file)!;
+        const start = Math.max(0, site.line - 7); // 6 lines above + 1 buffer
+        const window = lines.slice(start, site.line).join('\n');
+        if (!/06-29[\s\S]*cron/i.test(window)) {
+          failures.push(
+            site.file + ':' + site.line + ' ' + site.helper + ' call has no 06-29 cron attribution in 6 lines above:\n' +
+              '    line: ' + site.text + '\n' +
+              '    window:\n' + window.split('\n').map((l) => '      ' + l).join('\n')
+          );
+        }
+      }
+      expect(failures).toEqual([]);
+    });
+  });
 });
