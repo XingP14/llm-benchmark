@@ -16,11 +16,11 @@ const EVALUATOR_PATH = path.resolve(__dirname, '../src/core/evaluator.ts');
 describe('evaluator dispatchV050External helper (8-site dedupe)', () => {
   const src = fs.readFileSync(EVALUATOR_PATH, 'utf-8');
 
-  it('file exists and is >= 1300 lines (post-refactor floor; pre was 1366, post is 1326, refactor should not collapse below 1300)', () => {
+  it('file size in expected range (1300..1420 — bootstrap95CI helper added 74 lines at v0.6.0 step-v6.0-2)', () => {
     expect(src).toBeDefined();
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1300);
-    expect(lineCount).toBeLessThan(1366); // refactor 净减 40 行
+    expect(lineCount).toBeLessThan(1420); // bootstrap95CI helper added 74 lines (v0.6.0 step-v6.0-2)
   });
 
   it('declares exactly one private async dispatchV050External helper', () => {

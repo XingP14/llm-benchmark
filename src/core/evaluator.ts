@@ -1327,3 +1327,73 @@ export class Evaluator {
     );
   }
 }
+
+/**
+ * v0.6.0 step-v6.0-2 helper: 5-dim bootstrap 95% confidence interval 真输出
+ * (沿 06-19 ROADMAP evaluator.ts run() JSDoc 段标注 "📊 Confidence interval: 当前 v0.4.0 输出为 mean,
+ *  未输出 std / 95% CI; 5 题维度 std 较大, 决策前建议至少跑 3 轮取均值"). step-v6.0-2 把该 JSDoc
+ * 升级为真输出, 让 v0.6.0 reporter 5-dim Markdown / HTML / CSV 报表每格附 mean ± std [ci_lower, ci_upper].
+ *
+ * 方法: percentile bootstrap (Efron 1979). 沿 scores 数组 n 个分数, 有放回抽样 nResamples 次
+ * 各抽样 n 个分数, 算每个 resample 的 mean, 排序后取 2.5%/97.5% 分位数作 ci_lower/ci_upper.
+ * std 用 Bessel-corrected sample standard deviation.
+ *
+ * 边界:
+ * - 空数组: 返回 { mean: 0, ciLower: 0, ciUpper: 0, std: 0, n: 0 } (0 维不炸)
+ * - 单元素 (n=1): std=0 (Bessel NaN 替成 0), CI = [mean, mean] (resample = 1 point always)
+ * - 全部同值 (e.g. [80,80,80]): std=0, CI = [80,80]
+ *
+ * 默认 nResamples=1000 (Efron & Tibshirani 1993 推荐 ≥1000 for 95% CI 稳定).
+ * rng 可注入用于 seed 复现测试, 默认 Math.random.
+ */
+export interface Bootstrap95CI {
+  mean: number;
+  std: number;
+  ciLower: number;
+  ciUpper: number;
+  n: number;
+  nResamples: number;
+}
+
+export function bootstrap95CI(
+  scores: number[],
+  nResamples = 1000,
+  rng: () => number = Math.random,
+): Bootstrap95CI {
+  const n = scores.length;
+  if (n === 0) {
+    return { mean: 0, std: 0, ciLower: 0, ciUpper: 0, n: 0, nResamples };
+  }
+  // mean
+  let sum = 0;
+  for (const s of scores) sum += s;
+  const mean = sum / n;
+  // std (Bessel-corrected, n-1; NaN 边界 → 0)
+  let std = 0;
+  if (n >= 2) {
+    let sqSum = 0;
+    for (const s of scores) {
+      const d = s - mean;
+      sqSum += d * d;
+    }
+    std = Math.sqrt(sqSum / (n - 1));
+  }
+  // bootstrap resample means
+  const means = new Float64Array(nResamples);
+  for (let r = 0; r < nResamples; r++) {
+    let resampleSum = 0;
+    for (let i = 0; i < n; i++) {
+      // 有放回抽样: idx = floor(rng() * n)  (rng() ∈ [0,1) 永远 idx < n)
+      const idx = Math.floor(rng() * n);
+      resampleSum += scores[idx];
+    }
+    means[r] = resampleSum / n;
+  }
+  // percentile CI: 排序后取 2.5% / 97.5% 分位 (linear interp 用 Math.round 等价 round-half-up index)
+  const sorted = Array.from(means).sort((a, b) => a - b);
+  const loIdx = Math.floor(0.025 * nResamples);
+  const hiIdx = Math.min(nResamples - 1, Math.floor(0.975 * nResamples));
+  const ciLower = sorted[loIdx];
+  const ciUpper = sorted[hiIdx];
+  return { mean, std, ciLower, ciUpper, n, nResamples };
+}
