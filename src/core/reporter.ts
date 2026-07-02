@@ -165,8 +165,16 @@ export class Reporter {
       // `if (!dim || typeof dim.average !== 'number')` 副本 (5 维度: dialogue /
       // coding 默认开启, function_calling / long_context / multi_turn 可选,
       // 未启用时填 '-' 由 helper 统一处理)。
+      // 06-29 03:23 cron: Markdown detail block 5-dim cell 走 getDimCell (display string),
+      // 闭合第 2 处 inline `if (!dim || typeof dim.average !== 'number')` 副本。
+      // v0.6.0 step-v6.0-4 (07-02 06:43 cron): ci 存在时补 95% CI sub-line。
+      // 06-29 03:23 cron (parallels 同上): getDimCell 缺失/n=0 → '-' 已守。
       DIM_HEADERS.forEach((d) => {
         md += `- **${d.label}**: ${getDimCell(result.dimensions, d.key)}\n`;
+        const ciCell = getDimCiCell(result.dimensions, d.key);
+        if (ciCell !== '-') {
+          md += `  - *95% CI*: ${ciCell}\n`;
+        }
       });
       md += `- **评测耗时**: ${(result.duration / 1000).toFixed(1)}s\n\n`;
 
@@ -235,6 +243,8 @@ export class Reporter {
         .detail-card { background: #f8f9fa; border-radius: 8px; padding: 20px; }
         .detail-card h4 { margin: 12px 0 6px; color: #2c3e50; font-size: 0.95em; }
         .dim-na { color: #95a5a6; font-size: 0.85em; }
+        /* v0.6.0 step-v6.0-4 (07-02 06:43 cron): 95% CI sub-line 灰小字体, 与 dim-na 区分 */
+        .dim-ci { color: #7f8c8d; font-size: 0.8em; margin: 2px 0 8px 0; padding-left: 0; }
     </style>
 </head>
 <body>
@@ -306,12 +316,18 @@ export class Reporter {
       // 06-29 03:23 cron: detail-card 5-dim 走 getDimCell, 闭合第 2 处 inline `if
       // (!dim || typeof dim.average !== 'number')` 副本; 维度缺失时 helper 已返回 '-'
       // 但 detail-card 需要 dim-na 包装以便 CSS dim-na 灰显, 故保留包装 (与 td 一致)。
+      // v0.6.0 step-v6.0-4 (07-02 06:43 cron): 紧跟 cell 附 95% CI sub-line (class
+      // 'dim-ci' 灰小字体), ci 缺失 / n=0 / dim 缺失时降级为 '-' (helper 统一守)。
       DIM_HEADERS.forEach((d) => {
         const cell = getDimCell(result.dimensions, d.key);
         if (cell === '-') {
           html += `<p><strong>${d.label}:</strong> <span class="dim-na">-</span></p>`;
         } else {
           html += `<p><strong>${d.label}:</strong> ${cell}</p>`;
+          const ciCell = getDimCiCell(result.dimensions, d.key);
+          if (ciCell !== '-') {
+            html += `<p class="dim-ci">95% CI: ${ciCell}</p>`;
+          }
         }
       });
 
@@ -350,7 +366,13 @@ export class Reporter {
 
     // 维度列：固定 5 列（function_calling / 长上下文 / 多轮 可选，没有时填 -）
     // 统一从 module-level DIM_HEADERS 取 key + label (csv 需英文 label)
-    const headers = ['rank', 'model', 'total', ...DIM_HEADERS.map((d) => String(d.key)), 'duration_s', 'questions'];
+    // v0.6.0 step-v6.0-4 (07-02 06:43 cron): CSV header 5-dim 主列 + 每 dim 加 2 列
+    // ci_lower / ci_upper (raw number 供 Excel/Sheets 二次分析, 缺失 → '-'), 与
+    // Markdown/HTML getDimCiCell 显示精度 (1 位小数) 区分 - CSV 需 machine 精度不能
+    // toFixed (06-29 03:23 cron 同源 getDimValue 选 raw number 不走 getDimCell)。
+    const dimKeys = DIM_HEADERS.map((d) => String(d.key));
+    const ciHeaders = DIM_HEADERS.flatMap((d) => [`${d.key}_ci_lower`, `${d.key}_ci_upper`]);
+    const headers = ['rank', 'model', 'total', ...dimKeys, ...ciHeaders, 'duration_s', 'questions'];
     const lines: string[] = [headers.join(',')];
 
     const escape = (v: unknown): string => {
@@ -374,6 +396,17 @@ export class Reporter {
           const avg = getDimValue(r.dimensions, key);
           return avg === null ? '-' : avg;
         }),
+        // 06-29 03:23 cron: 5-dim CSV cell 走 getDimValue (raw number) ?? '-', 闭合第 4 处
+        // inline `dim && typeof dim.average === 'number'` 副本; CSV 需原始 number 供
+        // Excel/Sheets 二次分析, 不能走 getDimCell (toFixed(1) 会丢精度)。
+        ...(DIM_HEADERS.flatMap(({ key }) => {
+          // v0.6.0 step-v6.0-4 (07-02 06:43 cron): 每 dim 加 2 列 ci_lower / ci_upper
+          // (raw number, 缺失 → '-')。getDimCi 已守 dimensions/ci/n<=0 三重 null 降级。
+          // 与 06-29 03:23 cron getDimValue 选 raw number 同源 — CSV 优先 machine 精度。
+          const ci = getDimCi(r.dimensions, key);
+          const out: (string | number)[] = ci === null ? ['-', '-'] : [ci.ciLower, ci.ciUpper];
+          return out;
+        }) as (string | number)[]),
         (r.duration / 1000).toFixed(2),
         r.scores.length,
       ];

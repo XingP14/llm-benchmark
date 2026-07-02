@@ -150,20 +150,33 @@ describe('Reporter', () => {
       expect(html).toContain('class="dim-na">-</span>');
     });
 
-    it('should generate CSV leaderboard', () => {
+    it('should generate CSV leaderboard (v0.6.0 step-v6.0-4 07-02 06:43 cron: +10 ci_lower/ci_upper cols)', () => {
       const csv = Reporter.generateCSV(mockResults);
       const lines = csv.trim().split('\n');
       // header + 2 model rows
       expect(lines.length).toBe(3);
-      // header check
+      // header check (flatMap interleave: dim_ci_lower, dim_ci_upper per dim)
       expect(lines[0]).toBe(
-        'rank,model,total,dialogue,coding,function_calling,long_context,multi_turn,duration_s,questions'
+        'rank,model,total,dialogue,coding,function_calling,long_context,multi_turn,dialogue_ci_lower,dialogue_ci_upper,coding_ci_lower,coding_ci_upper,function_calling_ci_lower,function_calling_ci_upper,long_context_ci_lower,long_context_ci_upper,multi_turn_ci_lower,multi_turn_ci_upper,duration_s,questions'
       );
       // rows sorted by total desc, both have totalScore
       expect(lines[1]).toMatch(/^1,Model [AB],\d+,/);
       expect(lines[2]).toMatch(/^2,Model [AB],\d+,/);
-      // optional dims (long_context / multi_turn) should be '-'
+      // optional dims (long_context / multi_turn) should be '-' in 主列 + '-' in ci 列
       expect(lines[1].split(',').slice(6, 8).every((v) => v === '-')).toBe(true);
+      // long_context / multi_turn ci 列 idx 14..17 应为 '-' (mockResults 无 ci 字段)
+      const cols1 = lines[1].split(',');
+      expect(cols1[14]).toBe('-');  // long_context_ci_lower
+      expect(cols1[15]).toBe('-');  // long_context_ci_upper
+      expect(cols1[16]).toBe('-');  // multi_turn_ci_lower
+      expect(cols1[17]).toBe('-');  // multi_turn_ci_upper
+      // dialogue / coding / function_calling ci 列同样为 '-' (mockResults 无 ci)
+      expect(cols1[8]).toBe('-');   // dialogue_ci_lower
+      expect(cols1[9]).toBe('-');   // dialogue_ci_upper
+      expect(cols1[10]).toBe('-');  // coding_ci_lower
+      expect(cols1[11]).toBe('-');  // coding_ci_upper
+      expect(cols1[12]).toBe('-');  // function_calling_ci_lower
+      expect(cols1[13]).toBe('-');  // function_calling_ci_upper
     });
 
     it('should escape commas/quotes/newlines in CSV model name', () => {
