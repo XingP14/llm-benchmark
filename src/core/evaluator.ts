@@ -629,6 +629,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `terminal_bench HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
         };
       }
       const data = (await resp.json()) as { task_pass_rate?: number; avg_duration_s?: number; trajectory_id?: string; error?: string };
@@ -640,6 +641,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `terminal_bench API error: ${data.error}`,
+          dispatchType,
         };
       }
       const passRate = typeof data.task_pass_rate === 'number' ? data.task_pass_rate : 0;
@@ -658,6 +660,7 @@ export class Evaluator {
         dimension: 'coding',
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
+        dispatchType,
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
@@ -671,6 +674,7 @@ export class Evaluator {
         detail: isTimeout
           ? `terminal_bench timeout after ${timeoutMs}ms`
           : `terminal_bench fetch error: ${msg.slice(0, 200)}`,
+        dispatchType,
       };
     }
   }
@@ -721,6 +725,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `benchlm_agentic HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
         };
       }
       const data = (await resp.json()) as { agentic_pass_rate?: number; design2code_score?: number; vision2web_score?: number; native_evals_score?: number; eval_id?: string; error?: string };
@@ -732,6 +737,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `benchlm_agentic API error: ${data.error}`,
+          dispatchType,
         };
       }
       const passRate = typeof data.agentic_pass_rate === 'number' ? data.agentic_pass_rate : 0;
@@ -759,6 +765,7 @@ export class Evaluator {
         dimension: 'coding',
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
+        dispatchType,
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
@@ -772,6 +779,7 @@ export class Evaluator {
         detail: isTimeout
           ? `benchlm_agentic timeout after ${timeoutMs}ms`
           : `benchlm_agentic fetch error: ${msg.slice(0, 200)}`,
+        dispatchType,
       };
     }
   }
@@ -822,6 +830,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `swe_bench_pro HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
         };
       }
       const data = (await resp.json()) as { pass_rate?: number; patch_score?: number; files_modified?: number; eval_id?: string; error?: string };
@@ -833,6 +842,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `swe_bench_pro API error: ${data.error}`,
+          dispatchType,
         };
       }
       const passRate = typeof data.pass_rate === 'number' ? data.pass_rate : 0;
@@ -861,6 +871,7 @@ export class Evaluator {
         dimension: 'coding',
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
+        dispatchType,
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
@@ -874,6 +885,7 @@ export class Evaluator {
         detail: isTimeout
           ? `swe_bench_pro timeout after ${timeoutMs}ms`
           : `swe_bench_pro fetch error: ${msg.slice(0, 200)}`,
+        dispatchType,
       };
     }
   }
@@ -931,6 +943,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `process_aware_scoring HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
         };
       }
       const data = (await resp.json()) as { process_score?: number; pass_rate?: number; commit_count?: number; test_run_count?: number; retry_count?: number; file_coverage?: number; trajectory_score?: number; eval_id?: string; error?: string };
@@ -942,6 +955,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `process_aware_scoring API error: ${data.error}`,
+          dispatchType,
         };
       }
       // 优先采用 server 端 process_score (0-100, 已复合 pass_fail_weight + process_weight); 缺失时 client-side 复合
@@ -974,6 +988,7 @@ export class Evaluator {
         dimension: 'coding',
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
+        dispatchType,
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
@@ -987,6 +1002,7 @@ export class Evaluator {
         detail: isTimeout
           ? `process_aware_scoring timeout after ${timeoutMs}ms`
           : `process_aware_scoring fetch error: ${msg.slice(0, 200)}`,
+        dispatchType,
       };
     }
   }
@@ -1037,6 +1053,7 @@ export class Evaluator {
           dimension: 'long_context',
           modelOutput: '',
           detail: `long_context_cluster HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
         };
       }
       const data = (await resp.json()) as { subset_pass_rate?: number; tokens_used?: number; task_count?: number; anchor_scores?: { longbench_v2?: number; babilong?: number; infinitebench?: number; phonebook?: number }; eval_id?: string; error?: string };
@@ -1048,6 +1065,7 @@ export class Evaluator {
           dimension: 'long_context',
           modelOutput: '',
           detail: `long_context_cluster API error: ${data.error}`,
+          dispatchType,
         };
       }
       const passRate = typeof data.subset_pass_rate === 'number' ? data.subset_pass_rate : 0;
@@ -1080,6 +1098,7 @@ export class Evaluator {
         dimension: 'long_context',
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
+        dispatchType,
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
@@ -1093,6 +1112,7 @@ export class Evaluator {
         detail: isTimeout
           ? `long_context_cluster timeout after ${timeoutMs}ms`
           : `long_context_cluster fetch error: ${msg.slice(0, 200)}`,
+        dispatchType,
       };
     }
   }
