@@ -1,0 +1,134 @@
+// tests/reporter-5dim-dispatch-type-cell.test.ts
+// v0.6.0 step-v6.0-4 step3 regression: pin dispatchType (type=...) 副标渲染 in Markdown / HTML
+// (parallels 06-30 06:43 cron getDimCi / getDimCiCell helper + 07-02 06:43 cron Markdown detail CI sub-line).
+// 数据层 EvaluationResult.dispatchType 已在 8f8f68c (06-30 03:23 cron) 加 optional field,
+// 本轮 step-v6.0-4 step3 闭环报表层 (Markdown overall-ranking model name + Markdown detail 总分 + HTML detail-card 总分).
+
+import { Reporter, getDispatchTypeCell } from '../src/core/reporter';
+import { EvaluationResult, DimensionScore, QuestionScore } from '../src/types';
+
+const baseDim = (avg: number) => ({
+  total: avg,
+  count: 1,
+  average: avg,
+  details: { test: avg },
+});
+
+// DimensionScore requires dialogue + coding mandatory; function_calling/long_context/multi_turn optional
+const mockDims = (dialogue = 85, coding = 75): DimensionScore => ({
+  dialogue: baseDim(dialogue) as DimensionScore['dialogue'],
+  coding: baseDim(coding) as DimensionScore['coding'],
+});
+
+const mockScore = (
+  modelName: string,
+  dimensions: DimensionScore,
+  total = 85,
+  dispatchType?: string,
+): EvaluationResult => ({
+  modelName,
+  model: { name: modelName, model: modelName } as any,
+  totalScore: total,
+  duration: 10000,
+  scores: [] as QuestionScore[],
+  dimensions,
+  timestamp: new Date('2026-07-03T03:23:00+08:00'),
+  ...(dispatchType !== undefined ? { dispatchType } : {}),
+});
+
+describe('reporter dispatchType cell helper (v0.6.0 step-v6.0-4 step3)', () => {
+  describe('getDispatchTypeCell helper', () => {
+    test('returns " (type=agentic_coding)" when dispatchType is agentic_coding', () => {
+      const r = mockScore('gpt-5.4', mockDims(), 85, 'agentic_coding');
+      expect(getDispatchTypeCell(r)).toBe(' (type=agentic_coding)');
+    });
+    test('returns null when dispatchType is undefined (v0.5 backward-compat)', () => {
+      const r = mockScore('gpt-5.4', mockDims());
+      expect(getDispatchTypeCell(r)).toBeNull();
+    });
+    test('returns null when result is undefined', () => {
+      expect(getDispatchTypeCell(undefined)).toBeNull();
+    });
+    test('returns null when dispatchType is empty string', () => {
+      const r = mockScore('gpt-5.4', mockDims(), 85, '');
+      expect(getDispatchTypeCell(r)).toBeNull();
+    });
+    test('returns the literal "(type=   )" when dispatchType is whitespace-only (caller-trimming not handled here)', () => {
+      // helper only treats length===0 as null; whitespace passes through verbatim
+      const r = mockScore('gpt-5.4', mockDims(), 85, '   ');
+      expect(getDispatchTypeCell(r)).toBe(' (type=   )');
+    });
+    test('5 v0.5 dispatch_type literals round-trip via helper', () => {
+      const literals = ['agentic_coding', 'agentic_fullstack', 'agentic_swe', 'process_agentic', 'long_context_retrieval'];
+      for (const lit of literals) {
+        const r = mockScore('m', mockDims(), 50, lit);
+        expect(getDispatchTypeCell(r)).toBe(` (type=${lit})`);
+      }
+    });
+  });
+
+  describe('Markdown overall-ranking dispatchType subtitle', () => {
+    test('model name carries (type=agentic_swe) when dispatchType set', () => {
+      const r = mockScore('claude-opus-4.8', mockDims(), 85, 'agentic_swe');
+      const md = Reporter.generateMarkdown([r]);
+      expect(md).toContain('claude-opus-4.8 (type=agentic_swe)');
+      expect(md).toMatch(/\| 🥇 \| claude-opus-4\.8 \(type=agentic_swe\) \| 85 \|/);
+    });
+    test('model name has no (type=...) suffix when dispatchType absent (v0.5 path)', () => {
+      const r = mockScore('gpt-5.4', mockDims());
+      const md = Reporter.generateMarkdown([r]);
+      expect(md).toContain('gpt-5.4');
+      expect(md).not.toContain('gpt-5.4 (type=');
+      expect(md).toMatch(/\| 🥇 \| gpt-5\.4 \| 85 \|/);
+    });
+  });
+
+  describe('Markdown detail block dispatchType subtitle', () => {
+    test('emits `- **dispatchType**: (type=process_agentic)` line after 总分 when dispatchType set', () => {
+      const r = mockScore('claude-fable-5', mockDims(), 85, 'process_agentic');
+      const md = Reporter.generateMarkdown([r]);
+      expect(md).toContain('- **dispatchType**: (type=process_agentic)');
+      const totIdx = md.indexOf('**总分**: 85');
+      const dtIdx = md.indexOf('**dispatchType**: (type=process_agentic)');
+      const dimIdx = md.indexOf('**对话能力**');
+      expect(totIdx).toBeGreaterThan(-1);
+      expect(dtIdx).toBeGreaterThan(totIdx);
+      expect(dimIdx).toBeGreaterThan(dtIdx);
+    });
+    test('omits dispatchType line when dispatchType absent (v0.5 backward-compat)', () => {
+      const r = mockScore('gpt-5.4', mockDims());
+      const md = Reporter.generateMarkdown([r]);
+      expect(md).not.toContain('**dispatchType**');
+    });
+  });
+
+  describe('HTML detail-card dispatchType subtitle', () => {
+    test('emits <p class="dispatch-type-tag"> (type=long_context_retrieval)</p> when dispatchType set', () => {
+      const r = mockScore('claude-mythos-5', mockDims(), 85, 'long_context_retrieval');
+      const html = Reporter.generateHTML([r]);
+      expect(html).toContain('<p class="dispatch-type-tag"> (type=long_context_retrieval)</p>');
+      const totIdx = html.indexOf('<strong>总分:</strong> 85');
+      const dtIdx = html.indexOf('<p class="dispatch-type-tag">');
+      const dimIdx = html.indexOf('<strong>对话能力:</strong>');
+      expect(totIdx).toBeGreaterThan(-1);
+      expect(dtIdx).toBeGreaterThan(totIdx);
+      expect(dimIdx).toBeGreaterThan(dtIdx);
+    });
+    test('omits dispatch-type-tag <p> when dispatchType absent (v0.5 backward-compat)', () => {
+      const r = mockScore('gpt-5.4', mockDims());
+      const html = Reporter.generateHTML([r]);
+      expect(html).not.toContain('dispatch-type-tag');
+    });
+  });
+
+  describe('CSV column unchanged (CSV stays machine-precision, no dispatchType text contamination)', () => {
+    test('CSV header unchanged + dispatchType does NOT leak into CSV cell values', () => {
+      const r = mockScore('claude-opus-4.8', mockDims(), 85, 'agentic_swe');
+      const csv = Reporter.generateCSV([r]);
+      const lines = csv.trim().split('\n');
+      expect(lines[0]).toBe('rank,model,total,dialogue,coding,function_calling,long_context,multi_turn,dialogue_ci_lower,dialogue_ci_upper,coding_ci_lower,coding_ci_upper,function_calling_ci_lower,function_calling_ci_upper,long_context_ci_lower,long_context_ci_upper,multi_turn_ci_lower,multi_turn_ci_upper,duration_s,questions');
+      expect(lines[1]).toContain('claude-opus-4.8,');
+      expect(lines[1]).not.toContain('(type=agentic_swe)');
+    });
+  });
+});

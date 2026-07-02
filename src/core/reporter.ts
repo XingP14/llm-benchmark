@@ -115,6 +115,25 @@ export function getDimCiCell(dimensions: DimensionScore | undefined, key: keyof 
 }
 
 /**
+ * v0.6.0 step-v6.0-4 helper: 从 EvaluationResult 取 dispatchType 展示字符串。
+ * 5 fetcher (terminal_bench / benchlm_agentic / swe_bench_pro / process_aware_scoring /
+ * long_context_cluster) 已在 evaluator.ts 6d71bef 把 dispatchType 透传到 QuestionScore,
+ * 8f8f68c 把 dispatchType 透传到 EvaluationResult 本层; 本 helper 把同一字段以
+ * " (type=<dispatchType>)" 副标形式透到 Markdown / HTML 5-dim 报表。
+ *
+ * dispatchType 缺失 / undefined / 空字符串时返回 null (caller 跳过渲染, 0 行为变化 —
+ * v0.5 时期 evaluationResult 没 dispatchType 字段, 默认 absent 时报表照常)。
+ *
+ * 与 getDimCi / getDimValue 同源: 集中实现避免 3 处 inline `(type=${result.dispatchType})`
+ * 副本产生漂移 (parallels 06-29 03:23 cron getDimCell 提取)。
+ */
+export function getDispatchTypeCell(result: EvaluationResult | undefined): string | null {
+  const t = result?.dispatchType;
+  if (typeof t !== 'string' || t.length === 0) return null;
+  return ` (type=${t})`;
+}
+
+/**
  * 报告生成器 - 生成可视化对比报告
  */
 export class Reporter {
@@ -149,8 +168,11 @@ export class Reporter {
       // 06-29 03:23 cron: Markdown overall-ranking 5-dim cell 走 getDimCell (display
       // string), parallels 06-20 cron getDimCell extraction. 闭合第 1 处 inline
       // `if (!dim || typeof dim.average !== 'number')` 副本。
+      // v0.6.0 step-v6.0-4 (07-03 03:23 cron): model name 后附 (type=<dispatchType>) 副标.
       const dimCells = DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key));
-      md += `| ${medal} | ${result.modelName} | ${result.totalScore} | ${dimCells.join(' | ')} | ${(result.duration / 1000).toFixed(1)}s |\n`;
+      const dtCell = getDispatchTypeCell(result);
+      const modelLabel = dtCell === null ? result.modelName : `${result.modelName}${dtCell}`;
+      md += `| ${medal} | ${modelLabel} | ${result.totalScore} | ${dimCells.join(' | ')} | ${(result.duration / 1000).toFixed(1)}s |\n`;
     });
 
     md += `\n`;
@@ -160,6 +182,11 @@ export class Reporter {
     for (const result of results) {
       md += `### ${result.modelName}\n\n`;
       md += `- **总分**: ${result.totalScore}\n`;
+      // v0.6.0 step-v6.0-4 (07-03 03:23 cron): 总分后附 (type=<dispatchType>) 副标 (5 fetcher payload dispatch_type 透传).
+      const dtCell = getDispatchTypeCell(result);
+      if (dtCell !== null) {
+        md += `- **dispatchType**:${dtCell}\n`;
+      }
       // 06-29 03:23 cron: Markdown detail block 5-dim cell 走 getDimCell (display
       // string), parallels 06-20 cron getDimCell extraction. 闭合第 2 处 inline
       // `if (!dim || typeof dim.average !== 'number')` 副本 (5 维度: dialogue /
@@ -312,6 +339,11 @@ export class Reporter {
             <div class="detail-card">
                 <h3>${result.modelName}</h3>
                 <p><strong>总分:</strong> ${result.totalScore}</p>`;
+      // v0.6.0 step-v6.0-4 (07-03 03:23 cron): 总分后附 (type=<dispatchType>) 副标 (class 'dispatch-type-tag').
+      const dtCellHtml = getDispatchTypeCell(result);
+      if (dtCellHtml !== null) {
+        html += `<p class="dispatch-type-tag">${dtCellHtml}</p>`;
+      }
 
       // 06-29 03:23 cron: detail-card 5-dim 走 getDimCell, 闭合第 2 处 inline `if
       // (!dim || typeof dim.average !== 'number')` 副本; 维度缺失时 helper 已返回 '-'
