@@ -187,15 +187,16 @@ export class Reporter {
       if (dtCell !== null) {
         md += `- **dispatchType**:${dtCell}\n`;
       }
-      // 06-29 03:23 cron: Markdown detail block 5-dim cell 走 getDimCell (display
-      // string), parallels 06-20 cron getDimCell extraction. 闭合第 2 处 inline
+      // 06-29 03:23 cron: Markdown detail block 5-dim cell 走 getDimCell (display string),
+      // parallels 06-20 cron getDimCell extraction. 闭合第 2 处 inline
       // `if (!dim || typeof dim.average !== 'number')` 副本 (5 维度: dialogue /
       // coding 默认开启, function_calling / long_context / multi_turn 可选,
-      // 未启用时填 '-' 由 helper 统一处理)。
-      // 06-29 03:23 cron: Markdown detail block 5-dim cell 走 getDimCell (display string),
-      // 闭合第 2 处 inline `if (!dim || typeof dim.average !== 'number')` 副本。
-      // v0.6.0 step-v6.0-4 (07-02 06:43 cron): ci 存在时补 95% CI sub-line。
-      // 06-29 03:23 cron (parallels 同上): getDimCell 缺失/n=0 → '-' 已守。
+      // 未启用时填 '-' 由 helper 统一处理).
+      // v0.6.0 step-v6.0-4 (07-02 06:43 cron): ci 存在时补 95% CI sub-line
+      // (getDimCell 缺失/n=0 → '-' 退化由 helper 守).
+      // 06-29 03:23 cron (parallels 同上, attribution 续集): dim-ci 走 getDimCiCell
+      // helper 守 '-' 退化 — keep 06-29 attribution inline for the
+      // 07-02 02:03 cron regression-gate parity.
       DIM_HEADERS.forEach((d) => {
         md += `- **${d.label}**: ${getDimCell(result.dimensions, d.key)}\n`;
         const ciCell = getDimCiCell(result.dimensions, d.key);
@@ -305,9 +306,12 @@ export class Reporter {
                         <div class="score-bar"><div class="score-fill total" style="width: ${result.totalScore}%"></div></div>
                     </td>`;
 
-      // 06-29 03:23 cron: route 5-dim td cell through getDimValue (exists/number gate) +
-      // getDimCell (display string), parallels 06-20 cron getDimCell extraction. Replaces
-      // inline `if (!dim || typeof dim.average !== 'number')` 副本 (3rd inline site closed).
+      // 06-29 03:23 cron: route 5-dim td cell through getDimValue (exists/number gate),
+      // parallels 06-20 cron getDimCell extraction. Replaces inline
+      // `if (!dim || typeof dim.average !== 'number')` 副本 (3rd inline site closed).
+      // 06-29 03:23 cron (parallels 同上, attribution 续集): HTML td 用 raw avg.toFixed(1)
+      // + score-bar width = avg% (raw number), 故只用 getDimValue; getDimCell (display
+      // string) 留给 Markdown / detail-card 等纯文本渲染位.
       DIM_HEADERS.forEach((d) => {
         const avg = getDimValue(result.dimensions, d.key);
         if (avg === null) {
