@@ -364,7 +364,9 @@ export class Reporter {
   static generateCSV(results: EvaluationResult[]): string {
     const sorted = [...results].sort((a, b) => b.totalScore - a.totalScore);
 
-    // 维度列：固定 5 列（function_calling / 长上下文 / 多轮 可选，没有时填 -）
+    // 维度列：5 dim 主列 + 10 ci_lower/ci_upper 子列 + rank/model/total/duration_s/questions 元列 (20 列总);
+    // dialogue / coding 默认开启 (true), function_calling / long_context / multi_turn 可选
+    // (默认 false, 未启用时填 "-")。csv 实际默认行为见 initConfig() / config.example.json
     // 统一从 module-level DIM_HEADERS 取 key + label (csv 需英文 label)
     // v0.6.0 step-v6.0-4 (07-02 06:43 cron): CSV header 5-dim 主列 + 每 dim 加 2 列
     // ci_lower / ci_upper (raw number 供 Excel/Sheets 二次分析, 缺失 → '-'), 与
