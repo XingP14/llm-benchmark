@@ -117,6 +117,8 @@ export interface EvaluationResult {
   timestamp: Date;
   /** 耗时 (ms) */
   duration: number;
+  /** v0.6.0+ (optional) v0.5 dispatch_type 透传 result 层 (5 fetcher payload dispatch_type POST 字段经 dispatchV050External helper 接收后, 通过 QuestionScore.dispatchType 反向汇总至此, 让 reporter.ts 步骤 4 可在 Markdown/HTML/CSV 5-dim 副标附 (type=<dispatchType>) label). 默认 absent = v0.5 行为不变. */
+  dispatchType?: string;
 }
 
 /**
@@ -135,6 +137,8 @@ export interface QuestionScore {
   modelOutput: string;
   /** 评测详情 (LLM 判定) */
   detail?: string;
+  /** v0.6.0+ (optional) v0.5 dispatch_type 字段 (5 fetcher: terminal_bench / benchlm_agentic / swe_bench_pro / process_aware_scoring / long_context_cluster 已在 6d71bef 把 dispatch_type POST 字段发到远程 server, 本字段把同一 dispatchType 透传回 result 层, 让 reporter.ts 步骤 4 渲染 5-dim 副标). 默认 absent = v0.5 行为不变. */
+  dispatchType?: string;
 }
 
 /**
