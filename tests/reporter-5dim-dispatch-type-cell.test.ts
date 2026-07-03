@@ -4,6 +4,8 @@
 // 数据层 EvaluationResult.dispatchType 已在 8f8f68c (06-30 03:23 cron) 加 optional field,
 // 本轮 step-v6.0-4 step3 闭环报表层 (Markdown overall-ranking model name + Markdown detail 总分 + HTML detail-card 总分).
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { Reporter, getDispatchTypeCell } from '../src/core/reporter';
 import { EvaluationResult, DimensionScore, QuestionScore } from '../src/types';
 
@@ -129,6 +131,42 @@ describe('reporter dispatchType cell helper (v0.6.0 step-v6.0-4 step3)', () => {
       expect(lines[0]).toBe('rank,model,total,dialogue,coding,function_calling,long_context,multi_turn,dialogue_ci_lower,dialogue_ci_upper,coding_ci_lower,coding_ci_upper,function_calling_ci_lower,function_calling_ci_upper,long_context_ci_lower,long_context_ci_upper,multi_turn_ci_lower,multi_turn_ci_upper,duration_s,questions');
       expect(lines[1]).toContain('claude-opus-4.8,');
       expect(lines[1]).not.toContain('(type=agentic_swe)');
+    });
+  });
+
+  describe('reporter.ts JSDoc getDispatchTypeCell comment-correctness (07-04 02:43 cron)', () => {
+    // 07-04 02:43 cron (v0.6.0 step-v6.0-4 closure step5): JSDoc 上方
+    // "集中实现避免 N 处 inline `(type=${result.dispatchType})` 副本产生漂移" 的 N 计数
+    // 必须与实际 call site 数同步 (parallels 6af9f47 5-dim defaults comment-only stale
+    // drift fix)。修复前 N=3 stale (helper 引入但 printSummary 入口漏更); 修复后 N=4
+    // (3 reporter.ts + 1 index.ts printSummary console)。
+    test('JSDoc claims "4 处 inline" (refreshed from stale 3 处 after 07-04 01:33 cron 051591f printSummary migration)', () => {
+      const reporterSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'core', 'reporter.ts'), 'utf-8');
+      // JSDoc 必须在「集中实现避免」之后紧跟 「4 处 inline `(type=${result.dispatchType})`」
+      expect(reporterSrc).toMatch(/集中实现避免 4 处 inline `\(type=\$\{result\.dispatchType\}\)`/);
+      // 不许残留 stale 3 处 计数 (parallels 6af9f47 fix 的本质 — stale count drift)
+      expect(reporterSrc).not.toMatch(/集中实现避免 3 处 inline `\(type=/);
+    });
+
+    test('JSDoc attribution refreshed to mention 07-04 01:33 cron + 051591f 4-site closure', () => {
+      const reporterSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'core', 'reporter.ts'), 'utf-8');
+      // 修复后必须明示 07-04 01:33 cron + 051591f + 4th site closure chain
+      expect(reporterSrc).toContain('07-04 01:33 cron');
+      expect(reporterSrc).toContain('051591f');
+      expect(reporterSrc).toContain('printSummary console');
+      expect(reporterSrc).toContain('4 sites');
+    });
+
+    test('reporter.ts has exactly 3 getDispatchTypeCell call sites (parity: Markdown overall + Markdown detail + HTML detail-card) + index.ts has 1 = 4 total', () => {
+      // 6af9f47 模式基线: JSDoc N 与实际 call site 数同步。grep-style 二次校验 —
+      // 4 sites 1:1 对齐 JSDoc 声明 (而非 3 stale count)。
+      const reporterSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'core', 'reporter.ts'), 'utf-8');
+      const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.ts'), 'utf-8');
+      const reporterCallSites = reporterSrc.match(/getDispatchTypeCell\s*\(\s*result\s*\)/g) || [];
+      const indexCallSites = indexSrc.match(/getDispatchTypeCell\s*\(\s*result\s*\)/g) || [];
+      expect(reporterCallSites.length + indexCallSites.length).toBe(4);
+      expect(reporterCallSites.length).toBe(3);
+      expect(indexCallSites.length).toBe(1);
     });
   });
 });

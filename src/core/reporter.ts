@@ -124,8 +124,10 @@ export function getDimCiCell(dimensions: DimensionScore | undefined, key: keyof 
  * dispatchType 缺失 / undefined / 空字符串时返回 null (caller 跳过渲染, 0 行为变化 —
  * v0.5 时期 evaluationResult 没 dispatchType 字段, 默认 absent 时报表照常)。
  *
- * 与 getDimCi / getDimValue 同源: 集中实现避免 3 处 inline `(type=${result.dispatchType})`
- * 副本产生漂移 (parallels 06-29 03:23 cron getDimCell 提取)。
+ * 与 getDimCi / getDimValue 同源: 集中实现避免 4 处 inline `(type=${result.dispatchType})`
+ * 副本产生漂移 — 07-04 01:33 cron 051591f 把 helper 引入但调用点未迁移的 printSummary console
+ * 入口闭合 (4th site closure chain: 7265ec0 Markdown overall + Markdown detail + HTML
+ * detail-card 3 sites → 07-04 01:33 cron + printSummary console 1 site = 4 sites)。
  */
 export function getDispatchTypeCell(result: EvaluationResult | undefined): string | null {
   const t = result?.dispatchType;
