@@ -9,6 +9,18 @@ import { PythonSandbox } from '../sandbox/python-sandbox';
 import { TestResult } from '../sandbox/executor';
 import { errorMessage } from '../errors';
 
+// 07-04 04:38 cron: logError helper — same NODE_ENV=test / JEST_WORKER_ID
+// gating as src/core/evaluator.ts log/logWarn/logError/logInfo (047e952).
+// Replaces the bare `console.error(...)` at the score-question catch site
+// below so jest --silent contract is honored (5-dim console.error 漏更
+// 同源: reporter.ts + websocket.ts + core/evaluator.ts 已迁, scorer.ts
+// 漏。scorer.ts 不依赖 core/evaluator.ts 的 helper 以避免反向依赖,
+// 沿同模式 inline 定义即可, 行为 byte-identical to console.error).
+const shouldLog = process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID;
+const logError = (...args: unknown[]): void => {
+  if (shouldLog) console.error(...args);
+};
+
 /**
  * 评分器 - 使用 LLM 对答案进行评分
  */
@@ -49,7 +61,7 @@ export class Scorer {
         detail: scoreText,
       };
     } catch (error: unknown) {
-      console.error(`评分失败 [${question.id}]:`, errorMessage(error));
+      logError(`评分失败 [${question.id}]:`, errorMessage(error));
       return {
         questionId: question.id,
         category: question.category,
