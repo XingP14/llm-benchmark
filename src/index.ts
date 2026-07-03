@@ -3,7 +3,7 @@
 import { BenchmarkConfig, ModelConfig, EvaluationResult } from './types';
 import { version as pkgVersion } from '../package.json';
 import { Evaluator } from './core/evaluator';
-import { Reporter, DIM_HEADERS, getDimCell } from './core/reporter';
+import { Reporter, DIM_HEADERS, getDimCell, getDispatchTypeCell } from './core/reporter';
 import { LLMAdapter } from './adapters/adapter';
 import { errorMessage } from './errors';
 import { OpenAIAdapter } from './adapters/openai-adapter';
@@ -264,11 +264,17 @@ function printSummary(results: EvaluationResult[]) {
 
   sorted.forEach((result, index) => {
     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
+    // 07-04 01:33 cron (v0.6.0 step-v6.0-4 closure step4): printSummary model name
+    // 附 (type=<dispatchType>) 副标 (5 fetcher payload dispatch_type 透传, parallels
+    // reporter.ts L172-L176). 闭合第 4 处 getDispatchTypeCell call site (原 3 处 +
+    // 本轮 printSummary 1 处), 修复 helper 引入但调用点未迁移的漏更 (6af9f47 同源).
+    const dtCell = getDispatchTypeCell(result);
+    const modelLabel = dtCell === null ? result.modelName : `${result.modelName}${dtCell}`;
     // 06-29 03:23 cron: printSummary 5-dim cell 走 getDimCell (display string),
     // parallels 06-20 cron getDimCell extraction. 闭合第 5 处 inline
     // `if (!dim || typeof dim.average !== 'number')` 副本 (printSummary 之前
     // 直接读 result.dimensions?.[d.key].average ?? '-', 现统一走 helper)。
-    const cells = [medal, result.modelName, `**${result.totalScore}**`, ...DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key))];
+    const cells = [medal, modelLabel, `**${result.totalScore}**`, ...DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key))];
     console.log('| ' + cells.join(' | ') + ' |');
   });
 }
