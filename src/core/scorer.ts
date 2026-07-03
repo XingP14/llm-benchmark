@@ -16,6 +16,17 @@ import { errorMessage } from '../errors';
 // 同源: reporter.ts + websocket.ts + core/evaluator.ts 已迁, scorer.ts
 // 漏。scorer.ts 不依赖 core/evaluator.ts 的 helper 以避免反向依赖,
 // 沿同模式 inline 定义即可, 行为 byte-identical to console.error).
+//
+// 07-04 05:44 cron: extend logError usage to 5 silent catch sites (chain #6
+// closure parallels woclaw 07-04 05:12 cron ddb3768 hub/src/memory.ts:337
+// notifySubscribers catch → hubError helper migration). scorer.ts L191 FC
+// / L248 LC / L309 MT / L475 coding / L549 testcase catches previously
+// silently swallowed errors (only errorMessage(err) was injected into
+// `detail`, no log call). Now each catch site calls logError first to
+// surface failures through the NODE_ENV/JEST_WORKER_ID-gated helper. 0
+// functional break to existing detail payload behavior — logError is
+// gated silent under NODE_ENV=test or JEST_WORKER_ID (jest --silent
+// contract preserved).
 const shouldLog = process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID;
 const logError = (...args: unknown[]): void => {
   if (shouldLog) console.error(...args);
@@ -189,6 +200,7 @@ export class Scorer {
         detail,
       };
     } catch (err: unknown) {
+      logError(`FC 评分失败 [${question.id}]:`, errorMessage(err));
       return {
         questionId: question.id,
         category: question.category,
@@ -246,6 +258,7 @@ export class Scorer {
         detail,
       };
     } catch (err: unknown) {
+      logError(`LC 评分失败 [${question.id}]:`, errorMessage(err));
       return {
         questionId: question.id,
         category: question.category,
@@ -307,6 +320,7 @@ export class Scorer {
         detail,
       };
     } catch (err: unknown) {
+      logError(`MT 评分失败 [${question.id}]:`, errorMessage(err));
       return {
         questionId: question.id,
         category: question.category,
@@ -473,6 +487,7 @@ ${modelOutput}
         detail: scoreText,
       };
     } catch (error: unknown) {
+      logError(`评分失败 [${question.id}]:`, errorMessage(error));
       return {
         questionId: question.id,
         category: question.category,
@@ -547,6 +562,7 @@ ${modelOutput}
           passed: passed,
         });
       } catch (error: unknown) {
+        logError(`测试用例执行失败 [${tc.description}]:`, errorMessage(error));
         results.push({
           input: tc.input,
           expectedOutput: tc.expectedOutput,

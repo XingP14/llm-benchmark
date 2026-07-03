@@ -118,3 +118,84 @@ describe('scorer.ts console.error → logError helper (07-04 04:38 cron)', () =>
     expect(helperBody![0]).toMatch(/console\.error\(\.\.\.args\)/);
   });
 });
+
+// 07-04 05:44 cron: extend parity tests to pin the 5 silent catch sites
+// (chain #6 closure parallels woclaw 07-04 05:12 cron ddb3768 hub/src/memory.ts:337
+// notifySubscribers catch → hubError helper migration). scorer.ts L191 FC /
+// L248 LC / L309 MT / L475 coding / L549 testcase catches previously
+// silently swallowed errors (only errorMessage(err) was injected into
+// `detail`, no log call). Now each catch site calls logError first to
+// surface failures through the NODE_ENV/JEST_WORKER_ID-gated helper. 0
+// functional break to existing detail payload behavior — logError is
+// gated silent under NODE_ENV=test or JEST_WORKER_ID (jest --silent
+// contract preserved).
+
+describe('scorer.ts 5 silent catch sites → logError helper (07-04 05:44 cron chain #6)', () => {
+  const scorerPath = path.resolve(__dirname, '..', 'src', 'core', 'scorer.ts');
+  const src = fs.readFileSync(scorerPath, 'utf-8');
+  // Strip /* */ block comments and // line comments so gate scans do not
+  // trip on doc-comments that mention the migrated pattern.
+  const stripped = src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+  it('L191 FC scoreFunctionCalling catch routes through logError(...)', () => {
+    // 07-04 05:44 cron: L191 scoreFunctionCalling catch should now be:
+    //   logError(`FC 评分失败 [${question.id}]:`, errorMessage(err));
+    const idx = stripped.indexOf('logError(`FC 评分失败');
+    expect(idx).toBeGreaterThan(-1);
+    const slice = stripped.slice(idx, idx + 120);
+    expect(slice).toMatch(/logError\s*\(\s*`FC 评分失败\s*\[\$\{question\.id\}\]:`\s*,\s*errorMessage\s*\(\s*err\s*\)\s*\)/);
+  });
+
+  it('L248 LC scoreLongContext catch routes through logError(...)', () => {
+    // 07-04 05:44 cron: L248 scoreLongContext catch should now be:
+    //   logError(`LC 评分失败 [${question.id}]:`, errorMessage(err));
+    const idx = stripped.indexOf('logError(`LC 评分失败');
+    expect(idx).toBeGreaterThan(-1);
+    const slice = stripped.slice(idx, idx + 120);
+    expect(slice).toMatch(/logError\s*\(\s*`LC 评分失败\s*\[\$\{question\.id\}\]:`\s*,\s*errorMessage\s*\(\s*err\s*\)\s*\)/);
+  });
+
+  it('L309 MT scoreMultiTurn catch routes through logError(...)', () => {
+    // 07-04 05:44 cron: L309 scoreMultiTurn catch should now be:
+    //   logError(`MT 评分失败 [${question.id}]:`, errorMessage(err));
+    const idx = stripped.indexOf('logError(`MT 评分失败');
+    expect(idx).toBeGreaterThan(-1);
+    const slice = stripped.slice(idx, idx + 120);
+    expect(slice).toMatch(/logError\s*\(\s*`MT 评分失败\s*\[\$\{question\.id\}\]:`\s*,\s*errorMessage\s*\(\s*err\s*\)\s*\)/);
+  });
+
+  it('L475 coding scoreCoding catch routes through logError(...)', () => {
+    // 07-04 05:44 cron: L475 scoreCoding catch should now be:
+    //   logError(`评分失败 [${question.id}]:`, errorMessage(error));
+    // (same prefix as L52 site but inside the scoreCoding body; both have
+    // `dimension: 'coding'`).
+    const idx2 = stripped.indexOf('logError(`评分失败', stripped.indexOf('logError(`评分失败') + 1);
+    expect(idx2).toBeGreaterThan(-1);
+    const slice = stripped.slice(idx2, idx2 + 120);
+    expect(slice).toMatch(/logError\s*\(\s*`评分失败\s*\[\$\{question\.id\}\]:`\s*,\s*errorMessage\s*\(\s*error\s*\)\s*\)/);
+  });
+
+  it('L549 testcase executeTests catch routes through logError(...)', () => {
+    // 07-04 05:44 cron: L549 executeTests inner for-of catch should now be:
+    //   logError(`测试用例执行失败 [${tc.description}]:`, errorMessage(error));
+    const idx = stripped.indexOf('logError(`测试用例执行失败');
+    expect(idx).toBeGreaterThan(-1);
+    const slice = stripped.slice(idx, idx + 140);
+    expect(slice).toMatch(/logError\s*\(\s*`测试用例执行失败\s*\[\$\{tc\.description\}\]:`\s*,\s*errorMessage\s*\(\s*error\s*\)\s*\)/);
+  });
+
+  it('exactly 6 logError(...) call sites in scorer.ts (chain #6 closure 5 + chain #5 1 = 6 total)', () => {
+    // After migration: L52 dialogue + L191 FC + L248 LC + L309 MT + L475 coding + L549 testcase = 6.
+    const matches = stripped.match(/logError\s*\(/g) ?? [];
+    expect(matches.length).toBe(6);
+  });
+
+  it('chain #6 closure comment present in scorer.ts header', () => {
+    // Refreshed header at lines 20-29 should mention "5 silent catch sites" + "chain #6".
+    expect(src).toMatch(/chain #6/);
+    expect(src).toMatch(/5 silent catch sites/);
+    expect(src).toMatch(/ddb3768/);
+  });
+});
