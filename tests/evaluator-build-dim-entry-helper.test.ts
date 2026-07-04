@@ -20,7 +20,7 @@ describe('evaluator calculateDimensions → buildDimEntry helper (v0.6.0 step-v6
     expect(src).toBeDefined();
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1300);
-    expect(lineCount).toBeLessThan(1420); // buildDimEntry helper 抽出净减 (v0.6.0 step-v6.0-2 caller) + dispatch return 注入净增 20 行 (v0.6.0 step-v6.0-4 step4, 07-03 02:43 cron)
+    expect(lineCount).toBeLessThan(1520); // buildDimEntry helper 抽出净减 (v0.6.0 step-v6.0-2 caller) + dispatch return 注入净增 20 行 (v0.6.0 step-v6.0-4 step4, 07-03 02:43 cron)
   });
 
   it('declares exactly one private buildDimEntry helper', () => {

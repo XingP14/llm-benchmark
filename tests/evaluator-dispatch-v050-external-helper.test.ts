@@ -20,7 +20,7 @@ describe('evaluator dispatchV050External helper (8-site dedupe)', () => {
     expect(src).toBeDefined();
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1300);
-    expect(lineCount).toBeLessThan(1420); // bootstrap95CI helper added 74 lines (v0.6.0 step-v6.0-2)
+    expect(lineCount).toBeLessThan(1520); // bootstrap95CI helper added 74 lines (v0.6.0 step-v6.0-2)
   });
 
   it('declares exactly one private async dispatchV050External helper', () => {

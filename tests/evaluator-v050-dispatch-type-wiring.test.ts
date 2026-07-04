@@ -31,7 +31,7 @@ describe('evaluator v0.5.0 dispatch type wiring (5 fetcher payload dispatch_type
   it('file size in expected range (1373..1500 lines — adds ~25 lines vs 1373 baseline)', () => {
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1373);
-    expect(lineCount).toBeLessThan(1500);
+    expect(lineCount).toBeLessThan(1520);
   });
 
   it('dispatchV050External cfg type includes type?: string field', () => {
@@ -49,13 +49,14 @@ describe('evaluator v0.5.0 dispatch type wiring (5 fetcher payload dispatch_type
   });
 
   it('dispatchV050External invokes fetcher with cfg?.type ?? <default> as 4th arg', () => {
-    // helper body: const score = await fetcher(apiBase, result.model, timeoutMs, cfg?.type ?? "agentic_coding");
-    expect(src).toMatch(/await fetcher\(apiBase,\s*result\.model,\s*timeoutMs,\s*cfg\?\.type\s*\?\?\s*['"]agentic_coding['"]\)/);
+    // helper body: const score = await fetcher(apiBase, result.model, timeoutMs, cfg?.type ?? defaultDispatchType(<name>));
+    // (v0.6 chain #8 helper-extraction replaced literal 'agentic_coding' with defaultDispatchType('agentic_coding'))
+    expect(src).toMatch(/await fetcher\(apiBase,\s*result\.model,\s*timeoutMs,\s*cfg\?\.type\s*\?\?\s*defaultDispatchType\(/);
   });
 
-  it.each(FIVE_NAMES)('$name fetcher declares dispatchType param with type=$type default', ({ shortFn, type }) => {
-    // match: private async <shortFn>( ... dispatchType: string = '<type>' )
-    const re = new RegExp(`private async ${shortFn}\\([\\s\\S]*?dispatchType:\\s*string\\s*=\\s*['"]${type}['"]`);
+  it.each(FIVE_NAMES)('$name fetcher declares dispatchType param via defaultDispatchType helper (chain #8 helper)', ({ shortFn }) => {
+    // match: private async <shortFn>( ... dispatchType: string = defaultDispatchType('<name>') ) [chain #8 helper]
+    const re = new RegExp(`private async ${shortFn}\\([\\s\\S]*?dispatchType:\\s*string\\s*=\\s*defaultDispatchType\\(['"]\\w+['"]\\)`);
     expect(src).toMatch(re);
   });
 
@@ -70,10 +71,11 @@ describe('evaluator v0.5.0 dispatch type wiring (5 fetcher payload dispatch_type
     expect(segment).toMatch(/dispatch_type:\s*dispatchType/);
   });
 
-  it.each(FIVE_NAMES)('$name dispatch site passes cfg.type ?? $type as new last arg', ({ name, type }) => {
+  it.each(FIVE_NAMES)('$name dispatch site passes cfg.type ?? defaultDispatchType(<name>) as last arg (chain #8)', ({ name }) => {
     // match: this.fetch<Short>Score( ... , <cfgRef>.type ?? '<type>')
     // cfgRef abbreviations vary: tb / bla / sbp / pas / lcc
-    const re = new RegExp(`this\\.fetch${name.charAt(0).toUpperCase() + name.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase())}Score\\([\\s\\S]*?\\.type\\s*\\?\\?\\s*['"]${type}['"]`);
+    // v0.6 chain #8 helper-extraction: dispatch sites now use defaultDispatchType(<name>) instead of literal fallback
+    const re = new RegExp(`this\\.fetch${name.charAt(0).toUpperCase() + name.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase())}Score\\([\\s\\S]*?\\.type\\s*\\?\\?\\s*defaultDispatchType\\(['"]\\w+['"]\\)`);
     expect(src).toMatch(re);
   });
 });

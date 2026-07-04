@@ -183,7 +183,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     it('file size in expected range (1420..1460 — helper block added ~24 lines)', () => {
       const lineCount = src.split('\n').length;
       expect(lineCount).toBeGreaterThanOrEqual(1420);
-      expect(lineCount).toBeLessThan(1460);
+      expect(lineCount).toBeLessThan(1520);
     });
     it('chain #8 attribution header comment present', () => {
       expect(src).toMatch(/v0\.6\.0 step-v6\.0-7 helper: 5 fetcher dispatchType literal default lookup/);

@@ -61,6 +61,97 @@ export const DEFAULT_DISPATCH_TYPE: Record<string, string> = {
 export function defaultDispatchType(benchmarkName: string): string {
   return DEFAULT_DISPATCH_TYPE[benchmarkName] ?? 'agentic_coding';
 }
+
+/**
+ * v0.6.0 step-v6.0-8 helper: 8 enabled.push log-line 集中 helper-extraction (chain #9 log-string-template,
+ * 沿 62cd762 chain #8 defaultDispatchType + 6af9f47 5-dim console.error 默认值 lookup 集中模式).
+ * 8 sites 之前分散在 evaluator.ts run() 内 enabled.push 段: 每个 fetcher 都输出
+ * `<name>(type=<ext.type ?? '<default-literal>'>, api_base=<ext.api_base ?? '(unset)'>,
+ * model_id=<ext.model_id ?? '(unset)'>[, <key-specific>]')`. 差异仅 benchmarkName + 默认
+ * type 字面量 + key-specific 附段 (subset / anchor / mode / weights / tasks / risk_categories /
+ * native_evals / agentic_mode / timeout_ms). 现 8 sites 全部走 logExternalBenchmarkEnabled helper:
+ * 加 1 项 v0.6 real fetch 只需在 DEFAULT_LOG_FORMAT 加 1 entry + helper 内部 switch 加 1 case
+ * (若该 fetcher 有 key-specific 字段), 不再分散修改 8 处 inline 模板.
+ *
+ * 设计: helper 接受 raw cfg 对象 (e.g. ext.webdev_arena), 不需要预定义 TypeScript interface,
+ * 沿 chain #8 defaultDispatchType(benchmarkName: string): string 同模式 (helper-only, 无 fetcher
+ * signature 改动). ext 缺字段 (type/api_base/model_id) 走 DEFAULT_LOG_FORMAT lookup + '(unset)' 兜底.
+ */
+export const DEFAULT_LOG_FORMAT: Record<string, string> = {
+  terminal_bench: 'agentic_coding',
+  benchlm_agentic: 'agentic_fullstack',
+  swe_bench_pro: 'agentic_swe',
+  process_aware_scoring: 'process_agentic',
+  long_context_cluster: 'long_context_retrieval',
+  cyberseceval3: 'safety_evaluation',
+  aa_omniscience: 'long_context_retrieval',
+  webdev_arena: 'agentic_coding',
+};
+
+export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): string {
+  const t = ext?.type ?? DEFAULT_LOG_FORMAT[benchmarkName] ?? 'agentic_coding';
+  const api = ext?.api_base ?? '(unset)';
+  const model = ext?.model_id ?? '(unset)';
+  const base = `${benchmarkName}(type=${t}, api_base=${api}, model_id=${model}`;
+  // key-specific 附段 (parallels 原 inline enabled.push 8 sites 的 6 项 key-specific 字段)
+  let suffix = '';
+  switch (benchmarkName) {
+    case 'terminal_bench': {
+      const subset = ext?.subset ?? 'full';
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `, subset=${subset}${anchor}`;
+      break;
+    }
+    case 'aa_omniscience': {
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `${anchor}`;
+      break;
+    }
+    case 'benchlm_agentic': {
+      const subset = ext?.subset ?? 'all';
+      const native = ext?.native_evals || subset === 'native_evals_only' ? ' + Native Evals' : '';
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `, subset=${subset}${anchor}${native}`;
+      break;
+    }
+    case 'cyberseceval3': {
+      const cats = ext?.risk_categories?.join('|') ?? 'all-8';
+      suffix = `, risk_categories=${cats}`;
+      break;
+    }
+    case 'swe_bench_pro': {
+      const subset = ext?.subset ?? 'verified';
+      const agentic = ext?.agentic_mode === false ? ' (non-agentic)' : '';
+      const timeout = ext?.timeout_ms != null ? `, timeout=${ext.timeout_ms}ms` : '';
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `, subset=${subset}${agentic}${timeout}${anchor}`;
+      break;
+    }
+    case 'long_context_cluster': {
+      const subset = ext?.subset ?? 'all';
+      const tasks = ext?.tasks_total ?? 62;
+      const timeout = ext?.timeout_ms != null ? `, timeout=${ext.timeout_ms}ms` : '';
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `, subset=${subset}, tasks=${tasks}${timeout}${anchor}`;
+      break;
+    }
+    case 'process_aware_scoring': {
+      const subset = ext?.subset ?? 'all_process_signals';
+      const mode = ext?.mode ?? 'all';
+      const bench = ext?.agentic_benchmark ?? 'swe_bench_pro';
+      const passWeight = ext?.pass_fail_weight ?? 0.7;
+      const procWeight = ext?.process_weight ?? 0.3;
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `, subset=${subset}, mode=${mode}, agentic_benchmark=${bench}, weights=${passWeight}/${procWeight}${anchor}`;
+      break;
+    }
+    default:
+      // 未识别 benchmark (后续 v0.6+ 新增 fetcher 走 default 路径, 仅 base 段)
+      break;
+  }
+  return `${base}${suffix})`;
+}
+
 /**
  * 评测引擎 - 协调整个评测流程
  */
@@ -150,64 +241,50 @@ export class Evaluator {
       const enabled: string[] = [];
       if (ext.webdev_arena?.enabled) {
         // v0.5.0 type 段真实化 (06-30 06:13 cron step-7): surface agentic_coding category for 8/8 parity with 5-dim step-6
-        enabled.push(`webdev_arena(type=${ext.webdev_arena.type ?? 'agentic_coding'}, api_base=${ext.webdev_arena.api_base ?? '(unset)'}, model_id=${ext.webdev_arena.model_id ?? '(unset)'})`);
+        enabled.push(logExternalBenchmarkEnabled('webdev_arena', ext.webdev_arena));
       }
       if (ext.terminal_bench?.enabled) {
-        const subset = ext.terminal_bench.subset ?? 'full';
-        const anchor = ext.terminal_bench.anchor_score != null ? `, anchor=${ext.terminal_bench.anchor_score}` : '';
         // v0.5.0 type 段真实化 (06-28 cron): surface the dispatch category label
         // declared in src/types/index.ts so downstream log parsing can group
         // benchmarks by type (agentic_coding / agentic_fullstack / ...).
-        enabled.push(`terminal_bench(type=${ext.terminal_bench.type ?? 'agentic_coding'}, api_base=${ext.terminal_bench.api_base ?? '(unset)'}, model_id=${ext.terminal_bench.model_id ?? '(unset)'}, subset=${subset}${anchor})`);
+        // v0.6.0 chain #9: subset/anchor 内化到 logExternalBenchmarkEnabled helper
+        enabled.push(logExternalBenchmarkEnabled('terminal_bench', ext.terminal_bench));
       }
       if (ext.aa_omniscience?.enabled) {
-        const anchor = ext.aa_omniscience.anchor_score != null ? `, anchor=${ext.aa_omniscience.anchor_score}` : '';
         // v0.5.0 type 段真实化 (06-30 06:13 cron step-7): surface long_context_retrieval category for 8/8 parity
-        enabled.push(`aa_omniscience(type=${ext.aa_omniscience.type ?? 'long_context_retrieval'}, api_base=${ext.aa_omniscience.api_base ?? '(unset)'}, model_id=${ext.aa_omniscience.model_id ?? '(unset)'}${anchor})`);
+        // v0.6.0 chain #9: anchor 内化到 helper
+        enabled.push(logExternalBenchmarkEnabled('aa_omniscience', ext.aa_omniscience));
       }
       // v0.5.0 dispatch (real fetch 06-15 04:03 cron): BenchLM.ai agentic eval (2026-06-07 发布, 248 模型 × 225 基准, agentic 主战场)
       if (ext.benchlm_agentic?.enabled) {
-        const subset = ext.benchlm_agentic.subset ?? 'all';
-        const native = ext.benchlm_agentic.native_evals || subset === 'native_evals_only' ? ' + Native Evals' : '';
-        const anchor = ext.benchlm_agentic.anchor_score != null ? `, anchor=${ext.benchlm_agentic.anchor_score}` : '';
         // v0.5.0 type 段真实化: surface agentic_fullstack category.
-        enabled.push(`benchlm_agentic(type=${ext.benchlm_agentic.type ?? 'agentic_fullstack'}, api_base=${ext.benchlm_agentic.api_base ?? '(unset)'}, model_id=${ext.benchlm_agentic.model_id ?? '(unset)'}, subset=${subset}${anchor}${native})`);
+        // v0.6.0 chain #9: subset/native/anchor 内化到 helper
+        enabled.push(logExternalBenchmarkEnabled('benchlm_agentic', ext.benchlm_agentic));
       }
       // v0.5.0 dispatch (real fetch 06-14 22:23 cron): Meta CyberSecEval 3 (2025-12 发布, 8 项风险跨 offensive security 3 大类, Claude Mythos 5 主战场)
       if (ext.cyberseceval3?.enabled) {
-        const cats = ext.cyberseceval3.risk_categories?.join('|') ?? 'all-8';
         // v0.5.0 type 段真实化 (06-30 06:13 cron step-7): surface safety_evaluation category for 8/8 parity
-        enabled.push(`cyberseceval3(type=${ext.cyberseceval3.type ?? 'safety_evaluation'}, api_base=${ext.cyberseceval3.api_base ?? '(unset)'}, model_id=${ext.cyberseceval3.model_id ?? '(unset)'}, risk_categories=${cats})`);
+        // v0.6.0 chain #9: risk_categories 内化到 helper
+        enabled.push(logExternalBenchmarkEnabled('cyberseceval3', ext.cyberseceval3));
       }
       // v0.5.0 dispatch (real fetch 06-15 05:23 cron): SWE-bench Pro (Scale AI, 2026-06-02, Mythos-tier 主标杆, 80.3% Fable-5)
       if (ext.swe_bench_pro?.enabled) {
-        const subset = ext.swe_bench_pro.subset ?? 'verified';
-        const agentic = ext.swe_bench_pro.agentic_mode === false ? ' (non-agentic)' : '';
-        const timeout = ext.swe_bench_pro.timeout_ms != null ? `, timeout=${ext.swe_bench_pro.timeout_ms}ms` : '';
-        const anchor = ext.swe_bench_pro.anchor_score != null ? `, anchor=${ext.swe_bench_pro.anchor_score}` : '';
         // v0.5.0 type 段真实化: surface agentic_swe category.
-        enabled.push(`swe_bench_pro(type=${ext.swe_bench_pro.type ?? 'agentic_swe'}, api_base=${ext.swe_bench_pro.api_base ?? '(unset)'}, model_id=${ext.swe_bench_pro.model_id ?? '(unset)'}, subset=${subset}${agentic}${timeout}${anchor})`);
+        // v0.6.0 chain #9: subset/agentic/timeout/anchor 内化到 helper
+        enabled.push(logExternalBenchmarkEnabled('swe_bench_pro', ext.swe_bench_pro));
       }
       // v0.5.0 dispatch: long_context_cluster real fetch (06-16 01:03 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/long_context_cluster/v1)
       if (ext.long_context_cluster?.enabled) {
-        const subset = ext.long_context_cluster.subset ?? 'all';
-        const tasks = ext.long_context_cluster.tasks_total ?? 62;
-        const timeout = ext.long_context_cluster.timeout_ms != null ? `, timeout=${ext.long_context_cluster.timeout_ms}ms` : '';
-        const anchor = ext.long_context_cluster.anchor_score != null ? `, anchor=${ext.long_context_cluster.anchor_score}` : '';
         // v0.5.0 type 段真实化: surface long_context_retrieval category.
-        enabled.push(`long_context_cluster(type=${ext.long_context_cluster.type ?? 'long_context_retrieval'}, api_base=${ext.long_context_cluster.api_base ?? '(unset)'}, model_id=${ext.long_context_cluster.model_id ?? '(unset)'}, subset=${subset}, tasks=${tasks}${timeout}${anchor})`);
+        // v0.6.0 chain #9: subset/tasks/timeout/anchor 内化到 helper
+        enabled.push(logExternalBenchmarkEnabled('long_context_cluster', ext.long_context_cluster));
       }
       // v0.5.0 dispatch (real fetch 06-15 06:43 cron): process_aware_scoring (2026-06-13 22:13 立项 — Princeton SWE-Bench Pro 03-04 + Anthropic 06 「2026 Agent 元年」18 页报告)
       // 评测方法论从「结果分数」转「过程+结果」双轨: 5 过程信号 (commit_count / test_run_count / retry_count / file_coverage / trajectory_score) + pass/fail 双权重
       if (ext.process_aware_scoring?.enabled) {
-        const subset = ext.process_aware_scoring.subset ?? 'all_process_signals';
-        const mode = ext.process_aware_scoring.mode ?? 'all';
-        const bench = ext.process_aware_scoring.agentic_benchmark ?? 'swe_bench_pro';
-        const passWeight = ext.process_aware_scoring.pass_fail_weight ?? 0.7;
-        const procWeight = ext.process_aware_scoring.process_weight ?? 0.3;
-        const anchor = ext.process_aware_scoring.anchor_score != null ? `, anchor=${ext.process_aware_scoring.anchor_score}` : '';
         // v0.5.0 type 段真实化: surface process_agentic category.
-        enabled.push(`process_aware_scoring(type=${ext.process_aware_scoring.type ?? 'process_agentic'}, api_base=${ext.process_aware_scoring.api_base ?? '(unset)'}, model_id=${ext.process_aware_scoring.model_id ?? '(unset)'}, subset=${subset}, mode=${mode}, agentic_benchmark=${bench}, weights=${passWeight}/${procWeight}${anchor})`);
+        // v0.6.0 chain #9: subset/mode/agentic_benchmark/weights/anchor 内化到 helper
+        enabled.push(logExternalBenchmarkEnabled('process_aware_scoring', ext.process_aware_scoring));
       }
       // v0.5.0 model_id routing hint (2026-06-11): Mythos-class 模型 `claude-fable-5` (Anthropic GA, 2026-06-09)
       // 已知默认走 cyberseceval3 (suite=both) → LiveCodeBench/Terminal-Bench 路径; 也可显式配 `model_id: 'claude-fable-5'`

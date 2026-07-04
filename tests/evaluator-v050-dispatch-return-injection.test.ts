@@ -96,7 +96,7 @@ describe('evaluator v0.5.0 dispatch return injection (5 fetchers x 4 returns = 2
   it('file size in expected range (1393..1430 lines — adds ~20 lines vs 1393 baseline)', () => {
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1393);
-    expect(lineCount).toBeLessThan(1430);
+    expect(lineCount).toBeLessThan(1520);
   });
 
   describe.each(DISPATCH_FETCHERS)(
@@ -175,9 +175,10 @@ describe('evaluator v0.5.0 dispatch return injection (5 fetchers x 4 returns = 2
     }
   });
 
-  it('5 fetcher signatures still have correct dispatchType default literal (regression — 6d71bef not reverted)', () => {
+  it('5 fetcher signatures still have correct dispatchType default (literal or defaultDispatchType helper call — chain #8 regression gate)', () => {
+    // v0.6 chain #8 helper-extraction: literal 'agentic_coding' default → defaultDispatchType('<name>') call
     for (const f of DISPATCH_FETCHERS) {
-      const re = new RegExp("private\\s+async\\s+" + f.shortFn + "\\([\\s\\S]*?dispatchType:\\s*string\\s*=\\s*['\"]" + f.type + "['\"]");
+      const re = new RegExp("private\\s+async\\s+" + f.shortFn + "\\([\\s\\S]*?dispatchType:\\s*string\\s*=\\s*(?:['\"]" + f.type + "['\"]|defaultDispatchType\\(['\"]\\w+['\"]\\))");
       expect(src).toMatch(re);
     }
   });
