@@ -1,6 +1,6 @@
 // src/core/reporter.ts - 报告生成器
 
-import { ComparisonReport, DimensionScore, EvaluationResult } from '../types';
+import { ComparisonReport, DimensionScore, EvaluationResult, QuestionScore } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -133,6 +133,51 @@ export function getDispatchTypeCell(result: EvaluationResult | undefined): strin
   const t = result?.dispatchType;
   if (typeof t !== 'string' || t.length === 0) return null;
   return ` (type=${t})`;
+}
+
+/**
+ * v0.6.0 step-v6.0-5 helper: 从 QuestionScore 取 subset / mode / riskCategories
+ * 副标展示字符串 "[subset=xxx|mode=yyy|risk=a+b]" (字段缺失时跳过, 全 absent → null).
+ *
+ * 跟 getDispatchTypeCell 同模式:
+ * - 集中实现避免 Markdown / HTML / printSummary console 各报表入口产生
+ *   `${qs.subset}` / `${qs.mode}` / `${qs.riskCategories.join('|')}` 副本漂移
+ * - 单 helper 守 absent / undefined / empty string / empty array 边界, caller 0 重复守
+ * - 默认 absent = v0.5 行为不变 (caller 跳过渲染)
+ *
+ * 渲染规则:
+ * - subset 非空 → 加 `subset=<value>`
+ * - mode 非空 → 加 `mode=<value>`
+ * - riskCategories 非空数组 → 加 `risk=<value1>+<value2>+...` (用 + 分隔, 与 terminal_bench.subset / benchlm_agentic.subset 的 | 风格区分; | 在 risk 列表里跟 css 类名冲突, + 是 h3 tag 友好)
+ * - 三段任意为空 → 跳过该段
+ * - 三段全 absent → 返回 null
+ *
+ * 返回 string 始终以 " [" 开头 (跟 getDispatchTypeCell 的 " (type=...)" 视觉一致,
+ * 副标区隔: "(...)" 是单值, "[...]" 是多值键值对). caller 在 modelName 后拼接直接接.
+ *
+ * 输入接受单个 QuestionScore (跟 getDispatchTypeCell 输入 EvaluationResult 不对称 —
+ * 因为 subset/mode/risk 字段在 QuestionScore 层, 而 dispatchType 在 EvaluationResult 层
+ * via 6d71bef chain aggregation. 本 helper 接收单个 QuestionScore 是 caller 聚合时遍历
+ * result.scores 取第一个非空 subset/mode/risk 调用本 helper).
+ */
+export function getSubLabel(qs: QuestionScore | undefined): string | null {
+  if (!qs) return null;
+  const parts: string[] = [];
+  if (typeof qs.subset === 'string' && qs.subset.length > 0) {
+    parts.push(`subset=${qs.subset}`);
+  }
+  if (typeof qs.mode === 'string' && qs.mode.length > 0) {
+    parts.push(`mode=${qs.mode}`);
+  }
+  if (Array.isArray(qs.riskCategories) && qs.riskCategories.length > 0) {
+    // 过滤空字符串 + 拼 + 分隔符 (避免空字符串污染副标)
+    const cats = qs.riskCategories.filter((c) => typeof c === 'string' && c.length > 0);
+    if (cats.length > 0) {
+      parts.push(`risk=${cats.join('+')}`);
+    }
+  }
+  if (parts.length === 0) return null;
+  return ` [${parts.join('|')}]`;
 }
 
 /**
