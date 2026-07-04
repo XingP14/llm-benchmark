@@ -37,6 +37,30 @@ const logInfo = (...args: unknown[]): void => {
   if (shouldLog) console.info(...args);
 };
 
+
+/**
+ * v0.6.0 step-v6.0-7 helper: 5 fetcher dispatchType literal default lookup (chain #8 helper-extraction pattern,
+ * 沿 6d71bef dispatch_helper cfg.type + 7265ec0 reporter dispatchType 副标 + woclaw 06-04~07-04 跨 12 chains
+ * per-prefix helper 集中模式). 11 sites 之前分散在 evaluator.ts: 5 closure inline `tb.type ?? 'agentic_coding'`
+ * (L253/268/283/306/322) + 5 default parameter `dispatchType: string = 'agentic_coding'` 等 (L603/698/803/913/1026)
+ * + 1 dead-code fallback in dispatchV050External helper L1328 `cfg?.type ?? "agentic_coding"`. 现 11 sites 全部
+ * 走 DEFAULT_DISPATCH_TYPE lookup + defaultDispatchType() helper: 加 1 项 v0.6 real fetch 只需在
+ * DEFAULT_DISPATCH_TYPE 加 1 entry, 不再分散修改 2-3 处 inline.
+ */
+export const DEFAULT_DISPATCH_TYPE: Record<string, string> = {
+  terminal_bench: 'agentic_coding',
+  benchlm_agentic: 'agentic_fullstack',
+  swe_bench_pro: 'agentic_swe',
+  process_aware_scoring: 'process_agentic',
+  long_context_cluster: 'long_context_retrieval',
+  cyberseceval3: 'safety_evaluation',
+  aa_omniscience: 'long_context_retrieval',
+  webdev_arena: 'agentic_coding',
+};
+
+export function defaultDispatchType(benchmarkName: string): string {
+  return DEFAULT_DISPATCH_TYPE[benchmarkName] ?? 'agentic_coding';
+}
 /**
  * 评测引擎 - 协调整个评测流程
  */
@@ -250,7 +274,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/terminal_bench/v2',
       (apiBase, model, timeoutMs) => {
         const tb = this.config._external_benchmarks_roadmap!.terminal_bench!;
-        return this.fetchTerminalBenchScore(apiBase, model, timeoutMs, tb.anchor_score, tb.subset ?? 'full', tb.type ?? 'agentic_coding');
+        return this.fetchTerminalBenchScore(apiBase, model, timeoutMs, tb.anchor_score, tb.subset ?? 'full', tb.type ?? defaultDispatchType('terminal_bench'));
       },
     );
 
@@ -265,7 +289,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/benchlm_agentic/v1',
       (apiBase, model, timeoutMs) => {
         const bla = this.config._external_benchmarks_roadmap!.benchlm_agentic!;
-        return this.fetchBenchlmAgenticScore(apiBase, model, timeoutMs, bla.anchor_score, bla.native_evals ?? false, bla.subset ?? 'all', bla.type ?? 'agentic_fullstack');
+        return this.fetchBenchlmAgenticScore(apiBase, model, timeoutMs, bla.anchor_score, bla.native_evals ?? false, bla.subset ?? 'all', bla.type ?? defaultDispatchType('benchlm_agentic'));
       },
     );
 
@@ -280,7 +304,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/swe_bench_pro/v1',
       (apiBase, model, timeoutMs) => {
         const sbp = this.config._external_benchmarks_roadmap!.swe_bench_pro!;
-        return this.fetchSweBenchProScore(apiBase, model, timeoutMs, sbp.anchor_score, sbp.subset ?? 'verified', sbp.agentic_mode !== false, sbp.type ?? 'agentic_swe');
+        return this.fetchSweBenchProScore(apiBase, model, timeoutMs, sbp.anchor_score, sbp.subset ?? 'verified', sbp.agentic_mode !== false, sbp.type ?? defaultDispatchType('swe_bench_pro'));
       },
     );
 
@@ -303,7 +327,7 @@ export class Evaluator {
           pas.agentic_benchmark ?? 'swe_bench_pro',
           pas.pass_fail_weight ?? 0.7,
           pas.process_weight ?? 0.3,
-          pas.type ?? 'process_agentic',
+          pas.type ?? defaultDispatchType('process_aware_scoring'),
         );
       },
     );
@@ -319,7 +343,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/long_context_cluster/v1',
       (apiBase, model, timeoutMs) => {
         const lcc = this.config._external_benchmarks_roadmap!.long_context_cluster!;
-        return this.fetchLongContextClusterScore(apiBase, model, timeoutMs, lcc.anchor_score, lcc.subset ?? 'all', lcc.tasks_total ?? 62, lcc.type ?? 'long_context_retrieval');
+        return this.fetchLongContextClusterScore(apiBase, model, timeoutMs, lcc.anchor_score, lcc.subset ?? 'all', lcc.tasks_total ?? 62, lcc.type ?? defaultDispatchType('long_context_cluster'));
       },
     );
 
@@ -600,7 +624,7 @@ export class Evaluator {
     timeoutMs: number,
     anchorScore?: number,
     subset: string = 'full',
-    dispatchType: string = 'agentic_coding'
+    dispatchType: string = defaultDispatchType('terminal_bench')
   ): Promise<QuestionScore> {
     const questionId = `terminal_bench_${model.name}`;
     const basePayload = {
@@ -695,7 +719,7 @@ export class Evaluator {
     anchorScore?: number,
     nativeEvals: boolean = false,
     subset: 'all' | 'design2code_only' | 'vision2web_only' | 'native_evals_only' = 'all',
-    dispatchType: string = 'agentic_fullstack'
+    dispatchType: string = defaultDispatchType('benchlm_agentic')
   ): Promise<QuestionScore> {
     const questionId = `benchlm_agentic_${model.name}`;
     const basePayload = {
@@ -800,7 +824,7 @@ export class Evaluator {
     anchorScore?: number,
     subset: string = 'verified',
     agenticMode: boolean = true,
-    dispatchType: string = 'agentic_swe'
+    dispatchType: string = defaultDispatchType('swe_bench_pro')
   ): Promise<QuestionScore> {
     const questionId = `swe_bench_pro_${model.name}`;
     const basePayload = {
@@ -910,7 +934,7 @@ export class Evaluator {
     agenticBenchmark: string = 'swe_bench_pro',
     passFailWeight: number = 0.7,
     processWeight: number = 0.3,
-    dispatchType: string = 'process_agentic'
+    dispatchType: string = defaultDispatchType('process_aware_scoring')
   ): Promise<QuestionScore> {
     const questionId = `process_aware_scoring_${model.name}`;
     const basePayload = {
@@ -1023,7 +1047,7 @@ export class Evaluator {
     anchorScore?: number,
     subset: string = 'all',
     tasksTotal: number = 62,
-    dispatchType: string = 'long_context_retrieval'
+    dispatchType: string = defaultDispatchType('long_context_cluster')
   ): Promise<QuestionScore> {
     const questionId = `long_context_cluster_${model.name}`;
     const basePayload = {
@@ -1325,7 +1349,7 @@ export class Evaluator {
         if (cfg.model_id && result.model.model !== cfg.model_id && result.modelName !== cfg.model_id) {
           return;
         }
-        const score = await fetcher(apiBase, result.model, timeoutMs, cfg?.type ?? "agentic_coding");
+        const score = await fetcher(apiBase, result.model, timeoutMs, cfg?.type ?? defaultDispatchType(benchmarkName));
         result.scores.push(score);
         log(`  [${result.modelName}] ${benchmarkName} score: ${score.score} (${score.detail ?? 'no detail'})`);
       })
