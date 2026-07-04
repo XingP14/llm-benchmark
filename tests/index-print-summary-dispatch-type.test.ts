@@ -84,9 +84,27 @@ describe('src/index.ts printSummary dispatchType 副标 closure (v0.6.0 step-v6.
       expect(window).toMatch(/step-v6\.0-4[\s\S]*step4|closure[\s\S]*step4/i);
     });
 
-    test('modelLabel ternary gate preserved (dtCell === null ? modelName : `${name}${dtCell}`)', () => {
+    test('modelLabel template-literal gate (07-05 02:03 cron step-v6.0-5 closure: dtCell ?? subCell ?? concatenated after modelName)', () => {
+      // step-v6.0-4 ternary form 已演化: 现 modelLabel = `${result.modelName}${dtCell ?? ''}${subCell ?? ''}`
+      // (副标串联 dtCell + subCell, 视觉 "modelname (type=X) [...]").
       const src2 = fs.readFileSync(indexPath, 'utf-8');
-      expect(src2).toMatch(/modelLabel\s*=\s*dtCell\s*===\s*null\s*\?\s*result\.modelName\s*:\s*`\$\{result\.modelName\}\$\{dtCell\}`/);
+      expect(src2).toMatch(/modelLabel\s*=\s*`\$\{result\.modelName\}\$\{dtCell\s*\?\?\s*''\}\$\{subCell\s*\?\?\s*''\}`/);
+    });
+
+    test('getSubLabel helper imported in index.ts (chain #7 closure 4th site parallel to getDispatchTypeCell 4-site chain 7265ec0)', () => {
+      // 07-05 02:03 cron: 闭合 chain #7 helper-extraction (getSubLabel 引入但调用点未迁移的漏更),
+      // 4 处 call site (Markdown overall + Markdown detail + HTML detail-card + printSummary)
+      // parallels getDispatchTypeCell 4-site chain (7265ec0 + 07-04 01:33 cron).
+      const src2 = fs.readFileSync(indexPath, 'utf-8');
+      expect(src2).toMatch(/import\s*\{[^}]*getSubLabel[^}]*\}\s*from\s*'\.\/core\/reporter'/);
+      expect(src2).toMatch(/const\s+subCell\s*=\s*getSubLabel\(/);
+    });
+
+    test('subCell lookup uses result.scores find() pattern (chain #7 helper跨 QuestionScore 层聚合, parallels 6d71bef dispatchType 跨层)', () => {
+      // subset/mode/risk 字段在 QuestionScore 层 (vs dispatchType 在 EvaluationResult 层),
+      // 跨层聚合需 result.scores.find() 取首个 subset/mode/risk 任一非空的 QuestionScore.
+      const src2 = fs.readFileSync(indexPath, 'utf-8');
+      expect(src2).toMatch(/getSubLabel\(\s*result\.scores\?\.find\(/);
     });
 
     test('cell array uses modelLabel (not raw result.modelName)', () => {

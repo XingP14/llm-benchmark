@@ -215,10 +215,11 @@ export class Reporter {
       // 06-29 03:23 cron: Markdown overall-ranking 5-dim cell 走 getDimCell (display
       // string), parallels 06-20 cron getDimCell extraction. 闭合第 1 处 inline
       // `if (!dim || typeof dim.average !== 'number')` 副本。
-      // v0.6.0 step-v6.0-4 (07-03 03:23 cron): model name 后附 (type=<dispatchType>) 副标.
+      // v0.6.0 step-v6.0-4 (07-03 03:23 cron): dtCell 副标. 07-05 02:03 cron step-v6.0-5 chain #7 closure: subCell 副标 (05-29 cron helper-extraction 系列续集, parallels 6d71bef dispatchType 跨层).
       const dimCells = DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key));
       const dtCell = getDispatchTypeCell(result);
-      const modelLabel = dtCell === null ? result.modelName : `${result.modelName}${dtCell}`;
+      const subCell = getSubLabel(result.scores?.find((s) => s != null && (typeof s.subset === 'string' && s.subset.length > 0 || typeof s.mode === 'string' && s.mode.length > 0 || Array.isArray(s.riskCategories) && s.riskCategories.some((c) => typeof c === 'string' && c.length > 0))));
+      const modelLabel = `${result.modelName}${dtCell ?? ''}${subCell ?? ''}`;
       md += `| ${medal} | ${modelLabel} | ${result.totalScore} | ${dimCells.join(' | ')} | ${(result.duration / 1000).toFixed(1)}s |\n`;
     });
 
@@ -229,10 +230,15 @@ export class Reporter {
     for (const result of results) {
       md += `### ${result.modelName}\n\n`;
       md += `- **总分**: ${result.totalScore}\n`;
-      // v0.6.0 step-v6.0-4 (07-03 03:23 cron): 总分后附 (type=<dispatchType>) 副标 (5 fetcher payload dispatch_type 透传).
+      // v0.6.0 step-v6.0-4 (07-03 03:23 cron): dtCell 副标 (5 fetcher payload dispatch_type 透传).
+      // 07-05 02:03 cron step-v6.0-5 chain #7 closure: dispatchType 后附 subCell 副标 (subset/mode/risk 跨层聚合沿 6d71bef QuestionScore.dispatchType 同模式).
       const dtCell = getDispatchTypeCell(result);
+      const subCell = getSubLabel(result.scores?.find((s) => s != null && (typeof s.subset === 'string' && s.subset.length > 0 || typeof s.mode === 'string' && s.mode.length > 0 || Array.isArray(s.riskCategories) && s.riskCategories.some((c) => typeof c === 'string' && c.length > 0))));
       if (dtCell !== null) {
         md += `- **dispatchType**:${dtCell}\n`;
+      }
+      if (subCell !== null) {
+        md += `- **subset/mode/risk**:${subCell}\n`;
       }
       // 06-29 03:23 cron: Markdown detail block 5-dim cell 走 getDimCell (display string),
       // parallels 06-20 cron getDimCell extraction. 闭合第 2 处 inline
@@ -390,10 +396,15 @@ export class Reporter {
             <div class="detail-card">
                 <h3>${result.modelName}</h3>
                 <p><strong>总分:</strong> ${result.totalScore}</p>`;
-      // v0.6.0 step-v6.0-4 (07-03 03:23 cron): 总分后附 (type=<dispatchType>) 副标 (class 'dispatch-type-tag').
+      // v0.6.0 step-v6.0-4 (07-03 03:23 cron): dtCell 副标 (class 'dispatch-type-tag').
+      // 07-05 02:03 cron step-v6.0-5 chain #7 closure: subCell 副标 (class 'sub-label-tag').
       const dtCellHtml = getDispatchTypeCell(result);
+      const subCellHtml = getSubLabel(result.scores?.find((s) => s != null && (typeof s.subset === 'string' && s.subset.length > 0 || typeof s.mode === 'string' && s.mode.length > 0 || Array.isArray(s.riskCategories) && s.riskCategories.some((c) => typeof c === 'string' && c.length > 0))));
       if (dtCellHtml !== null) {
         html += `<p class="dispatch-type-tag">${dtCellHtml}</p>`;
+      }
+      if (subCellHtml !== null) {
+        html += `<p class="sub-label-tag">${subCellHtml}</p>`;
       }
 
       // 06-29 03:23 cron: detail-card 5-dim 走 getDimCell, 闭合第 2 处 inline `if
