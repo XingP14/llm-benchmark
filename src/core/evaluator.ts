@@ -305,9 +305,8 @@ export class Evaluator {
     // - 仅当 ext.webdev_arena.enabled && (model_id 匹配或未配 model_id 走全部 model)
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 webdev_arena QuestionScore (questionId=`webdev_arena_${model.name}`, category=`webdev_arena`, dimension=`coding` 走 v0.4.0 默认, score = elo_score * 0.9 + pass_rate * 10 归一到 0-100)
-    await this.dispatchV050External(
+    await this.dispatchExternalBenchmark(
       results, 'webdev_arena',
-      this.config._external_benchmarks_roadmap?.webdev_arena,
       'https://webdevarena.com/api/v1/eval',
       (apiBase, model, timeoutMs) => this.fetchWebdevArenaScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.webdev_arena!.anchor_score),
     );
@@ -317,9 +316,8 @@ export class Evaluator {
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 cyberseceval3 QuestionScore (questionId=`cyberseceval3_${model.name}`, category=`cyberseceval3`, dimension=`safety` 走 v0.4.0 默认, score = safety_score * 0.7 + coverage_rate * 30 归一到 0-100)
     // - 注: CyberSecEval3 官方 (Meta, 2025-12 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Meta 真实 API
-    await this.dispatchV050External(
+    await this.dispatchExternalBenchmark(
       results, 'cyberseceval3',
-      this.config._external_benchmarks_roadmap?.cyberseceval3,
       'https://llm-benchmark.local/api/v1/cyberseceval3/v3',
       (apiBase, model, timeoutMs) => {
         const cse3 = this.config._external_benchmarks_roadmap!.cyberseceval3!;
@@ -333,9 +331,8 @@ export class Evaluator {
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 aa_omniscience QuestionScore (questionId=`aa_omniscience_${model.name}`, category=`aa_omniscience`, dimension=`long_context` 走 v0.4.0 默认, score = accuracy_score * 0.7 + (1 - hallucination_rate) * 30 归一到 0-100)
     // - 注: Artificial Analysis Omniscience (2026-05-25 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 AA 真实 API
-    await this.dispatchV050External(
+    await this.dispatchExternalBenchmark(
       results, 'aa_omniscience',
-      this.config._external_benchmarks_roadmap?.aa_omniscience,
       'https://llm-benchmark.local/api/v1/aa_omniscience/v1',
       (apiBase, model, timeoutMs) => this.fetchAAOmniscienceScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.aa_omniscience!.anchor_score),
     );
@@ -345,9 +342,8 @@ export class Evaluator {
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 terminal_bench QuestionScore (questionId=`terminal_bench_${model.name}`, category=`terminal_bench`, dimension=`coding` 走 v0.4.0 默认, score = task_pass_rate * 70 + (1 - avg_duration_s/3600) * 30 归一到 0-100)
     // - 注: Terminal-Bench 2.0 (tbench.ai, 2026-06 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 tbench.ai 真实 API
-    await this.dispatchV050External(
+    await this.dispatchExternalBenchmark(
       results, 'terminal_bench',
-      this.config._external_benchmarks_roadmap?.terminal_bench,
       'https://llm-benchmark.local/api/v1/terminal_bench/v2',
       (apiBase, model, timeoutMs) => {
         const tb = this.config._external_benchmarks_roadmap!.terminal_bench!;
@@ -360,9 +356,8 @@ export class Evaluator {
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 benchlm_agentic QuestionScore (questionId=`benchlm_agentic_${model.name}`, category=`benchlm_agentic`, dimension=`coding` 走 v0.4.0 默认, score = agentic_pass_rate * 50 + design2code_score * 0.25 + vision2web_score * 0.25 归一到 0-100; native_evals 启用时附加 +5 奖励)
     // - 注: BenchLM.ai (benchlm.ai, 2026-06-07 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 BenchLM.ai 真实 API
-    await this.dispatchV050External(
+    await this.dispatchExternalBenchmark(
       results, 'benchlm_agentic',
-      this.config._external_benchmarks_roadmap?.benchlm_agentic,
       'https://llm-benchmark.local/api/v1/benchlm_agentic/v1',
       (apiBase, model, timeoutMs) => {
         const bla = this.config._external_benchmarks_roadmap!.benchlm_agentic!;
@@ -375,9 +370,8 @@ export class Evaluator {
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 swe_bench_pro QuestionScore (questionId=`swe_bench_pro_${model.name}`, category=`swe_bench_pro`, dimension=`coding` 走 v0.4.0 默认, score = pass_rate * 0.7 + patch_score * 0.2 + files_modified_normalized * 0.1 归一到 0-100; agentic_mode 关闭时纯 pass_rate)
     // - 注: SWE-bench Pro (Scale AI, 2026-06-02, claude-fable-5 首条数据 80.3%) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Scale AI 真实 API
-    await this.dispatchV050External(
+    await this.dispatchExternalBenchmark(
       results, 'swe_bench_pro',
-      this.config._external_benchmarks_roadmap?.swe_bench_pro,
       'https://llm-benchmark.local/api/v1/swe_bench_pro/v1',
       (apiBase, model, timeoutMs) => {
         const sbp = this.config._external_benchmarks_roadmap!.swe_bench_pro!;
@@ -390,9 +384,8 @@ export class Evaluator {
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 process_aware_scoring QuestionScore (questionId=`process_aware_scoring_${model.name}`, category=`process_aware_scoring`, dimension=`coding` 走 v0.4.0 默认, score = process_score 0-100 (过程维度综合分) 复合 pass_fail_weight + process_weight)
     // - 注: Process-Aware Scoring (Princeton SWE-Bench Pro 03-04 trajectory + Anthropic 「2026 Agent 元年」18 页报告) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Princeton/Anthropic 真实 API
-    await this.dispatchV050External(
+    await this.dispatchExternalBenchmark(
       results, 'process_aware_scoring',
-      this.config._external_benchmarks_roadmap?.process_aware_scoring,
       'https://llm-benchmark.local/api/v1/process_aware_scoring/v1',
       (apiBase, model, timeoutMs) => {
         const pas = this.config._external_benchmarks_roadmap!.process_aware_scoring!;
@@ -414,9 +407,8 @@ export class Evaluator {
     // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 long_context_cluster QuestionScore (questionId=`long_context_cluster_${model.name}`, category=`long_context_cluster`, dimension=`long_context` 走 v0.4.0 默认, score = subset_pass_rate * 0.7 + (1 - tokens_used_normalized) * 0.3 归一到 0-100; 4 基准 LongBench v2 + Babilong + InfiniteBench + Phonebook, harness 0.4.0 PR #3256 同源)
     // - 注: Long Context Cluster (harness 0.4.0 PR #3256 同源, 62 tasks, 4 基准 LongBench v2 21 + Babilong 13 + InfiniteBench 18 + Phonebook 10) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 harness 真实 API
-    await this.dispatchV050External(
+    await this.dispatchExternalBenchmark(
       results, 'long_context_cluster',
-      this.config._external_benchmarks_roadmap?.long_context_cluster,
       'https://llm-benchmark.local/api/v1/long_context_cluster/v1',
       (apiBase, model, timeoutMs) => {
         const lcc = this.config._external_benchmarks_roadmap!.long_context_cluster!;
@@ -1399,6 +1391,37 @@ export class Evaluator {
     }
 
     return details;
+  }
+
+  /**
+   * v0.6.0 step-v6.0-9 chain #10 dispatch-call-extraction shorthand:
+   * 8 个 await this.dispatchV050External(results, '<name>', this.config._external_benchmarks_roadmap?.<name>,
+   *   '<url>', (apiBase, model, timeoutMs) => { ... }) 调用点全部 collapse 到 4-arg 形式
+   *   await this.dispatchExternalBenchmark(results, '<name>', '<url>', (apiBase, model, timeoutMs) => { ... })
+   *
+   * 集中实现: 从 this.config._external_benchmarks_roadmap?.[benchmarkName] 读 cfg,
+   *   自动透传给 dispatchV050External (本 helper 仅是 cfg-lookup wrapper, 不修改 dispatchV050External 本身).
+   *
+   * 价值: 8 sites 减少 4×8=32 行重复 (3 行 cfg + 1 行 benchmarkName 参数 + 1 行换行 boilerplate),
+   *   parallels chain #8 defaultDispatchType + chain #9 logExternalBenchmarkEnabled 模式 —
+   *   「default value per-key 散落但 lookup 集中实现」的 helper-extraction 第 3 站 (cfg 自动 lookup).
+   *
+   * 边界:
+   * - _external_benchmarks_roadmap 整体 undefined → cfg = undefined → dispatchV050External 走 enabled 守卫早 return (8 个 fetcher 同行为)
+   * - benchmarkName 不在 cfg 里 (typings 漂移) → cfg = undefined → 同上守卫早 return
+   * - benchmarkName 拼错 (e.g. 'webdevArena' 驼峰而非 'webdev_arena') → cfg = undefined → 守卫早 return, 0 副作用
+   *
+   * 类型: cfg cast 为 dispatchV050External 期望的 5-field shape (TypeScript homomorphic narrow on key)
+   */
+  private async dispatchExternalBenchmark(
+    results: EvaluationResult[],
+    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster',
+    defaultApiBase: string,
+    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: string) => Promise<QuestionScore>,
+  ): Promise<void> {
+    const ext = this.config._external_benchmarks_roadmap as Record<string, { enabled?: boolean; type?: string; api_base?: string; timeout_ms?: number; model_id?: string } | undefined> | undefined;
+    const cfg = ext?.[benchmarkName];
+    return this.dispatchV050External(results, benchmarkName, cfg, defaultApiBase, fetcher);
   }
 
   /**
