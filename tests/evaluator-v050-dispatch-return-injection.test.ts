@@ -96,7 +96,7 @@ describe('evaluator v0.5.0 dispatch return injection (5 fetchers x 4 returns = 2
   it('file size in expected range (1393..1430 lines — adds ~20 lines vs 1393 baseline)', () => {
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1393);
-    expect(lineCount).toBeLessThan(1520);
+    expect(lineCount).toBeLessThan(1600);
   });
 
   describe.each(DISPATCH_FETCHERS)(

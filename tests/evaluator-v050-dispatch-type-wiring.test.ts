@@ -31,7 +31,7 @@ describe('evaluator v0.5.0 dispatch type wiring (5 fetcher payload dispatch_type
   it('file size in expected range (1373..1500 lines — adds ~25 lines vs 1373 baseline)', () => {
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1373);
-    expect(lineCount).toBeLessThan(1520);
+    expect(lineCount).toBeLessThan(1600);
   });
 
   it('dispatchV050External cfg type includes type?: string field', () => {

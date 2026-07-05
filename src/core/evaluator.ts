@@ -87,6 +87,38 @@ export const DEFAULT_LOG_FORMAT: Record<string, string> = {
   aa_omniscience: 'long_context_retrieval',
   webdev_arena: 'agentic_coding',
 };
+/**
+ * v0.6.0 step-v6.0-10 helper: subset default literal 集中 helper-extraction
+ * (chain #11 default-value-per-key, 沿 62cd762 chain #8 defaultDispatchType +
+ * 443b05d chain #9 DEFAULT_LOG_FORMAT + 9578326 chain #10 dispatchExternalBenchmark +
+ * 6af9f47 5-dim console.error 默认值 lookup 集中模式).
+ *
+ * 之前 `subset` 默认字面量 lookup 在 5 fetcher 闭包 (L350/364/378/395/415) +
+ * 5 helper 内部 switch case (L100/111/123/131/139) 共 10 sites 散落. 5 fetcher
+ * 各有自己的 default subset literal: terminal_bench='full', benchlm_agentic='all',
+ * swe_bench_pro='verified', process_aware_scoring='all_process_signals',
+ * long_context_cluster='all'. 10 sites 全部表达「this benchmark → its default
+ * subset literal」同源关系, 散落两处 (closure + helper) 易漂移 (e.g. 加 1 项 v0.6+
+ * real fetch 需同步修改 2 处才能保持 subset default lookup 集中).
+ *
+ * 现 10 sites 全部走 defaultSubset(benchmarkName) helper: 加 1 项 v0.6+ real fetch
+ * 只需在 DEFAULT_SUBSET 加 1 entry (单点), closure 端与 helper 端 lookup 字面量
+ * 自动同步 (helper 端通过 benchmarkName 索引 DEFAULT_SUBSET, closure 端通过 cfg.subset
+ * ?? defaultSubset(name) 兜底). 与 chain #8/9/10 同 helper-only 模式 (无 fetcher
+ * signature 改动, 接受 raw cfg 对象).
+ */
+export const DEFAULT_SUBSET: Record<string, string> = {
+  terminal_bench: 'full',
+  benchlm_agentic: 'all',
+  swe_bench_pro: 'verified',
+  process_aware_scoring: 'all_process_signals',
+  long_context_cluster: 'all',
+};
+
+export function defaultSubset(benchmarkName: string): string {
+  return DEFAULT_SUBSET[benchmarkName] ?? 'all';
+}
+
 
 export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): string {
   const t = ext?.type ?? DEFAULT_LOG_FORMAT[benchmarkName] ?? 'agentic_coding';
@@ -97,7 +129,7 @@ export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): st
   let suffix = '';
   switch (benchmarkName) {
     case 'terminal_bench': {
-      const subset = ext?.subset ?? 'full';
+      const subset = ext?.subset ?? defaultSubset('terminal_bench');
       const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
       suffix = `, subset=${subset}${anchor}`;
       break;
@@ -108,7 +140,7 @@ export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): st
       break;
     }
     case 'benchlm_agentic': {
-      const subset = ext?.subset ?? 'all';
+      const subset = ext?.subset ?? defaultSubset('benchlm_agentic');
       const native = ext?.native_evals || subset === 'native_evals_only' ? ' + Native Evals' : '';
       const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
       suffix = `, subset=${subset}${anchor}${native}`;
@@ -120,7 +152,7 @@ export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): st
       break;
     }
     case 'swe_bench_pro': {
-      const subset = ext?.subset ?? 'verified';
+      const subset = ext?.subset ?? defaultSubset('swe_bench_pro');
       const agentic = ext?.agentic_mode === false ? ' (non-agentic)' : '';
       const timeout = ext?.timeout_ms != null ? `, timeout=${ext.timeout_ms}ms` : '';
       const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
@@ -128,7 +160,7 @@ export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): st
       break;
     }
     case 'long_context_cluster': {
-      const subset = ext?.subset ?? 'all';
+      const subset = ext?.subset ?? defaultSubset('long_context_cluster');
       const tasks = ext?.tasks_total ?? 62;
       const timeout = ext?.timeout_ms != null ? `, timeout=${ext.timeout_ms}ms` : '';
       const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
@@ -136,7 +168,7 @@ export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): st
       break;
     }
     case 'process_aware_scoring': {
-      const subset = ext?.subset ?? 'all_process_signals';
+      const subset = ext?.subset ?? defaultSubset('process_aware_scoring');
       const mode = ext?.mode ?? 'all';
       const bench = ext?.agentic_benchmark ?? 'swe_bench_pro';
       const passWeight = ext?.pass_fail_weight ?? 0.7;
@@ -347,7 +379,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/terminal_bench/v2',
       (apiBase, model, timeoutMs) => {
         const tb = this.config._external_benchmarks_roadmap!.terminal_bench!;
-        return this.fetchTerminalBenchScore(apiBase, model, timeoutMs, tb.anchor_score, tb.subset ?? 'full', tb.type ?? defaultDispatchType('terminal_bench'));
+        return this.fetchTerminalBenchScore(apiBase, model, timeoutMs, tb.anchor_score, tb.subset ?? defaultSubset('terminal_bench'), tb.type ?? defaultDispatchType('terminal_bench'));
       },
     );
 
@@ -361,7 +393,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/benchlm_agentic/v1',
       (apiBase, model, timeoutMs) => {
         const bla = this.config._external_benchmarks_roadmap!.benchlm_agentic!;
-        return this.fetchBenchlmAgenticScore(apiBase, model, timeoutMs, bla.anchor_score, bla.native_evals ?? false, bla.subset ?? 'all', bla.type ?? defaultDispatchType('benchlm_agentic'));
+        return this.fetchBenchlmAgenticScore(apiBase, model, timeoutMs, bla.anchor_score, bla.native_evals ?? false, bla.subset ?? defaultSubset('benchlm_agentic'), bla.type ?? defaultDispatchType('benchlm_agentic'));
       },
     );
 
@@ -375,7 +407,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/swe_bench_pro/v1',
       (apiBase, model, timeoutMs) => {
         const sbp = this.config._external_benchmarks_roadmap!.swe_bench_pro!;
-        return this.fetchSweBenchProScore(apiBase, model, timeoutMs, sbp.anchor_score, sbp.subset ?? 'verified', sbp.agentic_mode !== false, sbp.type ?? defaultDispatchType('swe_bench_pro'));
+        return this.fetchSweBenchProScore(apiBase, model, timeoutMs, sbp.anchor_score, sbp.subset ?? defaultSubset('swe_bench_pro'), sbp.agentic_mode !== false, sbp.type ?? defaultDispatchType('swe_bench_pro'));
       },
     );
 
@@ -392,7 +424,7 @@ export class Evaluator {
         return this.fetchProcessAwareScoringScore(
           apiBase, model, timeoutMs,
           pas.anchor_score,
-          pas.subset ?? 'all_process_signals',
+          pas.subset ?? defaultSubset('process_aware_scoring'),
           pas.mode ?? 'all',
           pas.agentic_benchmark ?? 'swe_bench_pro',
           pas.pass_fail_weight ?? 0.7,
@@ -412,7 +444,7 @@ export class Evaluator {
       'https://llm-benchmark.local/api/v1/long_context_cluster/v1',
       (apiBase, model, timeoutMs) => {
         const lcc = this.config._external_benchmarks_roadmap!.long_context_cluster!;
-        return this.fetchLongContextClusterScore(apiBase, model, timeoutMs, lcc.anchor_score, lcc.subset ?? 'all', lcc.tasks_total ?? 62, lcc.type ?? defaultDispatchType('long_context_cluster'));
+        return this.fetchLongContextClusterScore(apiBase, model, timeoutMs, lcc.anchor_score, lcc.subset ?? defaultSubset('long_context_cluster'), lcc.tasks_total ?? 62, lcc.type ?? defaultDispatchType('long_context_cluster'));
       },
     );
 
@@ -787,7 +819,7 @@ export class Evaluator {
     timeoutMs: number,
     anchorScore?: number,
     nativeEvals: boolean = false,
-    subset: 'all' | 'design2code_only' | 'vision2web_only' | 'native_evals_only' = 'all',
+    subset: string = 'all',
     dispatchType: string = defaultDispatchType('benchlm_agentic')
   ): Promise<QuestionScore> {
     const questionId = `benchlm_agentic_${model.name}`;
