@@ -1,11 +1,11 @@
 // tests/evaluator-dispatch-v050-external-helper.test.ts
-// 钉住 src/core/evaluator.ts:1305 dispatchV050External() helper 存在 + 8 v0.5.0 dispatch sites 全部走 helper:
+// 钉住 src/core/evaluator.ts:1305 dispatchV050External() helper 存在 + 8 v0.5.0 dispatch sites 全部走 cfg-lookup wrapper dispatchExternalBenchmark (chain #10):
 // 1) helper declared as private async (single instance)
 // 2) helper signature canonical: 5 params (results, benchmarkName, cfg, defaultApiBase, fetcher), returns Promise<void>
 // 3) helper body canonical: enabled guard + api_base ?? defaultApiBase + timeout_ms ?? 30000 + Promise.all(results.map(model_id_filter + fetcher + scores.push + log))
-// 4) 8 sites call this.dispatchV050External( at run() level (webdev_arena/cyberseceval3/aa_omniscience/terminal_bench/benchlm_agentic/swe_bench_pro/process_aware_scoring/long_context_cluster)
-// 5) 0 inline `if (this.config._external_benchmarks_roadmap?.<NAME>?.enabled) {` dispatch-block patterns remain (regression gate — 8 sites collapsed)
-// 6) helper file size + run() block range consistent (post-refactor 1326 lines, down from 1366)
+// 4) 8 sites call this.dispatchExternalBenchmark( at run() level (webdev_arena/cyberseceval3/aa_omniscience/terminal_bench/benchlm_agentic/swe_bench_pro/process_aware_scoring/long_context_cluster)
+// 5) wrapper dispatchExternalBenchmark 内部 1 次 call this.dispatchV050External( (cfg-lookup 透明透传, helper 真接线总入口)
+// 6) 0 inline `if (this.config._external_benchmarks_roadmap?.<NAME>?.enabled) {` dispatch-block patterns remain (regression gate — 8 sites collapsed)
 // 7) each of 8 sites passes benchmarkName as lowercase_snake string literal (webdev_arena / cyberseceval3 / aa_omniscience / terminal_bench / benchlm_agentic / swe_bench_pro / process_aware_scoring / long_context_cluster)
 // 8) default API base literals for 8 sites match v0.5.0 dispatch endpoints (no accidental rewriting)
 import * as fs from 'fs';
@@ -13,7 +13,7 @@ import * as path from 'path';
 
 const EVALUATOR_PATH = path.resolve(__dirname, '../src/core/evaluator.ts');
 
-describe('evaluator dispatchV050External helper (8-site dedupe)', () => {
+describe('evaluator dispatchV050External + dispatchExternalBenchmark helpers (8-site wrapper dedupe, chain #10)', () => {
   const src = fs.readFileSync(EVALUATOR_PATH, 'utf-8');
 
   it('file size in expected range (1300..1420 — bootstrap95CI helper added 74 lines at v0.6.0 step-v6.0-2)', () => {
@@ -63,7 +63,7 @@ describe('evaluator dispatchV050External helper (8-site dedupe)', () => {
     expect(body).toMatch(/\$\{score\.detail\s*\?\?\s*'no detail'\}/);
   });
 
-  it('8 call sites at run() level use this.dispatchV050External( with lowercase_snake benchmarkName literal', () => {
+  it('8 call sites at run() level use this.dispatchExternalBenchmark( wrapper with lowercase_snake benchmarkName literal (chain #10 cfg-lookup wrapper)', () => {
     const expected = [
       'webdev_arena',
       'cyberseceval3',
@@ -75,11 +75,23 @@ describe('evaluator dispatchV050External helper (8-site dedupe)', () => {
       'long_context_cluster',
     ];
     for (const name of expected) {
-      const re = new RegExp(`await this\\.dispatchV050External\\(\\s*[\\s\\S]*?'${name}'`);
+      const re = new RegExp(`await this\\.dispatchExternalBenchmark\\([\\s\\S]{0,200}?'${name}'`);
       expect(re.test(src)).toBe(true);
     }
-    const totalCalls = (src.match(/await this\.dispatchV050External\(/g) || []).length;
+    // 仅数代码行 (排除 JSDoc `* await this.dispatchExternalBenchmark(...)` 例行); 1 JSDoc example 已被排除
+    const codeOnly = src.split('\n').filter(l => !/^\s*\*/.test(l)).join('\n');
+    const totalCalls = (codeOnly.match(/await this\.dispatchExternalBenchmark\(/g) || []).length;
     expect(totalCalls).toBe(8);
+  });
+
+  it('wrapper dispatchExternalBenchmark calls dispatchV050External once internally (cfg-lookup transparent passthrough)', () => {
+    // chain #10: wrapper does cfg = ext?.[benchmarkName]; return this.dispatchV050External(...)
+    const wrapperBody = src.match(/private async dispatchExternalBenchmark\([\s\S]*?\n  \}/);
+    expect(wrapperBody).not.toBeNull();
+    expect(wrapperBody![0]).toMatch(/return this\.dispatchV050External\(/);
+    // exactly 1 internal dispatchV050External call (the wrapper's own), 1 declaration
+    const internalCalls = (wrapperBody![0].match(/this\.dispatchV050External\(/g) || []).length;
+    expect(internalCalls).toBe(1);
   });
 
   it('zero remaining inline `if (this.config._external_benchmarks_roadmap?.<NAME>?.enabled) {` dispatch-block patterns (regression gate)', () => {

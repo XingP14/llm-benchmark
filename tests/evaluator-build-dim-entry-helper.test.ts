@@ -20,7 +20,7 @@ describe('evaluator calculateDimensions → buildDimEntry helper (v0.6.0 step-v6
     expect(src).toBeDefined();
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1300);
-    expect(lineCount).toBeLessThan(1520); // buildDimEntry helper 抽出净减 (v0.6.0 step-v6.0-2 caller) + dispatch return 注入净增 20 行 (v0.6.0 step-v6.0-4 step4, 07-03 02:43 cron)
+    expect(lineCount).toBeLessThan(1600); // bumped 1520→1600 after chain #8 defaultDispatchType + chain #9 logExternalBenchmarkEnabled + chain #10 dispatchExternalBenchmark (3 helpers + JSDoc 累加 ~234 行 vs step-v6.0-2 1326 baseline; 现 1560, 留 40 行 slack 给后续 helper-extraction 链)
   });
 
   it('declares exactly one private buildDimEntry helper', () => {
