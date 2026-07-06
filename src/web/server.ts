@@ -1,4 +1,5 @@
 // src/web/server.ts - Express 服务器入口
+// chain #15 closure: 2 inline console.log (L63 banner + L73 shutdown) → webServerLog per-prefix helper (parallels core/scorer.ts logError + web/engine/evaluator.ts logEvalError 漏更续集)。
 
 import express from 'express';
 import { createServer } from 'http';
@@ -11,6 +12,23 @@ import questionsRoutes from './routes/questions';
 import { initWebSocket } from './websocket';
 import { closeDatabase } from './db/database';
 import { adminPasswordSource, validateRuntimeConfig } from './config';
+
+/**
+ * Server lifecycle log helper — 沿 src/core/scorer.ts:14 logError + src/web/engine/evaluator.ts:30 logEvalError
+ * + src/core/reporter.ts:7 + src/web/websocket.ts:9 per-prefix helper 集中模式。
+ *
+ * chain #15 closure: server.ts 的 2 个 inline `console.log` site (L63 listen-banner + L73 SIGINT-shutdown)
+ * 此前直接调 console.log, 散落在 server.ts 入口里。
+ * 现通过 webServerLog 集中: 加 1 个新 helper / 调整 gate 语义只需改 1 处,
+ * 不再让 server lifecycle log 走 raw console.log (parallels core/scorer.ts + web/engine/evaluator.ts 漏更续集)。
+ *
+ * 注: webServerLog 不带 shouldLog gate (因为 server 启动 banner 和 SIGINT shutdown 都是生命周期事件,
+ * 与 per-evaluation error log 不同 — lifecycle log 应该 always 出现, 哪怕 jest 测试环境也保留).
+ * 如果未来要加 shouldLog gate, 沿 src/core/scorer.ts:14 模式集中即可, 不必改 call sites.
+ */
+const webServerLog = (...args: unknown[]): void => {
+  console.log(...args);
+};
 
 const PORT = process.env.PORT || 3033;
 const PUBLIC_DIR = path.join(__dirname, '../../public');
@@ -60,7 +78,7 @@ initWebSocket(server);
 
 // 启动服务器
 server.listen(PORT, () => {
-  console.log(`
+  webServerLog(`
 🎯 LLM Benchmark Web Server
 ============================
 URL: http://localhost:${PORT}
@@ -70,7 +88,7 @@ Admin user: admin (password source: ${adminPasswordSource()})
 
 // 优雅关闭
 process.on('SIGINT', () => {
-  console.log('\nShutting down...');
+  webServerLog('\nShutting down...');
   closeDatabase();
   process.exit(0);
 });
