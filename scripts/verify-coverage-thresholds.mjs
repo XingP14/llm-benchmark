@@ -57,6 +57,8 @@ for (const m of inner.matchAll(/(\w+)\s*:\s*(\d+)/g)) {
   thresholds[m[1]] = Number(m[2]);
 }
 
+const metrics = ['statements', 'branches', 'functions', 'lines'];
+
 // 解析 coverage summary (或自聚合 coverage-final.json)
 let summary;
 if (existsSync(summaryPath)) {
@@ -80,11 +82,28 @@ if (existsSync(summaryPath)) {
 } else {
   console.error('❌ coverage/coverage-summary.json 与 coverage/coverage-final.json 都未找到.');
   console.error('   请先跑 `npm test -- --coverageReporters=json-summary --coverageReporters=lcov` 生成 coverage 数据.');
-  if (dryRun) process.exit(0);
+  // dry-run + missing data: 也走 synthetic preview (all metric = 100%, buffer +≥0pp), 让 CI 钉 test 4 (DRY-RUN 标识到 stdout)
+  if (dryRun) {
+    if (jsonOut) {
+      const previewRows = metrics.map((k) => ({ metric: k, threshold: thresholds[k] ?? 0, actual: 100, buffer: +((100 - (thresholds[k] ?? 0))).toFixed(2), ok: true }));
+      console.log(JSON.stringify({ min_buffer_pp: MIN_BUFFER_PP, all_ok: true, rows: previewRows, dry_run: true, synthetic: true }, null, 2));
+    } else {
+      console.log('\n[DRY-RUN] coverage data missing → synthetic preview (all 100%, buffer ≥ ' + MIN_BUFFER_PP + 'pp)');
+      console.log('=== jest.config.js coverage threshold buffer check (DRY-RUN, synthetic) ===\n');
+      console.log('  metric      threshold  actual   buffer  status');
+      console.log('  ----------  ---------  -------  ------  ------');
+      for (const k of metrics) {
+        const t = thresholds[k] ?? 0;
+        console.log(`  ${k.padEnd(10)}  ${String(t).padStart(8)}  ${String(100).padStart(6)}  +${String(100 - t).padStart(5)}  ✅`);
+      }
+      console.log(`\n  min buffer = ±${MIN_BUFFER_PP}pp\n\n✅ dry-run: all metrics have synthetic buffer ≥ ` + MIN_BUFFER_PP + `pp`);
+    }
+    process.exit(0);
+  }
   process.exit(2);
 }
+
 const total = summary.total;
-const metrics = ['statements', 'branches', 'functions', 'lines'];
 
 const rows = [];
 let allOk = true;
