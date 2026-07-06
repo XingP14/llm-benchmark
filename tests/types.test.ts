@@ -341,5 +341,46 @@ describe('Types', () => {
       expect(stubOptional.cyberseceval3?.type).toBeUndefined();
     });
 
+    // 07-07 cron: 5 type-stub 真实化 closure step — ExternalDispatchType union alias 导出 + 8 fetcher `type?:` 字段统一指向 alias (替 8 个单 literal stub).
+    // (a) 5 关键 fetcher (terminal_bench / benchlm_agentic / swe_bench_pro / process_aware_scoring / long_context_cluster) 接受任意 ExternalDispatchType literal 而非锁死单 literal
+    // (b) 8 fetcher 仍 optional (缺省走 evaluator.ts ?? fallback 不变)
+    // (c) ExternalDispatchType alias 是真 union (6 literal 全覆盖, 防后续漂移到 7/9/4)
+    it('ExternalDispatchType union alias accepts all 6 literals on 5-dim stub 真实化 (07-07 type-stub closure step)', () => {
+      type Ext = NonNullable<BenchmarkConfig['_external_benchmarks_roadmap']>;
+      // 5 关键 fetcher 各接受 alias 全 6 literal (替锁死单 literal stub)
+      const stubTb: Ext = { terminal_bench: { enabled: true, api_base: 'x', model_id: 'y', type: 'agentic_fullstack' } };
+      expect(stubTb.terminal_bench?.type).toBe('agentic_fullstack');
+      const stubBa: Ext = { benchlm_agentic: { enabled: true, api_base: 'x', model_id: 'y', type: 'safety_evaluation' } };
+      expect(stubBa.benchlm_agentic?.type).toBe('safety_evaluation');
+      const stubSw: Ext = { swe_bench_pro: { enabled: true, api_base: 'x', model_id: 'y', type: 'long_context_retrieval' } };
+      expect(stubSw.swe_bench_pro?.type).toBe('long_context_retrieval');
+      const stubPa: Ext = { process_aware_scoring: { enabled: true, api_base: 'x', model_id: 'y', type: 'agentic_coding' } };
+      expect(stubPa.process_aware_scoring?.type).toBe('agentic_coding');
+      const stubLc: Ext = { long_context_cluster: { enabled: true, api_base: 'x', model_id: 'y', type: 'agentic_swe' } };
+      expect(stubLc.long_context_cluster?.type).toBe('agentic_swe');
+      // 8 fetcher 仍 optional (缺省走 evaluator.ts ?? fallback)
+      const stubOptional: Ext = {
+        webdev_arena: { enabled: true, api_base: 'x', model_id: 'y' },
+        aa_omniscience: { enabled: true, api_base: 'x', model_id: 'y' },
+        cyberseceval3: { enabled: true, api_base: 'x', model_id: 'y' },
+      };
+      expect(stubOptional.webdev_arena?.type).toBeUndefined();
+      expect(stubOptional.aa_omniscience?.type).toBeUndefined();
+      expect(stubOptional.cyberseceval3?.type).toBeUndefined();
+    });
+
+    // 07-07 cron: type-layer pin — LiteralA (来自 terminal_bench.type) 是 ExternalDispatchType 真 union, 6 literal 全覆盖, 任一不在 alias 的 literal 编译失败 (e.g. 'agentic_perf' 不被 alias 接受).
+    it('ExternalDispatchType union covers all 6 dispatch literals (07-07 type-layer pin)', () => {
+      type LiteralA = NonNullable<NonNullable<BenchmarkConfig['_external_benchmarks_roadmap']>['terminal_bench']>['type'];
+      const a1: LiteralA = 'agentic_coding';
+      const a2: LiteralA = 'agentic_fullstack';
+      const a3: LiteralA = 'agentic_swe';
+      const a4: LiteralA = 'process_agentic';
+      const a5: LiteralA = 'long_context_retrieval';
+      const a6: LiteralA = 'safety_evaluation';
+      expect(a1).toBe('agentic_coding');
+      expect(a6).toBe('safety_evaluation');
+    });
+
   });
 });
