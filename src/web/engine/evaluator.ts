@@ -23,10 +23,18 @@ import { BenchmarkQuestion } from '../../types';
 import { MultiTurnQuestion } from '../../benchmarks/multi-turn';
 import { PythonSandbox } from '../../sandbox/python-sandbox';
 
+/**
+ * 运行时日志 helper — 沿 src/core/evaluator.ts:26 shouldLog + src/core/scorer.ts:30 + src/core/reporter.ts:7 + src/web/websocket.ts:9 per-prefix helper 集中模式。
+ * 漏更模式 chain #13 closure: logEvaluationError 此前使用 inline `process.env.NODE_ENV !== 'test' && process.env.JEST_WORKER_ID === undefined` literal (byte-identical to `!process.env.JEST_WORKER_ID` 但语义散落),
+ * 现通过 shouldLog / logEvalError 集中: 加 1 个新 helper / 调整 gate 语义只需改 1 处, 不再分散 inline 在 2-3 处 per-prefix 副本产生漂移 (parallels 047e952 reporter.ts + websocket.ts + core/evaluator.ts 漏更续集)。
+ */
+const shouldLog = process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID;
+const logEvalError = (...args: unknown[]): void => {
+  if (shouldLog) console.error(...args);
+};
+
 export function logEvaluationError(message: string, err: unknown): void {
-  if (process.env.NODE_ENV !== 'test' && process.env.JEST_WORKER_ID === undefined) {
-    console.error(message, errorMessage(err));
-  }
+  logEvalError(message, errorMessage(err));
 }
 
 /**

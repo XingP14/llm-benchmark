@@ -66,15 +66,20 @@ describe('engine/evaluator.ts logEvaluationError console.error → errorMessage 
     expect(matches).toEqual([]);
   });
 
-  it('(2) L28 logEvaluationError body routes through errorMessage(err)', () => {
-    // The migrated body should be:
-    //   console.error(message, errorMessage(err));
-    // Find the helper body and assert it uses errorMessage(err).
+  it('(2) logEvaluationError body routes through logEvalError helper which carries errorMessage(err) (chain #13 closure)', () => {
+    // chain #13 refactor: logEvaluationError body became `logEvalError(message, errorMessage(err))`;
+    // the actual `console.error(message, errorMessage(err))` literal now lives inside the new
+    // `logEvalError` helper, byte-identical to the previous inline shape. We assert that the
+    // exported function body routes through the helper, and that the helper body still contains
+    // `console.error(...args)` so behavior parity with chain #5 / chain #6 / 047e952 is preserved.
     const idx = stripped.indexOf('export function logEvaluationError');
     expect(idx).toBeGreaterThan(-1);
     // Look at the next ~220 chars for the body.
     const slice = stripped.slice(idx, idx + 240);
-    expect(slice).toMatch(/console\.error\s*\(\s*message\s*,\s*errorMessage\s*\(\s*err\s*\)\s*\)/);
+    expect(slice).toMatch(/logEvalError\s*\(\s*message\s*,\s*errorMessage\s*\(\s*err\s*\)\s*\)/);
+    // And the helper itself still calls console.error(...args) (byte-identical gate semantics).
+    expect(stripped).toMatch(/const\s+logEvalError\s*=\s*\(\.\.\.args:\s*unknown\[\]\)\s*:\s*void\s*=>\s*\{/);
+    expect(stripped).toMatch(/if\s*\(\s*shouldLog\s*\)\s*console\.error\s*\(\.\.\.args\s*\)\s*;/);
   });
 
   it('(3) logEvaluationError signature unchanged (message, err) => void', () => {
@@ -108,5 +113,29 @@ describe('engine/evaluator.ts logEvaluationError console.error → errorMessage 
       if (prevWorker === undefined) delete process.env.JEST_WORKER_ID;
       else process.env.JEST_WORKER_ID = prevWorker;
     }
+  });
+  it('(6) chain #13 shouldLog per-prefix helper exists (parallels src/core/evaluator.ts:26 / scorer.ts:30 / reporter.ts:7 / websocket.ts:9)', () => {
+    // The new `shouldLog` const must exist with byte-identical gate logic to the 4 sibling sites:
+    //   `process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID`
+    expect(stripped).toMatch(/const\s+shouldLog\s*=\s*process\.env\.NODE_ENV\s*!==\s*'test'\s*&&\s*!process\.env\.JEST_WORKER_ID\s*;/);
+  });
+
+  it('(7) chain #13 attribution comment present (mentions 047e952 leak-fix pattern + 4 sibling shouldLog sites)', () => {
+    // Header doc-comment must reference the chain #13 closure rationale AND the 4 sibling sites
+    // whose `shouldLog` pattern this engine/evaluator.ts site now joins.
+    expect(src).toMatch(/chain\s*#13\s*closure/);
+    expect(src).toMatch(/src\/core\/evaluator\.ts:26/);
+    expect(src).toMatch(/src\/core\/scorer\.ts:30/);
+    expect(src).toMatch(/src\/core\/reporter\.ts:7/);
+    expect(src).toMatch(/src\/web\/websocket\.ts:9/);
+  });
+
+  it('(8) chain #13 console.error site count = 1 (only the new logEvalError helper has it, logEvaluationError body now routes through helper)', () => {
+    // After chain #13 refactor the file should have exactly 1 console.error call site:
+    // inside the `logEvalError` helper body. The exported `logEvaluationError` no longer
+    // contains a console.error call directly (it routes through logEvalError).
+    // Strip doc-comments and string literals before counting.
+    const matches = src.match(/console\.error\s*\(/g) ?? [];
+    expect(matches.length).toBe(1);
   });
 });
