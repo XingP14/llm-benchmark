@@ -49,7 +49,7 @@ export interface BenchmarkConfig {
   concurrency?: number;
   /** 评测次数 (默认 1) */
   runs?: number;
-  /** v0.5.0+ 外部基准路线图 (roadmap-only, 默认 undefined; PR 进度: type ✅ / dispatch ⏳) */
+  /** v0.5.0+ 外部基准路线图 (roadmap-only, 默认 undefined; PR 进度: type ✅ 2150d07 / dispatch 8/8 ✅ — 沿 6af9f47 5-dim 默认值 lookup 集中 stale drift 模式, 见 src/index.ts L100 / L106 同步刷新). */
   _external_benchmarks_roadmap?: ExternalBenchmarkRoadmap;
   /**
    * v0.5.0+ 配套工具 (companion tooling, roadmap-only, 默认 undefined)

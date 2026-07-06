@@ -54,11 +54,16 @@ function scoresOf(results: ResultRow[], type: ResultRow['question_type']): numbe
 }
 
 // Average of a numeric score list, rounded to nearest integer (0 for empty list).
-// Used by the 5 question-type fields on the per-config results block in
-// /:id/results; all 5 call sites are byte-identical so the inline ternary +
-// reduce/length + Math.round pattern was hoisted here (parallels woclaw
-// f622f24 sendJsonError / 59753ba logEvaluationError / 845c4ba
-// printBenchmarkSection 5-dim 漏更 cleanup).
+// Used by the 5 question-type fields (dialogue / coding / function_calling /
+// long_context / multi_turn) + 1 totalAvg field on the per-config results
+// block in /:id/results; all 6 call sites are byte-identical so the inline
+// ternary + reduce/length + Math.round pattern was hoisted here (parallels
+// woclaw f622f24 sendJsonError / 59753ba logEvaluationError / 845c4ba
+// printBenchmarkSection 5-dim 漏更 cleanup). 07-07 01:23 cron: comment-only
+// stale drift fix (5 → 6 call sites) — 6af9f47 mode; avgOf totalAvg call site
+// at L207 was added at 2bb18e4 commit time but JSDoc claim was not refreshed
+// (was: "5 question-type fields ... all 5 call sites"; is: 5 dim + 1 totalAvg
+// = 6 calls). 0 functional code change.
 function avgOf(scores: number[]): number {
   return scores.length > 0
     ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)

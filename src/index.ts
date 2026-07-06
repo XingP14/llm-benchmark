@@ -97,7 +97,8 @@ async function runBenchmark(args: string[]) {
   try {
     const results = await evaluator.run();
 
-    // v0.5.0+ 外部基准路线图提示 (roadmap-only, PR 进度: type ✅ / dispatch ⏳)
+    // v0.5.0+ 外部基准路线图提示 (roadmap-only, PR 进度: type ✅ 2150d07 / dispatch 8/8 ✅
+    // — 见下方 console.info 同步刷新, 沿 6af9f47 5-dim 默认值 lookup 集中 stale drift 模式).
     if (config._external_benchmarks_roadmap) {
       const enabled = Object.entries(config._external_benchmarks_roadmap)
         .filter(([_, v]) => v?.enabled)
