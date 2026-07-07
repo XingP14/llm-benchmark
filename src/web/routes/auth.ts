@@ -21,6 +21,16 @@ interface UserRow {
 }
 
 /**
+ * chain #16 closure: migrate auth.ts:32 admin init console.log to webAdminLog per-prefix helper
+ * (parallels src/web/server.ts webServerLog + src/core/scorer.ts logError + src/web/engine/evaluator.ts logEvalError 漏更续集).
+ * webAdminLog 不带 shouldLog gate (admin init is a bootstrap lifecycle event that must always appear,
+ * e.g. during first-run db bootstrap under jest, unlike per-request auth debug logs).
+ */
+const webAdminLog = (...args: unknown[]): void => {
+  console.log(...args);
+};
+
+/**
  * 初始化管理员用户
  */
 export function initAdmin(): void {
@@ -29,7 +39,7 @@ export function initAdmin(): void {
   if (!existing) {
     const hash = bcrypt.hashSync(getAdminPassword(), 10);
     db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run('admin', hash);
-    console.log(`Admin user created: admin (password source: ${adminPasswordSource()})`);
+    webAdminLog(`Admin user created: admin (password source: ${adminPasswordSource()})`);
   }
 }
 
