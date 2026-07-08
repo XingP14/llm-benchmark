@@ -41,3 +41,7 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Verify coverage threshold buffer (≥ 2pp regression gate)
+        run: npm run verify:coverage --silent
+

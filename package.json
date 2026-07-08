@@ -29,7 +29,9 @@
     "dev:web": "ts-node src/web/server.ts",
     "test": "jest --runInBand --coverage",
     "lint": "eslint src/**/*.ts",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "verify:coverage": "node scripts/verify-coverage-thresholds.mjs",
+    "test:coverage": "jest --runInBand --coverage --coverageReporters=json-summary --coverageReporters=lcov"
   },
   "keywords": [
     "llm",

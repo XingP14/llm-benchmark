@@ -131,3 +131,40 @@ describe('verify-coverage-thresholds.mjs script', () => {
     expect(configText).toMatch(/lines:\s*90/);
   });
 });
+
+// 02-47 cron fix(ci) 增量 (CI workflow + npm script wiring):
+// - 9) npm run verify:coverage 入口存在 + exit 0 (验证 package.json scripts 字段)
+// - 10) .github/workflows/ci.yml 含 Verify coverage threshold buffer step (CI wiring regression gate)
+// - 11) package.json 含 test:coverage helper (--coverageReporters=json-summary + lcov for full local CI parity)
+// - 12) scripts/verify-coverage-thresholds.mjs 真实跑时 (有 final.json) → exit 0 + rows ≥ 4 + all_ok=true
+describe('CI workflow + npm script wiring (02:47 cron fix(ci) 增量)', () => {
+  test('9) package.json 含 verify:coverage script 入口', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(REPO_ROOT, 'package.json'), 'utf8'));
+    expect(pkg.scripts['verify:coverage']).toBe('node scripts/verify-coverage-thresholds.mjs');
+  });
+
+  test('10) .github/workflows/ci.yml 含 Verify coverage threshold buffer step (CI wiring regression gate)', () => {
+    const ciYml = fs.readFileSync(path.resolve(REPO_ROOT, '.github/workflows/ci.yml'), 'utf8');
+    expect(ciYml).toMatch(/Verify coverage threshold buffer/);
+    expect(ciYml).toMatch(/npm run verify:coverage/);
+    // 必须出现在 'Test' step 之后 (顺序 gate)
+    const testIdx = ciYml.indexOf('- name: Test');
+    const verifyIdx = ciYml.indexOf('Verify coverage threshold buffer');
+    expect(testIdx).toBeGreaterThan(-1);
+    expect(verifyIdx).toBeGreaterThan(testIdx);
+  });
+
+  test('11) package.json 含 test:coverage helper (CI parity)', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(REPO_ROOT, 'package.json'), 'utf8'));
+    expect(pkg.scripts['test:coverage']).toMatch(/--coverageReporters=json-summary/);
+    expect(pkg.scripts['test:coverage']).toMatch(/--coverageReporters=lcov/);
+  });
+
+  test('12) scripts/verify-coverage-thresholds.mjs 真实跑 (有 final.json) → exit 0 + rows ≥ 4 + all_ok=true', () => {
+    const r = runScript(['--json']);
+    expect(r.code).toBe(0);
+    const parsed = JSON.parse(r.stdout);
+    expect(parsed.all_ok).toBe(true);
+    expect(parsed.rows.length).toBeGreaterThanOrEqual(4);
+  });
+});
