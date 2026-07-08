@@ -20,7 +20,7 @@ describe('evaluator dispatchV050External + dispatchExternalBenchmark helpers (8-
     expect(src).toBeDefined();
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1300);
-    expect(lineCount).toBeLessThan(1600); // bootstrap95CI helper added 74 lines (v0.6.0 step-v6.0-2)
+    expect(lineCount).toBeLessThan(1700); // bumped 1600→1700 after chain #12 dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
   });
 
   it('declares exactly one private async dispatchV050External helper', () => {
@@ -63,7 +63,7 @@ describe('evaluator dispatchV050External + dispatchExternalBenchmark helpers (8-
     expect(body).toMatch(/\$\{score\.detail\s*\?\?\s*'no detail'\}/);
   });
 
-  it('8 call sites at run() level use this.dispatchExternalBenchmark( wrapper with lowercase_snake benchmarkName literal (chain #10 cfg-lookup wrapper)', () => {
+  it('8 call sites at run() level use this.dispatchExternalCall( 3-arg shorthand (chain #12 dispatch-call-extraction, 沿 chain #10 dispatchExternalBenchmark 4-arg wrapper 收缩)', () => {
     const expected = [
       'webdev_arena',
       'cyberseceval3',
@@ -75,15 +75,24 @@ describe('evaluator dispatchV050External + dispatchExternalBenchmark helpers (8-
       'long_context_cluster',
     ];
     for (const name of expected) {
-      const re = new RegExp(`await this\\.dispatchExternalBenchmark\\([\\s\\S]{0,200}?'${name}'`);
+      const re = new RegExp(`await this\\.dispatchExternalCall\\([\\s\\S]{0,200}?'${name}'`);
       expect(re.test(src)).toBe(true);
     }
-    // 仅数代码行 (排除 JSDoc `* await this.dispatchExternalBenchmark(...)` 例行); 1 JSDoc example 已被排除
+    // 仅数代码行 (排除 JSDoc `* await this.dispatchExternalCall(...)` 例行); 1 JSDoc example 已被排除
     const codeOnly = src.split('\n').filter(l => !/^\s*\*/.test(l)).join('\n');
-    const totalCalls = (codeOnly.match(/await this\.dispatchExternalBenchmark\(/g) || []).length;
+    const totalCalls = (codeOnly.match(/await this\.dispatchExternalCall\(/g) || []).length;
     expect(totalCalls).toBe(8);
   });
 
+  it('chain #10 dispatchExternalBenchmark 4-arg wrapper retained as back-compat alias (zero callers at run() level — chain #12 collapsed all 8 sites to dispatchExternalCall 3-arg)', () => {
+    // wrapper declaration still present
+    const decl = src.match(/private async dispatchExternalBenchmark\(/);
+    expect(decl).not.toBeNull();
+    // 0 callers (chain #12 collapsed all 8 sites to dispatchExternalCall); JSDoc 仅 1 处文档示例 'await this.dispatchExternalBenchmark(...)' 被 codeOnly 过滤
+    const codeOnly = src.split('\n').filter(l => !/^\s*\*/.test(l)).join('\n');
+    const totalCalls = (codeOnly.match(/this\.dispatchExternalBenchmark\(/g) || []).length;
+    expect(totalCalls).toBe(0);
+  });
   it('wrapper dispatchExternalBenchmark calls dispatchV050External once internally (cfg-lookup transparent passthrough)', () => {
     // chain #10: wrapper does cfg = ext?.[benchmarkName]; return this.dispatchV050External(...)
     const wrapperBody = src.match(/private async dispatchExternalBenchmark\([\s\S]*?\n  \}/);

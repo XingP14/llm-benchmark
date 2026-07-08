@@ -183,7 +183,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     it('file size in expected range (1420..1460 — helper block added ~24 lines)', () => {
       const lineCount = src.split('\n').length;
       expect(lineCount).toBeGreaterThanOrEqual(1420);
-      expect(lineCount).toBeLessThan(1600);
+      expect(lineCount).toBeLessThan(1700); // bumped 1600→1700 after chain #12 dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
     });
     it('chain #8 attribution header comment present', () => {
       expect(src).toMatch(/v0\.6\.0 step-v6\.0-7 helper: 5 fetcher dispatchType literal default lookup/);

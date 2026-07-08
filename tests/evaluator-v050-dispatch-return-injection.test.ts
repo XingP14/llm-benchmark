@@ -96,7 +96,7 @@ describe('evaluator v0.5.0 dispatch return injection (5 fetchers x 4 returns = 2
   it('file size in expected range (1393..1430 lines — adds ~20 lines vs 1393 baseline)', () => {
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1393);
-    expect(lineCount).toBeLessThan(1600);
+    expect(lineCount).toBeLessThan(1700); // bumped 1600→1700 after chain #12 dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
   });
 
   describe.each(DISPATCH_FETCHERS)(

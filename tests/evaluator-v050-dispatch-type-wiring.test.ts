@@ -31,7 +31,7 @@ describe('evaluator v0.5.0 dispatch type wiring (5 fetcher payload dispatch_type
   it('file size in expected range (1373..1500 lines — adds ~25 lines vs 1373 baseline)', () => {
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1373);
-    expect(lineCount).toBeLessThan(1600);
+    expect(lineCount).toBeLessThan(1700); // bumped 1600→1700 after chain #12 dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
   });
 
   it('dispatchV050External cfg type includes type?: string field', () => {
