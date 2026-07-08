@@ -16,13 +16,95 @@
     "multi_turn": false
   },
   "_external_benchmarks_roadmap": {
-    "_comment": "v0.5.0 路线图: 第三方/对抗式基准 (本段示例格式, 当前不消费, src/types/index.ts BenchmarkConfig 未声明, 启用需同步 PR type 扩展)",
+    "_comment": "v0.5.0+ 外部基准路线图 (类型已声明于 src/types/index.ts ExternalBenchmarkRoadmap, 沿 2150d07 type 段 5 处 stub 真实化 + bb49dd0 8 union alias + 0ffb136 8/8 parity). 全部 8 个 dispatch keys 都消费 (eval 时 enabled=true 才发请求), 默认 enabled=false 不消费. dispatch POST 字段详见 src/core/evaluator.ts DEFAULT_API_BASE / DEFAULT_SUBSET + dispatchV050External helper.",
     "webdev_arena": {
       "enabled": false,
-      "endpoint": "https://webdevarena.com/api/v1/evaluate",
-      "category": "fullstack_codegen",
-      "scoring": "elo_pairwise"
+      "type": "agentic_coding",
+      "api_base": "https://webdevarena.com/api/v1/eval",
+      "model_id": "your-model",
+      "timeout_ms": 30000,
+      "anchor_score": 1500
+    },
+    "terminal_bench": {
+      "enabled": false,
+      "type": "agentic_coding",
+      "api_base": "https://llm-benchmark.local/api/v1/terminal_bench/v2",
+      "model_id": "claude-fable-5",
+      "subset": "full",
+      "timeout_ms": 30000,
+      "anchor_score": 80.3
+    },
+    "aa_omniscience": {
+      "enabled": false,
+      "type": "long_context_retrieval",
+      "api_base": "https://llm-benchmark.local/api/v1/aa_omniscience/v1",
+      "model_id": "claude-fable-5",
+      "timeout_ms": 30000,
+      "anchor_score": 78.5
+    },
+    "benchlm_agentic": {
+      "enabled": false,
+      "type": "agentic_fullstack",
+      "api_base": "https://llm-benchmark.local/api/v1/benchlm_agentic/v1",
+      "model_id": "claude-fable-5",
+      "subset": "all",
+      "native_evals": false,
+      "timeout_ms": 30000,
+      "anchor_score": 72.4
+    },
+    "cyberseceval3": {
+      "enabled": false,
+      "type": "safety_evaluation",
+      "api_base": "https://llm-benchmark.local/api/v1/cyberseceval3/v1",
+      "model_id": "claude-fable-5",
+      "risk_categories": [
+        "automated_social_engineering",
+        "manual_offensive_cyber",
+        "autonomous_offensive_cyber"
+      ]
+    },
+    "swe_bench_pro": {
+      "enabled": false,
+      "type": "agentic_swe",
+      "api_base": "https://llm-benchmark.local/api/v1/swe_bench_pro/v1",
+      "model_id": "claude-fable-5",
+      "subset": "verified",
+      "agentic_mode": true,
+      "timeout_ms": 30000,
+      "anchor_score": 80.3
+    },
+    "long_context_cluster": {
+      "enabled": false,
+      "type": "long_context_retrieval",
+      "api_base": "https://llm-benchmark.local/api/v1/long_context_cluster/v1",
+      "model_id": "claude-fable-5",
+      "subset": "all",
+      "tasks_total": 62,
+      "timeout_ms": 30000,
+      "anchor_score": 49.5
+    },
+    "process_aware_scoring": {
+      "enabled": false,
+      "type": "process_agentic",
+      "api_base": "https://llm-benchmark.local/api/v1/process_aware_scoring/v1",
+      "model_id": "claude-fable-5",
+      "subset": "all_process_signals",
+      "mode": "all",
+      "agentic_benchmark": "swe_bench_pro",
+      "pass_fail_weight": 0.7,
+      "process_weight": 0.3,
+      "timeout_ms": 30000,
+      "anchor_score": 75.0
     }
   },
-  "output": "./results"
+  "companion_tools": {
+    "_comment": "v0.5.0+ 配套工具 (companion tooling, 与 _external_benchmarks_roadmap 同 roadmap-only 性质; 评出「模型质量」后, 跑推理服务 SLO sweep)",
+    "guidellm": {
+      "installed": false,
+      "sweep_config": ""
+    }
+  },
+  "output": "./results",
+  "concurrency": 3,
+  "runs": 1
 }
