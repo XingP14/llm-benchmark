@@ -99,4 +99,26 @@ describe('stale .bak cleanup + index.ts catch errorMessage 漏更', () => {
     const block = match[0];
     expect(block).toMatch(/process\.exit\(1\)/);
   });
+
+
+  // -- chain #10 stale .bak closure (07-09 22:23 cron; abf14d6 23:04 refactor 留下的 cp snapshot,
+  //    被 chain #12 dispatchExternalCall helper test 完全替代, 但 .bak 文件残留在 tests/ 目录未清) --
+  test('9) tests/ 目录无 .bak 文件残留 (chain #10 stale snapshot closure)', () => {
+    // chain #10 abf14d6 refactor 后, tests/evaluator-dispatch-external-benchmark-helper-historical.test.ts.bak
+    // 是 pre-chain #12 dispatchExternalBenchmark 4-arg helper 的 cp snapshot; 现已被
+    // tests/evaluator-dispatch-external-call-helper.test.ts (chain #12 step-v6.0-11) 完全替代.
+    // sweep tests/ 目录确认无任何 .bak 文件 (host-local 清理 + 防止再 cp 漏更).
+    const testsDir = path.join(repoRoot, 'tests');
+    const entries = fs.readdirSync(testsDir, { withFileTypes: true });
+    const bakFiles = entries
+      .filter((e) => e.isFile() && e.name.endsWith('.bak'))
+      .map((e) => e.name);
+    expect(bakFiles).toEqual([]);
+  });
+
+  test('10) tests/evaluator-dispatch-external-call-helper.test.ts 存在 (chain #12 successor pin)', () => {
+    // chain #12 dispatchExternalCall helper test 是 .bak 内容的正式后继; 若它缺席, sweep 测试假阳性.
+    const successor = path.join(repoRoot, 'tests', 'evaluator-dispatch-external-call-helper.test.ts');
+    expect(fs.existsSync(successor)).toBe(true);
+  });
 });
