@@ -37,7 +37,7 @@ export const DIM_HEADERS: ReadonlyArray<DimHeader> = [
  * 从 EvaluationResult.dimensions 取一个维度的原始平均分。
  * 缺失 / undefined / average 非 number 时返回 null。
  * 这是 Reporter 各报表 (md / html td / html detail-card / csv) 唯一需要的存在性 +
- * 数值判定逻辑, 集中实现避免 3 处 inline `if (!dim || typeof dim.average !== 'number')`
+ * 数值判定逻辑, 集中实现避免 6 处 inline `if (!dim || typeof dim.average !== 'number')`
  * 副本产生漂移 (06-29 03:23 cron refactor 之前的 bug, parallels 06-20 cron 提
  * getDimCell 时漏更续集)。需要显示文本请用 getDimCell; 需要原始 number (例如 HTML
  * 评分条 width) 请用 getDimValue。
@@ -361,7 +361,7 @@ export class Reporter {
 
       // 06-29 03:23 cron: route 5-dim td cell through getDimValue (exists/number gate),
       // parallels 06-20 cron getDimCell extraction. Replaces inline
-      // `if (!dim || typeof dim.average !== 'number')` 副本 (3rd inline site closed).
+      // `if (!dim || typeof dim.average !== 'number')` 副本 (闭合第 3 处 inline site closed).
       // 06-29 03:23 cron (parallels 同上, attribution 续集): HTML td 用 raw avg.toFixed(1)
       // + score-bar width = avg% (raw number), 故只用 getDimValue; getDimCell (display
       // string) 留给 Markdown / detail-card 等纯文本渲染位.
@@ -407,11 +407,15 @@ export class Reporter {
         html += `<p class="sub-label-tag">${subCellHtml}</p>`;
       }
 
-      // 06-29 03:23 cron: detail-card 5-dim 走 getDimCell, 闭合第 2 处 inline `if
-      // (!dim || typeof dim.average !== 'number')` 副本; 维度缺失时 helper 已返回 '-'
+      // 06-29 03:23 cron: detail-card 5-dim 走 getDimCell, 闭合第 4 处 inline `if
+      // (!dim || typeof dim.average !== 'number')` 副本 (站点 1/2/3 见 markdown overall L216
+      // + markdown detail L244 + html td L364; 站点 5 见 src/index.ts:281 printSummary);
+      // 维度缺失时 helper 已返回 '-'
       // 但 detail-card 需要 dim-na 包装以便 CSS dim-na 灰显, 故保留包装 (与 td 一致)。
       // v0.6.0 step-v6.0-4 (07-02 06:43 cron): 紧跟 cell 附 95% CI sub-line (class
       // 'dim-ci' 灰小字体), ci 缺失 / n=0 / dim 缺失时降级为 '-' (helper 统一守)。
+      // 06-29 03:23 cron (parallels L410 inline-attribution): 5-dim cell 取自 getDimCell
+      // 第 4 处 inline 闭合站点 (html detail-card, 与 L410 6af9f47 模式同源).
       DIM_HEADERS.forEach((d) => {
         const cell = getDimCell(result.dimensions, d.key);
         if (cell === '-') {
@@ -486,13 +490,13 @@ export class Reporter {
         r.modelName,
         r.totalScore,
         ...DIM_HEADERS.map(({ key }) => {
-          // 06-29 03:23 cron: 5-dim CSV cell 走 getDimValue (raw number) ?? '-', 闭合第 4 处
+          // 06-29 03:23 cron: 5-dim CSV cell 走 getDimValue (raw number) ?? '-', 闭合第 5 处
           // inline `dim && typeof dim.average === 'number'` 副本; CSV 需原始 number 供
           // Excel/Sheets 二次分析, 不能走 getDimCell (toFixed(1) 会丢精度)。
           const avg = getDimValue(r.dimensions, key);
           return avg === null ? '-' : avg;
         }),
-        // 06-29 03:23 cron: 5-dim CSV cell 走 getDimValue (raw number) ?? '-', 闭合第 4 处
+        // 06-29 03:23 cron: 5-dim CSV cell 走 getDimValue (raw number) ?? '-', 闭合第 5 处
         // inline `dim && typeof dim.average === 'number'` 副本; CSV 需原始 number 供
         // Excel/Sheets 二次分析, 不能走 getDimCell (toFixed(1) 会丢精度)。
         ...(DIM_HEADERS.flatMap(({ key }) => {

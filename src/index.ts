@@ -275,7 +275,7 @@ function printSummary(results: EvaluationResult[]) {
     const subCell = getSubLabel(result.scores?.find((s) => s != null && (typeof s.subset === 'string' && s.subset.length > 0 || typeof s.mode === 'string' && s.mode.length > 0 || Array.isArray(s.riskCategories) && s.riskCategories.some((c) => typeof c === 'string' && c.length > 0))));
     const modelLabel = `${result.modelName}${dtCell ?? ''}${subCell ?? ''}`;
     // 06-29 03:23 cron: printSummary 5-dim cell 走 getDimCell (display string),
-    // parallels 06-20 cron getDimCell extraction. 闭合第 5 处 inline
+    // parallels 06-20 cron getDimCell extraction. 闭合第 6 处 inline
     // `if (!dim || typeof dim.average !== 'number')` 副本 (printSummary 之前
     // 直接读 result.dimensions?.[d.key].average ?? '-', 现统一走 helper)。
     const cells = [medal, modelLabel, `**${result.totalScore}**`, ...DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key))];
