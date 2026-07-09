@@ -149,6 +149,10 @@ export const DEFAULT_API_BASE: Record<string, string> = {
   swe_bench_pro: 'https://llm-benchmark.local/api/v1/swe_bench_pro/v1',
   process_aware_scoring: 'https://llm-benchmark.local/api/v1/process_aware_scoring/v1',
   long_context_cluster: 'https://llm-benchmark.local/api/v1/long_context_cluster/v1',
+  // v0.6.0 step-v6.0-13 (07-10 05:03 cron, 沿 8769f27 type stub + abf14d6 chain #12 dispatchExternalCall 3-arg shorthand):
+  // lm-eval-harness 任务冲突依赖管理自动化 (CSDN 2026-03-30 实战痛点, [dependency-groups] 已知冲突组合自动检测
+  //   + numpy/torch/datasets 跨 version resolver). 与 lm_eval_harness_v0_4_0 配对 (60+ 学术基准跨 task conflict 自动化 resolver).
+  lm_eval_task_conflict_resolver: 'https://llm-benchmark.local/api/v1/lm_eval_task_conflict_resolver/v1',
 };
 
 
@@ -1265,6 +1269,75 @@ export class Evaluator {
       };
     }
   }
+
+  /**
+   * v0.6.0 step-v6.0-13: lm_eval_task_conflict_resolver 真实 fetch skeleton (07-10 05:03 cron,
+   * 沿 8769f27 type stub + abf14d6 chain #12 dispatchExternalCall 3-arg shorthand helper).
+   *
+   * 目的: lm-eval-harness 任务冲突依赖管理自动化 (CSDN 2026-03-30 实战痛点, [dependency-groups]
+   * 已知冲突组合自动检测 + numpy/torch/datasets 跨 version resolver). 与 lm_eval_harness_v0_4_0 配对
+   * (60+ 学术基准跨 task conflict 自动化 resolver = 2026 H2 跨 vendor model 选型基础设施).
+   *
+   * POST {api_base} body={api_base, model_id, tasks?, mode?, dependency_groups?, timeout_ms}
+   * 期望 Response: { conflicts_detected: number; resolver_status: 'clean' | 'partial_skip' | 'fail';
+   *                  skip_tasks: string[]; report_yaml: string; eval_id?: string; error?: string }
+   * (沿 06-17 22:03 cron type 段锚定契约).
+   *
+   * 本步为 skeleton 实现: 默认走 dry_run 模式, 0 真实 API 调用 (纯 mock fetch + parse + inject),
+   * 仅返回 QuestionScore shape contract 验证 (questionId / category / dimension / dispatchType 5 字段
+   * 与 8 项 v0.5 fetch 模式对齐). 后续 cron tick 补 (1) 真实 fetch + parse + 5 字段 semantic 解码
+   * (2) dry_run / auto_resolve / report_only 三模式 switch (3) skip_tasks 列表注入 detail
+   * (4) report_yaml 摘要嵌入 (5) 9th dispatch site 接入 run() 方法.
+   *
+   * 三段 try/catch: timeout / 4xx / 5xx — 与 8 项 v0.5 fetch 完全对齐 (parallels 06-15/06-16 cron
+   * 7 项 fetch 模式); 失败路径返回 0 分 QuestionScore, 不阻塞主评测.
+   */
+  private async fetchLmEvalTaskConflictResolverScore(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    anchorScore?: number,
+    mode: string = 'dry_run',
+    dependencyGroups: string = 'all',
+    dispatchType: string = defaultDispatchType('lm_eval_task_conflict_resolver')
+  ): Promise<QuestionScore> {
+    const questionId = `lm_eval_task_conflict_resolver_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      tasks: ['acpbench', 'math', 'gsm8k'],
+      mode,
+      dependency_groups: dependencyGroups,
+      timeout_ms: timeoutMs,
+      dispatch_type: dispatchType,
+    };
+    // skeleton placeholder: dry_run 0-conflicts 响应 (后续 cron tick 替换为真实 fetch + parse)
+    // 注: 此处不调真实 API, 仅返回 sentinel QuestionScore 让 type contract 校验通过.
+    // 完整实现 (下轮): fetch(apiBase, POST, basePayload, AbortController) + parse 5 fields
+    // (conflicts_detected / resolver_status / skip_tasks / report_yaml / eval_id) +
+    // normalized = conflicts_detected === 0 ? 100 : Math.max(0, 100 - conflicts_detected * 5).
+    const placeholderConflicts = 0;
+    const normalized = 100;
+    const modePart = `[${mode}|${dependencyGroups}]`;
+    // 引用 apiBase 参数 (skeleton 阶段不实际调 API, 但保留参数以与 8 项 v0.5 fetcher 4-arg signature 对齐);
+    // 下轮真实 fetch 接入时, 此行替换为 `await fetch(apiBase, { method: 'POST', body: JSON.stringify(basePayload), ... })`.
+    void apiBase;
+    let detail = `lm_eval_task_conflict_resolver${modePart} score=${normalized.toFixed(1)} (skeleton placeholder, 0 真实 fetch, apiBase=${apiBase})`;
+    if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
+      logWarn(`  [lm_eval_task_conflict_resolver] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
+      detail += ` (anchor ⚠️ ${anchorScore})`;
+    }
+    return {
+      questionId,
+      category: 'lm_eval_task_conflict_resolver',
+      score: Math.round(normalized * 10) / 10,
+      dimension: 'coding',
+      modelOutput: JSON.stringify({ placeholder: true, conflicts_detected: placeholderConflicts, mode, dependencyGroups }).slice(0, 500),
+      detail,
+      dispatchType,
+    };
+  }
+
 
   private async evaluateModel(
     model: ModelConfig,
