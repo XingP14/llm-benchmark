@@ -6,8 +6,8 @@
 // (4) empty string 返回 'agentic_coding' 兜底
 // (5) L1352 dispatchV050External 调用 defaultDispatchType(benchmarkName) 不再硬编码 (substring grep)
 // (6) 5 closure L277/292/307/330/346 全部从 lookup 取值
-// (7) 5 default parameter L627/722/827/937/1050 全部用 helper 调用
-// (8) 1 helper fallback L1352 调用 helper
+// (7) 6 default parameter L756/851/956/1066/1179/1302 全部用 helper 调用 (v0.6.0 step-v6.0-13 加 lm_eval_task_conflict_resolver 第 6 处)
+// (8) 1 helper fallback L1616 调用 helper (dispatchV050External)
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -107,7 +107,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     });
   });
 
-  describe('5 default parameter declarations all use helper', () => {
+  describe('6 default parameter declarations all use helper (v0.6.0 step-v6.0-13 added lm_eval_task_conflict_resolver)', () => {
     it("(terminal_bench) → defaultDispatchType('terminal_bench')", () => {
       expect(src).toMatch(/dispatchType: string = defaultDispatchType\('terminal_bench'\)/);
     });
@@ -124,13 +124,17 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       expect(src).toMatch(/dispatchType: string = defaultDispatchType\('long_context_cluster'\)/);
     });
 
-    it('default parameter NO LONGER use bare 5 literals (default-param gate, excludes helper block)', () => {
+    it("(lm_eval_task_conflict_resolver) → defaultDispatchType('lm_eval_task_conflict_resolver') [v0.6.0 step-v6.0-13 9th fetcher, 07-10 05:03 cron]", () => {
+      expect(src).toMatch(/dispatchType: string = defaultDispatchType\('lm_eval_task_conflict_resolver'\)/);
+    });
+
+    it('default parameter NO LONGER use bare 6 literals (default-param gate, excludes helper block) — bumped 5→6 after v0.6.0 step-v6.0-13', () => {
       // Scope: only check 5 fetcher signature lines (NOT the helper block DEFAULT_DISPATCH_TYPE entries
       // + NOT the helper block header comment)
       // The 5 fetcher signatures all have the form `    dispatchType: string = ...` at column 4 (4-space indent)
       const lines = src.split('\n');
       const defaultParamLines = lines.filter((l) => /^    dispatchType: string = /.test(l));
-      expect(defaultParamLines.length).toBe(5);
+      expect(defaultParamLines.length).toBe(6);
       for (const l of defaultParamLines) {
         // Must use defaultDispatchType, not bare literal
         expect(l).toMatch(/defaultDispatchType\(/);
@@ -160,8 +164,8 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     });
   });
 
-  describe('closure + default param + helper fallback total = 11 sites consolidated', () => {
-    it('total defaultDispatchType() call sites = 11 (5 closure + 5 default param + 1 helper fallback)', () => {
+  describe('closure + default param + helper fallback total = 12 sites consolidated (v0.6.0 step-v6.0-13 bumped 11→12)', () => {
+    it('total defaultDispatchType() call sites = 12 (5 closure + 6 default param + 1 helper fallback)', () => {
       // Count occurrences of `defaultDispatchType(` that are NOT inside a `*` comment line + NOT the declaration
       const lines = src.split('\n');
       let callCount = 0;
@@ -175,7 +179,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
         const matches = l.match(/defaultDispatchType\(/g);
         if (matches) callCount += matches.length;
       }
-      expect(callCount).toBe(11);
+      expect(callCount).toBe(12);
     });
   });
 
