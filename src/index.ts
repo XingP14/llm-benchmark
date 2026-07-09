@@ -6,6 +6,7 @@ import { Evaluator } from './core/evaluator';
 import { Reporter, DIM_HEADERS, getDimCell, getDispatchTypeCell, getSubLabel } from './core/reporter';
 import { LLMAdapter } from './adapters/adapter';
 import { errorMessage } from './errors';
+import { cliLog, cliError } from './cli/cli_log';
 import { OpenAIAdapter } from './adapters/openai-adapter';
 import { AnthropicAdapter } from './adapters/anthropic-adapter';
 import { GLMAdapter } from './adapters/glm-adapter';
@@ -52,7 +53,7 @@ async function main() {
     case '--version':
     case '-v':
       // 文档承诺 (README 「方式 2: 全局安装」段) 必须可用
-      console.log(`llm-bench v${pkgVersion}`);
+      cliLog(`llm-bench v${pkgVersion}`);
       break;
     case 'run':
       await runBenchmark(args.slice(1));
@@ -76,7 +77,7 @@ async function main() {
 async function runBenchmark(args: string[]) {
   const configPath = getArgValue(args, '--config') || 'config.json';
 
-  console.log('🚀 LLM Benchmark 开始...\n');
+  cliLog('🚀 LLM Benchmark 开始...\n');
 
   const config = loadConfig(configPath);
   if (!config.models || config.models.length === 0) {
@@ -104,18 +105,18 @@ async function runBenchmark(args: string[]) {
         .filter(([_, v]) => v?.enabled)
         .map(([k]) => k);
       if (enabled.length > 0) {
-        console.info(`\n🧪 v0.5.0+ external benchmark roadmap detected: ${enabled.join(', ')} (PR progress: type ✅ 2150d07 / dispatch 8/8 真实化 (webdev_arena/terminal_bench/aa_omniscience/benchlm_agentic/cyberseceval3/swe_bench_pro/long_context_cluster/process_aware_scoring, per src/core/evaluator.ts line 161) / 真连接 adapter 仍 partial — full PR 估 30-45min)`);
+        cliLog(`\n🧪 v0.5.0+ external benchmark roadmap detected: ${enabled.join(', ')} (PR progress: type ✅ 2150d07 / dispatch 8/8 真实化 (webdev_arena/terminal_bench/aa_omniscience/benchlm_agentic/cyberseceval3/swe_bench_pro/long_context_cluster/process_aware_scoring, per src/core/evaluator.ts line 161) / 真连接 adapter 仍 partial — full PR 估 30-45min)`);
       }
     }
 
-    console.log('\n\n✅ 评测完成!\n');
+    cliLog('\n\n✅ 评测完成!\n');
 
     printSummary(results);
 
     const outputDir = config.output || './results';
     Reporter.saveReport(results, outputDir);
   } catch (error: unknown) {
-    console.error('\n\n❌ 评测失败:', errorMessage(error));
+    cliError('\n\n❌ 评测失败:', errorMessage(error));
     process.exit(1);
   }
 }
@@ -159,23 +160,23 @@ function initConfig() {
   };
 
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  console.log(`✅ 配置文件已创建: ${configPath}`);
-  console.log('请编辑配置文件添加你的模型 API Key');
-  console.log('\n支持的适配器类型:');
-  console.log('  - openai: OpenAI 兼容接口 (GPT-4, GPT-3.5 等)');
-  console.log('  - anthropic: Anthropic Claude (Claude 3 Haiku/Opus 等)');
-  console.log('  - glm: 智谱 GLM (GLM-4 等)');
-  console.log('  - deepseek: DeepSeek (deepseek-chat, deepseek-reasoner 推理回退)');
-  console.log('  - qwen: 通义千问 / DashScope (qwen-turbo/plus/max/qwen3-max)');
-  console.log('  - ollama: Ollama 本地模型 (llama3.2, qwen2.5, mistral 等)');
+  cliLog(`✅ 配置文件已创建: ${configPath}`);
+  cliLog('请编辑配置文件添加你的模型 API Key');
+  cliLog('\n支持的适配器类型:');
+  cliLog('  - openai: OpenAI 兼容接口 (GPT-4, GPT-3.5 等)');
+  cliLog('  - anthropic: Anthropic Claude (Claude 3 Haiku/Opus 等)');
+  cliLog('  - glm: 智谱 GLM (GLM-4 等)');
+  cliLog('  - deepseek: DeepSeek (deepseek-chat, deepseek-reasoner 推理回退)');
+  cliLog('  - qwen: 通义千问 / DashScope (qwen-turbo/plus/max/qwen3-max)');
+  cliLog('  - ollama: Ollama 本地模型 (llama3.2, qwen2.5, mistral 等)');
 }
 
 async function compareModels(args: string[]) {
   const modelPaths = args.filter((a) => !a.startsWith('--'));
 
   if (modelPaths.length < 2) {
-    console.error('请至少提供两个模型配置文件进行对比');
-    console.error('用法: llm-bench compare model1.json model2.json');
+    cliError('请至少提供两个模型配置文件进行对比');
+    cliError('用法: llm-bench compare model1.json model2.json');
     process.exit(1);
   }
 
@@ -203,11 +204,11 @@ async function compareModels(args: string[]) {
   const adapter = createAdapter(models[0].type);
   const evaluator = new Evaluator(benchmarkConfig, adapter);
 
-  console.log(`🔄 对比评测 ${models.length} 个模型...\n`);
+  cliLog(`🔄 对比评测 ${models.length} 个模型...\n`);
 
   const results = await evaluator.run();
 
-  console.log('\n✅ 对比完成!\n');
+  cliLog('\n✅ 对比完成!\n');
   printSummary(results);
 }
 
@@ -221,7 +222,7 @@ function listBenchmarks() {
   // LongContextQuestion / MultiTurnQuestion) declare `category: string`.
   // parallels 06-26 22:03 cron 5 as-any drops in same function (this round targets
   // the structural repetition, not the cast leak). 0 functional change.
-  console.log('\n📋 可用评测题:\n');
+  cliLog('\n📋 可用评测题:\n');
   printBenchmarkSection('对话能力评测', getAllDialogueBenchmarks());
   printBenchmarkSection('代码能力评测', getAllCodeBenchmarks());
   printBenchmarkSection('工具调用 (Function Calling) 评测', getAllFunctionCallingBenchmarks());
@@ -240,11 +241,11 @@ function printBenchmarkSection<T extends { category: string }>(
   label: string,
   benchmarks: T[],
 ): void {
-  console.log(`\n=== ${label} ===`);
-  console.log(`共 ${benchmarks.length} 题\n`);
+  cliLog(`\n=== ${label} ===`);
+  cliLog(`共 ${benchmarks.length} 题\n`);
   const byCategory = groupBy(benchmarks, 'category');
   for (const [category, questions] of Object.entries(byCategory)) {
-    console.log(`  [${category}] - ${questions.length} 题`);
+    cliLog(`  [${category}] - ${questions.length} 题`);
   }
 }
 
@@ -254,14 +255,14 @@ function printSummary(results: EvaluationResult[]) {
   // 统一从 src/core/reporter.ts 导入 DIM_HEADERS + getDimCell，与 Reporter 各报表入口
   // 共享同一份事实 (避免双处副本产生漂移, 06-20 cron refactor 之前的 bug)。
 
-  console.log('📊 评测结果:\n');
+  cliLog('📊 评测结果:\n');
 
   const sorted = [...results].sort((a, b) => b.totalScore - a.totalScore);
 
   const header = ['| 排名 ', '| 模型 ', '| 总分 ', ...DIM_HEADERS.map((d) => `| ${d.cn} `), '|'];
   const sep = ['|------', '|------', '|------', ...DIM_HEADERS.map(() => '|------'), '|'];
-  console.log(header.join('|') + '|');
-  console.log(sep.join('|') + '|');
+  cliLog(header.join('|') + '|');
+  cliLog(sep.join('|') + '|');
 
   sorted.forEach((result, index) => {
     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
@@ -278,7 +279,7 @@ function printSummary(results: EvaluationResult[]) {
     // `if (!dim || typeof dim.average !== 'number')` 副本 (printSummary 之前
     // 直接读 result.dimensions?.[d.key].average ?? '-', 现统一走 helper)。
     const cells = [medal, modelLabel, `**${result.totalScore}**`, ...DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key))];
-    console.log('| ' + cells.join(' | ') + ' |');
+    cliLog('| ' + cells.join(' | ') + ' |');
   });
 }
 
@@ -287,9 +288,9 @@ function loadConfig(configPath: string): BenchmarkConfig {
     const content = fs.readFileSync(configPath, 'utf-8');
     return JSON.parse(content);
   } catch (error: unknown) {
-    console.error(`无法加载配置文件: ${configPath}`);
-    console.error(`原因: ${errorMessage(error)}`);
-    console.error('请先运行: llm-bench init');
+    cliError(`无法加载配置文件: ${configPath}`);
+    cliError(`原因: ${errorMessage(error)}`);
+    cliError('请先运行: llm-bench init');
     process.exit(1);
   }
 }
@@ -314,7 +315,7 @@ function groupBy<T>(array: T[], field: keyof T): Record<string, T[]> {
 }
 
 function showHelp() {
-  console.log(`
+  cliLog(`
 🎯 LLM Benchmark - 本地快速LLM评测工具
 
 用法:
@@ -400,6 +401,6 @@ function showHelp() {
 export { runBenchmark, loadConfig };
 
 main().catch((error: unknown) => {
-  console.error('Fatal error:', errorMessage(error));
+  cliError('Fatal error:', errorMessage(error));
   process.exit(1);
 });
