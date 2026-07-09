@@ -56,6 +56,7 @@ export const DEFAULT_DISPATCH_TYPE: Record<string, string> = {
   cyberseceval3: 'safety_evaluation',
   aa_omniscience: 'long_context_retrieval',
   webdev_arena: 'agentic_coding',
+  lm_eval_task_conflict_resolver: 'agentic_coding',
 };
 
 export function defaultDispatchType(benchmarkName: string): string {
@@ -86,6 +87,7 @@ export const DEFAULT_LOG_FORMAT: Record<string, string> = {
   cyberseceval3: 'safety_evaluation',
   aa_omniscience: 'long_context_retrieval',
   webdev_arena: 'agentic_coding',
+  lm_eval_task_conflict_resolver: 'agentic_coding',
 };
 /**
  * v0.6.0 step-v6.0-10 helper: subset default literal 集中 helper-extraction
