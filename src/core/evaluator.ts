@@ -1339,6 +1339,7 @@ export class Evaluator {
     // 引用 apiBase 参数 (skeleton 阶段不实际调 API, 但保留参数以与 8 项 v0.5 fetcher 4-arg signature 对齐);
     // 下轮真实 fetch 接入时, 此行替换为 `await fetch(apiBase, { method: 'POST', body: JSON.stringify(basePayload), ... })`.
     void apiBase;
+    void basePayload;
     let detail = `lm_eval_task_conflict_resolver${modePart} score=${normalized.toFixed(1)} (skeleton placeholder, 0 真实 fetch, apiBase=${apiBase})`;
     if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
       logWarn(`  [lm_eval_task_conflict_resolver] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
@@ -1349,7 +1350,7 @@ export class Evaluator {
       category: 'lm_eval_task_conflict_resolver',
       score: Math.round(normalized * 10) / 10,
       dimension: 'coding',
-      modelOutput: JSON.stringify({ placeholder: true, conflicts_detected: placeholderConflicts, mode, dependencyGroups }).slice(0, 500),
+      modelOutput: JSON.stringify({ placeholder: true, conflicts_detected: placeholderConflicts, mode, dependencyGroups, request: basePayload }).slice(0, 500),
       detail,
       dispatchType,
     };

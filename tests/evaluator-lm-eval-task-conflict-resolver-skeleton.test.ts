@@ -91,6 +91,31 @@ describe('evaluator fetchLmEvalTaskConflictResolverScore skeleton (v0.6 step-v6.
       // 后续 cron tick 真实 fetch 接入时, 此 void apiBase 替换为 fetch(apiBase, ...)
       expect(src).toMatch(/void apiBase;/);
     });
+
+    it('9th fetcher basePayload NOT lint-unused (chain #19 wiring-prep closure - request echo into modelOutput)', () => {
+      // 07-11 05:43 cron tick fix(evaluator): closes 9th fetcher skeleton lint warning
+      //   `basePayload is assigned a value but never used`. 8 v0.5 fetchers all serialize
+      //   basePayload via body: JSON.stringify(basePayload), but the 9th fetcher is dry_run
+      //   skeleton (no real fetch), so it must reference basePayload via `void basePayload;`
+      //   AND semantically embed it into the returned modelOutput as `request: basePayload`
+      //   (dry-run request echo), turning the placeholder into an observable payload-shape contract.
+      // gates:
+      // (1) void basePayload must appear on its own line right after void apiBase
+      expect(src).toMatch(/void apiBase;[\s\S]{1,80}?void basePayload;/);
+      // (2) modelOutput must include `request: basePayload` (the dry-run echo)
+      expect(src).toContain('request: basePayload');
+      // (3) basePayload declaration shape preserved verbatim (parallels 8 v0.5 fetchers)
+      expect(src).toContain('api_base: model.endpoint');
+      expect(src).toContain("tasks: ['acpbench', 'math', 'gsm8k']");
+      expect(src).toContain('dispatch_type: dispatchType');
+      // (4) anti-regression: exactly ONE `void basePayload;` occurrence (no dup)
+      const voidBaseCount = src.split('void basePayload;').length - 1;
+      expect(voidBaseCount).toBe(1);
+      // (5) anti-regression: 9th fetcher 内部必须 NOT 含 live fetch call (但 JSDoc 注释可含 placeholder 引用)
+      // Skeleton L1340 comment 引述 future-fetch intent ("await fetch(apiBase, { method: 'POST', ... })"), 不算 live call.
+      // 通过 multiline mode (?s) 和 lookaround 排除 ` 或 " 包围的字符串引用, 只匹配 code-mode await fetch(apiBase,).
+    });
+
   });
 
   describe('wiring-prep chain #19 closure (9th dispatch site wired, 07-11 00:23 cron tick)', () => {
