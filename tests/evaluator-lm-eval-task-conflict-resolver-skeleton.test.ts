@@ -138,4 +138,33 @@ describe('evaluator fetchLmEvalTaskConflictResolverScore skeleton (v0.6 step-v6.
       expect(ltrIdx).toBeGreaterThan(lccIdx);
     });
   });
+
+  describe('9th fetcher ExternalDispatchType type field parity (07-10 22:03 cron tick closure)', () => {
+    // 钉住 9/9 dispatch type 字段完整 (含 9th fetcher lm_eval_task_conflict_resolver e578634)
+    // 沿 06-30 06:13 cron 8/8 parity 模式 — 9th entry 漏更 closure, parallels 5 字段补齐 (process_aware_scoring / swe_bench_pro / terminal_bench / benchlm_agentic / long_context_cluster)
+    const typesSrc = fs.readFileSync(TYPES_PATH, 'utf-8');
+
+    it('lm_eval_task_conflict_resolver interface declares type?: ExternalDispatchType (9th entry parity)', () => {
+      // 9-key interface entry 含 type 字段 (沿 webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 / swe_bench_pro / long_context_cluster / process_aware_scoring 8 项同模式)
+      // 必须严格匹配 interface field declaration `lm_eval_task_conflict_resolver?: {` (而非 JSDoc 注释里的引用)
+      expect(typesSrc).toMatch(/lm_eval_task_conflict_resolver\?: \{\s*enabled: boolean;[\s\S]{0,800}?type\?: ExternalDispatchType;/);
+    });
+
+    it('rejects stale 9-key without type field (e578634 era was missing type)', () => {
+      // 9-key type 字段缺失检测: 9th entry 仅有 enabled + api_base + tasks + mode + dependency_groups + anchor_score + timeout_ms 时, 应失败
+      // 8-key 旧版特征: lm_eval_task_conflict_resolver interface entry 不含 type?: ExternalDispatchType
+      const lmEvalBlockMatch = typesSrc.match(/lm_eval_task_conflict_resolver\?: \{([\s\S]*?)\n  \};/);
+      expect(lmEvalBlockMatch).not.toBeNull();
+      const blockBody = lmEvalBlockMatch![1];
+      expect(blockBody).toContain('type?: ExternalDispatchType');
+    });
+
+    it('9-key interface ordering parity (lm_eval_task_conflict_resolver 9th entry, after long_context_cluster cluster段)', () => {
+      // 顺序锁定: lm_eval_task_conflict_resolver interface entry 必须在 long_context_cluster cluster 段之后
+      // (与 e578634 step-v6.0-13 立 chain #19 wiring-prep plan 一致 — 9-key interface 顺序与 9-key DEFAULT_API_BASE 顺序同步)
+      const lmEvalIdx = typesSrc.indexOf('lm_eval_task_conflict_resolver?:');
+      const longContextClusterIdx = typesSrc.lastIndexOf('long_context_cluster?:');
+      expect(lmEvalIdx).toBeGreaterThan(longContextClusterIdx);
+    });
+  });
 });

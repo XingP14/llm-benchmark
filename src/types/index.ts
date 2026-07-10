@@ -824,6 +824,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Timeout / 4xx / 5xx 三段 try/catch (不阻塞主评测, 仅 console.warn + 注入 detail) */
   lm_eval_task_conflict_resolver?: {
     enabled: boolean;
+    /** dispatch 类别标签: 'agentic_coding' — lm-evaluation-harness 任务冲突依赖管理自动化 (CSDN 2026-03-30 实战痛点, [dependency-groups] 已知冲突组合自动检测 + numpy/torch/datasets 跨 version resolver), 与 terminal_bench.type='agentic_coding' / swe_bench_pro.type='agentic_swe' / benchlm_agentic.type='agentic_fullstack' / process_aware_scoring.type='process_agentic' / long_context_cluster.type='long_context_retrieval' 对位, 07-10 22:03 cron 补齐 — 9/9 dispatch type 字段完整 (含 9th fetcher lm_eval_task_conflict_resolver e578634) */
+    type?: ExternalDispatchType;
     api_base?: string;
     /** 待评测的 task 列表 (e.g. ['acpbench', 'math', 'gsm8k']), 跑前 dry-run 验证版本冲突 */
     tasks?: string[];
