@@ -478,6 +478,21 @@ export class Evaluator {
       },
     );
 
+    // v0.6.0 step-v6.0-13 chain #19 wiring-prep: lm_eval_task_conflict_resolver 真实 fetch 接入
+    // (07-11 00:23 cron tick, 沿 8769f27 type stub + abf14d6 chain #12 dispatchExternalCall 3-arg shorthand +
+    //  e578634 9th fetcher skeleton + a444d46 9-key DEFAULT_DISPATCH_TYPE/DEFAULT_LOG_FORMAT + ca4c33f test ceiling 11→12 closure +
+    //  2c140a8 9-key interface type field parity). 本步为 9th dispatch site 接入 — chain #19 wiring-prep 闭合 ✅
+    // - 仅当 ext.lm_eval_task_conflict_resolver.enabled (默认 false, dry_run skeleton sentinel score=100)
+    // - 错误处理: skeleton 阶段 0 真实 fetch 调用, 仅返回 sentinel QuestionScore (后续 cron tick 替换为真实 fetch + parse)
+    // - 注入: EvaluationResult.scores[] 追加 1 个 lm_eval_task_conflict_resolver QuestionScore (questionId=`lm_eval_task_conflict_resolver_${model.name}`,
+    //   category=`lm_eval_task_conflict_resolver`, dimension=`coding` 走 v0.4.0 默认,
+    //   score = 100 sentinel (skeleton placeholder, 后续 cron tick 替换为 conflicts_detected 0-100 归一))
+    // - 注: lm-eval-harness 任务冲突依赖管理自动化 (CSDN 2026-03-30 实战痛点, [dependency-groups] 已知冲突组合自动检测 + numpy/torch/datasets 跨 version resolver)
+    await this.dispatchExternalCall(
+      results, 'lm_eval_task_conflict_resolver',
+      (apiBase, model, timeoutMs) => this.fetchLmEvalTaskConflictResolverScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.anchor_score, this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.mode ?? 'dry_run', this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.dependency_groups ?? 'all'),
+    );
+
     return results;
   }
 
@@ -1546,7 +1561,7 @@ export class Evaluator {
    */
   private async dispatchExternalBenchmark(
     results: EvaluationResult[],
-    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster',
+    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver',
     defaultApiBase: string,
     fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: string) => Promise<QuestionScore>,
   ): Promise<void> {
@@ -1581,7 +1596,7 @@ export class Evaluator {
    */
   private async dispatchExternalCall(
     results: EvaluationResult[],
-    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster',
+    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver',
     fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: string) => Promise<QuestionScore>,
   ): Promise<void> {
     const ext = this.config._external_benchmarks_roadmap as Record<string, { enabled?: boolean; type?: string; api_base?: string; timeout_ms?: number; model_id?: string } | undefined> | undefined;

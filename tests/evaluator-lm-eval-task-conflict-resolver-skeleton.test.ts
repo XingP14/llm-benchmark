@@ -16,8 +16,9 @@
 // (10) lm_eval_task_conflict_resolver 在 9-key map 中位置 = 第 9 个 entry (顺序紧跟 long_context_cluster)
 // (11) 立项 JSDoc 包含 step-v6.0-13 + chain #19 + lm_eval_task_conflict_resolver_real_v1
 // (12) src/types/index.ts ExternalBenchmarkRoadmap.lm_eval_task_conflict_resolver type 段已存在 (8769f27 type stub)
-// (13) 9th dispatch site NOT yet wired in run() method (本步仅 skeleton, 后续 tick 接入 dispatchExternalCall)
-// (14) ZERO real API call — basePayload 仅构造, 不调 fetch / AbortController / response parse
+// (13) 9th dispatch site wired in run() method (07-11 00:23 cron tick, chain #19 closure; 沿 e578634 skeleton + abf14d6 dispatchExternalCall 3-arg shorthand)
+// (14) ZERO real API call — basePayload 仅构造, 不调 fetch / AbortController / response parse (skeleton 阶段, 后续 cron tick 接入真实 fetch + parse)
+
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -92,22 +93,55 @@ describe('evaluator fetchLmEvalTaskConflictResolverScore skeleton (v0.6 step-v6.
     });
   });
 
-  describe('wiring-prep pre-flight (9th dispatch site NOT yet wired, intentional)', () => {
-    it('run() method does NOT yet call dispatchExternalCall for lm_eval_task_conflict_resolver', () => {
-      // 本步仅 skeleton (DEFAULT_API_BASE entry + fetcher method), 9th dispatch site 在下轮接入
-      // 必须无 await this.dispatchExternalCall(... 'lm_eval_task_conflict_resolver' ...)
-      const runMatch = src.match(/async run\(\)[\s\S]*?await this\.dispatchExternalCall\(\s*\n\s*results, 'long_context_cluster',[\s\S]*?\}\);/);
+  describe('wiring-prep chain #19 closure (9th dispatch site wired, 07-11 00:23 cron tick)', () => {
+    // chain #19 wiring-prep 闭合: 9th dispatch site 已接入 run() 方法
+    // (沿 e578634 9th fetcher skeleton + a444d46 9-key DEFAULT_DISPATCH_TYPE/DEFAULT_LOG_FORMAT + ca4c33f test ceiling 11→12 closure +
+    //  2c140a8 9-key interface type field parity). 8/8 → 9/9 real fetch dispatch sites 全部走 dispatchExternalCall 3-arg shorthand.
+
+    it('run() method calls dispatchExternalCall for lm_eval_task_conflict_resolver (9th site wired)', () => {
+      // chain #19 closure: 9th site 必须在 long_context_cluster 之后接入
+      // 必须含 await this.dispatchExternalCall(... 'lm_eval_task_conflict_resolver' ...)
+      const runMatch = src.match(/async run\(\)[\s\S]*?await this\.dispatchExternalCall\(\s*\n\s*results, 'long_context_cluster',[\s\S]*?lm_eval_task_conflict_resolver[\s\S]*?\}\);/);
       expect(runMatch).not.toBeNull();
       const lastDispatch = runMatch![0];
-      expect(lastDispatch).not.toMatch(/lm_eval_task_conflict_resolver/);
+      expect(lastDispatch).toMatch(/'lm_eval_task_conflict_resolver'/);
     });
 
-    it('union types in dispatchExternalCall + dispatchExternalBenchmark NOT yet extended (8-key preserved)', () => {
-      // union 类型扩展在下轮 (本轮保持 8-key union, 0 type widening 风险)
-      const unionMatch = src.match(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster'/);
+    it('9th dispatch site uses fetchLmEvalTaskConflictResolverScore fetcher (closure parity)', () => {
+      // 9th site 闭包必须调 fetchLmEvalTaskConflictResolverScore (沿 8 项 v0.5 fetcher closure 模式)
+      expect(src).toMatch(/await this\.dispatchExternalCall\([\s\S]*?'lm_eval_task_conflict_resolver',[\s\S]*?this\.fetchLmEvalTaskConflictResolverScore\(/);
+    });
+
+    it('union types in dispatchExternalCall + dispatchExternalBenchmark extended to 9-key (lm_eval_task_conflict_resolver added)', () => {
+      // 9-key union: 8 v0.5 + 1 v0.6 lm_eval_task_conflict_resolver
+      const unionMatch = src.match(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster' \| 'lm_eval_task_conflict_resolver'/);
       expect(unionMatch).not.toBeNull();
-      // 仍为 8-key (未扩展), 验证无第 9 个 union member
-      expect(unionMatch![0]).not.toMatch(/lm_eval_task_conflict_resolver/);
+      // 验证 union 含 9 个 member (含 lm_eval_task_conflict_resolver)
+      const unionBody = unionMatch![0];
+      expect(unionBody.split('|').length).toBe(9);
+    });
+
+    it('9th site 闭包透传 anchorScore + mode + dependencyGroups 3 字段 (沿 8 项 v0.5 fetcher 模式)', () => {
+      // 9th site fetcher 闭包必须读 cfg.lm_eval_task_conflict_resolver.anchor_score + mode + dependency_groups (skeleton 阶段 mode=dry_run, dependency_groups=all)
+      expect(src).toMatch(/this\.config\._external_benchmarks_roadmap!\.lm_eval_task_conflict_resolver!\.anchor_score/);
+      expect(src).toMatch(/\.lm_eval_task_conflict_resolver!\.mode \?\? 'dry_run'/);
+      expect(src).toMatch(/\.lm_eval_task_conflict_resolver!\.dependency_groups \?\? 'all'/);
+    });
+
+    it('9 dispatch sites total: 8 v0.5 + 1 v0.6 (lm_eval_task_conflict_resolver, full 9-key chain #19 closure)', () => {
+      // run() 方法内 await this.dispatchExternalCall 总数 = 9 (8 + 1)
+      // 用 name (单引号 string literal 形式) 计数
+      const matches = src.match(/await this\.dispatchExternalCall\(\s*\n\s*results, '([^']+)'/g);
+      expect(matches).not.toBeNull();
+      expect(matches!.length).toBe(9);
+      // 第 9 个必须是 lm_eval_task_conflict_resolver
+      expect(matches![8]).toContain("'lm_eval_task_conflict_resolver'");
+    });
+
+    it('8-key union regression gate (rejects accidental 8-key rollback)', () => {
+      // 如未来误删 union 中 'lm_eval_task_conflict_resolver', 这个正则会失败
+      const unionMatch = src.match(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster' \| 'lm_eval_task_conflict_resolver'/);
+      expect(unionMatch).not.toBeNull();
     });
   });
 
