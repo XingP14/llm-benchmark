@@ -203,3 +203,6 @@
 1148:##[error]buildx failed with: ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 2
 1177:Failed to save: Unable to reserve cache with key docker.io--tonistiigi--binfmt-latest-linux-x64, another job may be creating this cache.
 ```
+
+## Tick note 2026-07-11 06:03 (cron watchdog)
+- V3 27 tick/d night window, picked via rotation rule 4 (dual project <=1h LOCKED tight; woclaw 6min UNLOCK 06:57 + llm-bench 11min UNLOCK 06:52, CI both 24h GREEN). Lowest-cost fix(docs) exception: 16 CI Failure entries historical, current 0 active (last green run 2026-07-10). Documenting cron cadence for audit.
