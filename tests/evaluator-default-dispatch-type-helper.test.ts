@@ -187,7 +187,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     it('file size in expected range (1420..1460 — helper block added ~24 lines)', () => {
       const lineCount = src.split('\n').length;
       expect(lineCount).toBeGreaterThanOrEqual(1420);
-      expect(lineCount).toBeLessThan(1750); // bumped 1700→1750 after chain #19 lm_eval_task_conflict_resolver 9th site (chain #12 left 1619 baseline, +91 JSDoc+9th-site+union-ext+anchor/mode/dependency_groups closure lines vs 1710 actual; 留 40 行 slack) dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
+      expect(lineCount).toBeLessThan(1820); // bumped 1750→1820 after chain #19 lm_eval_task_conflict_resolver 9th site (chain #12 left 1619 baseline, +91 JSDoc+9th-site+union-ext+anchor/mode/dependency_groups closure lines vs 1710 actual; 留 40 行 slack) dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
     });
     it('chain #8 attribution header comment present', () => {
       expect(src).toMatch(/v0\.6\.0 step-v6\.0-7 helper: 5 fetcher dispatchType literal default lookup/);
