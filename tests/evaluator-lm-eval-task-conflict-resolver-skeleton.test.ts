@@ -11,13 +11,13 @@
 // (6) fetcher basePayload 字段 (api_base/model_id/tasks/mode/dependency_groups/timeout_ms/dispatch_type) 7 字段
 // (7) fetcher skeleton 返回 QuestionScore 5 字段 (questionId/category/score/dimension/dispatchType)
 //    category=lm_eval_task_conflict_resolver + dimension=coding 走 v0.4.0 默认
-// (8) fetcher skeleton 0 真实 API 调用 (placeholderConflicts=0, score=100 sentinel)
-// (9) fetcher 错误路径仍 TODO (本步未实现 dry_run/auto_resolve/report_only 三模式 switch, 后续 cron tick 补)
+// (8) fetcher 真实 fetch + 5-field decode (conflicts_detected / resolver_status / skip_tasks / report_yaml / eval_id, 07-12 01:23 cron round 2 closure)
+// (9) fetcher 错误路径三段 try/catch (timeout / 4xx / 5xx, parallels fetchLongContextClusterScore 6-gate pattern); 失败路径返回 0 分 QuestionScore, 不阻塞主评测
 // (10) lm_eval_task_conflict_resolver 在 9-key map 中位置 = 第 9 个 entry (顺序紧跟 long_context_cluster)
 // (11) 立项 JSDoc 包含 step-v6.0-13 + chain #19 + lm_eval_task_conflict_resolver_real_v1
 // (12) src/types/index.ts ExternalBenchmarkRoadmap.lm_eval_task_conflict_resolver type 段已存在 (8769f27 type stub)
 // (13) 9th dispatch site wired in run() method (07-11 00:23 cron tick, chain #19 closure; 沿 e578634 skeleton + abf14d6 dispatchExternalCall 3-arg shorthand)
-// (14) ZERO real API call — basePayload 仅构造, 不调 fetch / AbortController / response parse (skeleton 阶段, 后续 cron tick 接入真实 fetch + parse)
+// (14) REAL fetch + parse — basePayload 走 JSON.stringify(body) + AbortController + response.json() 5-field decode (round 2 closure, 07-12 01:23 cron)
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -69,51 +69,71 @@ describe('evaluator fetchLmEvalTaskConflictResolverScore skeleton (v0.6 step-v6.
       expect(src).toMatch(/questionId,[\s\S]*?category: 'lm_eval_task_conflict_resolver',[\s\S]*?score: Math\.round\(normalized \* 10\) \/ 10,[\s\S]*?dimension: 'coding',[\s\S]*?modelOutput:[\s\S]*?detail,[\s\S]*?dispatchType,[\s\S]*?\};/);
     });
 
-    it('skeleton returns sentinel score=100 (placeholder, 0 real API call)', () => {
-      expect(src).toMatch(/const placeholderConflicts = 0;[\s\S]*?const normalized = 100;/);
+    it('real fetch 5-field decode + normalized=100-conflicts*5 (round 2 closure, replaces sentinel)', () => {
+      // 5 字段 parse: conflicts_detected / resolver_status / skip_tasks / report_yaml / eval_id
+      expect(src).toMatch(/const data = \(await resp\.json\(\)\) as \{[\s\S]*?conflicts_detected\?: number;[\s\S]*?resolver_status\?:/);
+      // 归一公式: 100 - conflicts*5 clamp [0, 100]
+      expect(src).toMatch(/const conflicts = typeof data\.conflicts_detected === 'number' \? data\.conflicts_detected : 0;/);
+      expect(src).toMatch(/const normalized = Math\.max\(0, Math\.min\(100, 100 - conflicts \* 5\)\);/);
     });
 
-    it('skeleton does NOT call real fetch (no code-level fetch( / AbortController, comments allowed)', () => {
-      // 提取 fetcher body 范围 (从 fetcher decl 到 closing })
+    it('real fetch + AbortController + 3-segment try/catch (timeout / 4xx / 5xx, parallels fetchLongContextClusterScore 6-gate)', () => {
       const fetchMatch = src.match(/private async fetchLmEvalTaskConflictResolverScore\([\s\S]*?\n  \}\n/);
       expect(fetchMatch).not.toBeNull();
-      // strip comment lines (// ...) 避免注释中提及 fetch( 被误判
       const codeOnly = fetchMatch![0]
         .split('\n')
         .filter((l) => !l.trim().startsWith('//'))
         .join('\n');
-      // skeleton 阶段不应有真实 fetch 调用 (后续 cron tick 接入)
-      expect(codeOnly).not.toMatch(/await fetch\(/);
-      expect(codeOnly).not.toMatch(/new AbortController/);
+      // real fetch call present (与 8 项 v0.5 fetcher 完全对齐)
+      expect(codeOnly).toMatch(/await fetch\(apiBase,/);
+      expect(codeOnly).toMatch(/new AbortController/);
+      // 4xx 分支
+      expect(codeOnly).toMatch(/if \(!resp\.ok\)/);
+      expect(codeOnly).toMatch(/HTTP \$\{resp\.status\}: \$\{errText\.slice\(0, 200\)\}/);
+      // catch 分支 (timeout / generic fetch error)
+      expect(codeOnly).toMatch(/catch \(err: unknown\) \{/);
+      expect(codeOnly).toMatch(/timeout after \$\{timeoutMs\}ms/);
+      expect(codeOnly).toMatch(/fetch error: \$\{msg\.slice\(0, 200\)\}/);
     });
 
-    it('skeleton void apiBase suppress unused-parameter warning (placeholder annotation)', () => {
-      // 后续 cron tick 真实 fetch 接入时, 此 void apiBase 替换为 fetch(apiBase, ...)
-      expect(src).toMatch(/void apiBase;/);
+    it('real-fetch fetcher uses modePart inline for detail label (replaces skeleton void apiBase)', () => {
+      // modePart = `[${mode}|${dependencyGroups}]` 必须在 fetcher body 内出现 (用于 detail 三段 error/timout/HTTP 分支)
+      expect(src).toMatch(/const modePart = `\[\$\{mode\}\|\$\{dependencyGroups\}\]`;/);
+      // 确认 void apiBase (skeleton 阶段) 已移除 — 真实 fetch 接入后, apiBase 必须实际被 fetch() 使用, 不再 void 抹平
+      const voidApiBaseCount = src.split('void apiBase;').length - 1;
+      expect(voidApiBaseCount).toBe(0);
     });
 
-    it('9th fetcher basePayload NOT lint-unused (chain #19 wiring-prep closure - request echo into modelOutput)', () => {
-      // 07-11 05:43 cron tick fix(evaluator): closes 9th fetcher skeleton lint warning
-      //   `basePayload is assigned a value but never used`. 8 v0.5 fetchers all serialize
-      //   basePayload via body: JSON.stringify(basePayload), but the 9th fetcher is dry_run
-      //   skeleton (no real fetch), so it must reference basePayload via `void basePayload;`
-      //   AND semantically embed it into the returned modelOutput as `request: basePayload`
-      //   (dry-run request echo), turning the placeholder into an observable payload-shape contract.
-      // gates:
-      // (1) void basePayload must appear on its own line right after void apiBase
-      expect(src).toMatch(/void apiBase;[\s\S]{1,80}?void basePayload;/);
-      // (2) modelOutput must include `request: basePayload` (the dry-run echo)
-      expect(src).toContain('request: basePayload');
-      // (3) basePayload declaration shape preserved verbatim (parallels 8 v0.5 fetchers)
+    it('9th fetcher real-fetch body uses basePayload via JSON.stringify (chain #19 closure round 2)', () => {
+      // round 2 closure: basePayload 不再 void 抹平, 而是走 real fetch: `body: JSON.stringify(basePayload)`
+      // (沿 8 项 v0.5 fetcher 同样模式). 错误路径 modelOutput 必须 echo request echo + 5-field decode:
+      expect(src).toMatch(/body: JSON\.stringify\(basePayload\),[\s\S]{0,200}?signal: controller\.signal,/);
+      // modelOutput 包含 spread data + request echo (replaces skeleton dry-run echo)
+      expect(src).toMatch(/modelOutput: JSON\.stringify\(\{ \.\.\.data, request: basePayload \}\)\.slice\(0, 500\)/);
+      // basePayload 声明 shape preserved verbatim
       expect(src).toContain('api_base: model.endpoint');
       expect(src).toContain("tasks: ['acpbench', 'math', 'gsm8k']");
       expect(src).toContain('dispatch_type: dispatchType');
-      // (4) anti-regression: exactly ONE `void basePayload;` occurrence (no dup)
+      // anti-regression: void basePayload / void apiBase 都被移除 (skeleton 阶段抹平)
       const voidBaseCount = src.split('void basePayload;').length - 1;
-      expect(voidBaseCount).toBe(1);
-      // (5) anti-regression: 9th fetcher 内部必须 NOT 含 live fetch call (但 JSDoc 注释可含 placeholder 引用)
-      // Skeleton L1340 comment 引述 future-fetch intent ("await fetch(apiBase, { method: 'POST', ... })"), 不算 live call.
-      // 通过 multiline mode (?s) 和 lookaround 排除 ` 或 " 包围的字符串引用, 只匹配 code-mode await fetch(apiBase,).
+      const voidApiBaseCount = src.split('void apiBase;').length - 1;
+      expect(voidBaseCount).toBe(0);
+      expect(voidApiBaseCount).toBe(0);
+    });
+
+    it('skip_tasks + report_yaml 摘要嵌入 detail (top-5 + ellipsis, 80 char truncate + ws-fold)', () => {
+      // skip_tasks 摘要: top-5 + ellipsis
+      expect(src).toContain('skipped=[');
+      expect(src).toContain('skipArr.slice(0, 5)');
+      expect(src).toContain("skipArr.length > 5 ? ',…' : ''");
+      // report_yaml 摘要: 80 char 截断 + ws 折叠
+      // report_yaml 摘要: 80 char 截断 + ws 折叠 (避免冗长 yaml 撑爆 detail 字段, 同时保留诊断信息)
+      expect(src).toContain('yamlReport.slice(0, 80)');
+      expect(src).toContain("replace(/\\s+/g, ' ')");
+      // status (resolver_status) 嵌入 detail
+      expect(src).toContain('status=${data.resolver_status}');
+      // eval_id 嵌入 detail (与 8 项 v0.5 一致)
+      expect(src).toContain('eval_id=${data.eval_id}');
     });
 
   });

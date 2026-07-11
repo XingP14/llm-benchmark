@@ -478,15 +478,19 @@ export class Evaluator {
       },
     );
 
-    // v0.6.0 step-v6.0-13 chain #19 wiring-prep: lm_eval_task_conflict_resolver 真实 fetch 接入
-    // (07-11 00:23 cron tick, 沿 8769f27 type stub + abf14d6 chain #12 dispatchExternalCall 3-arg shorthand +
-    //  e578634 9th fetcher skeleton + a444d46 9-key DEFAULT_DISPATCH_TYPE/DEFAULT_LOG_FORMAT + ca4c33f test ceiling 11→12 closure +
-    //  2c140a8 9-key interface type field parity). 本步为 9th dispatch site 接入 — chain #19 wiring-prep 闭合 ✅
-    // - 仅当 ext.lm_eval_task_conflict_resolver.enabled (默认 false, dry_run skeleton sentinel score=100)
-    // - 错误处理: skeleton 阶段 0 真实 fetch 调用, 仅返回 sentinel QuestionScore (后续 cron tick 替换为真实 fetch + parse)
+    // v0.6.0 step-v6.0-13 chain #19 wiring-prep: lm_eval_task_conflict_resolver 真实 fetch + parse 接入
+    // (07-12 01:23 cron tick round 2 closure, 沿 07-10 05:03 e578634 skeleton + cfc340a 9th dispatch site run() (07-11 00:23) +
+    //  2fb572a/2c140a8 9-key interface type field parity + ade6422 9th fetcher basePayload request echo (07-11 05:43) +
+    //  a444d46 9-key DEFAULT_DISPATCH_TYPE/DEFAULT_LOG_FORMAT + 99c8a8a 9-gate external-benchmarks-roadmap cliLog parity (07-11 23:28) +
+    //  d168d1a 7 stale test caps).
+    // round 2 收尾: 9th fetcher 0-skeleton → 1-real-fetch 全闭环 (replaces skeleton sentinel score=100 placeholder
+    //  with real fetch + parse + 3-mode switch + skip_tasks/report_yaml 摘要, parallels fetchLongContextClusterScore 6-gate pattern).
+    // - 仅当 ext.lm_eval_task_conflict_resolver.enabled (默认 false, dry_run sentinel score=100)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
     // - 注入: EvaluationResult.scores[] 追加 1 个 lm_eval_task_conflict_resolver QuestionScore (questionId=`lm_eval_task_conflict_resolver_${model.name}`,
     //   category=`lm_eval_task_conflict_resolver`, dimension=`coding` 走 v0.4.0 默认,
-    //   score = 100 sentinel (skeleton placeholder, 后续 cron tick 替换为 conflicts_detected 0-100 归一))
+    //   score = 100 - conflicts_detected*5 clamp [0, 100] (clean/0-conflicts → 100, partial_skip/fail → 100 - conflicts*5))
+    // - skip_tasks 摘要嵌入 detail (top-5 + ellipsis), report_yaml 摘要嵌入 detail (80 char 截断 + ws 折叠)
     // - 注: lm-eval-harness 任务冲突依赖管理自动化 (CSDN 2026-03-30 实战痛点, [dependency-groups] 已知冲突组合自动检测 + numpy/torch/datasets 跨 version resolver)
     await this.dispatchExternalCall(
       results, 'lm_eval_task_conflict_resolver',
@@ -1288,26 +1292,33 @@ export class Evaluator {
   }
 
   /**
-   * v0.6.0 step-v6.0-13: lm_eval_task_conflict_resolver 真实 fetch skeleton (07-10 05:03 cron,
-   * 沿 8769f27 type stub + abf14d6 chain #12 dispatchExternalCall 3-arg shorthand helper).
+   * v0.6.0 step-v6.0-13 chain #19 wiring-prep closure (round 2, 07-12 01:23 cron):
+   * lm_eval_task_conflict_resolver 真实 fetch + parse (替换 07-10 05:03 cron skeleton placeholder,
+   * 沿 e578634 skeleton + cfc340a 9th dispatch site run() + 2fb572a/2c140a8 9-key interface type field +
+   * ade6422 9th fetcher basePayload request echo + a444d46 9-key DEFAULT_DISPATCH_TYPE/DEFAULT_LOG_FORMAT +
+   * 99c8a8a 9-gate external-benchmarks-roadmap cliLog parity + d168d1a 7 stale test caps).
    *
    * 目的: lm-eval-harness 任务冲突依赖管理自动化 (CSDN 2026-03-30 实战痛点, [dependency-groups]
    * 已知冲突组合自动检测 + numpy/torch/datasets 跨 version resolver). 与 lm_eval_harness_v0_4_0 配对
    * (60+ 学术基准跨 task conflict 自动化 resolver = 2026 H2 跨 vendor model 选型基础设施).
    *
-   * POST {api_base} body={api_base, model_id, tasks?, mode?, dependency_groups?, timeout_ms}
-   * 期望 Response: { conflicts_detected: number; resolver_status: 'clean' | 'partial_skip' | 'fail';
-   *                  skip_tasks: string[]; report_yaml: string; eval_id?: string; error?: string }
+   * POST {api_base} body={api_base, model_id, tasks?, mode?, dependency_groups?, timeout_ms, dispatch_type}
+   * 解析 {conflicts_detected: number; resolver_status: 'clean' | 'partial_skip' | 'fail';
+   *       skip_tasks: string[]; report_yaml: string; eval_id?: string; error?: string}
    * (沿 06-17 22:03 cron type 段锚定契约).
    *
-   * 本步为 skeleton 实现: 默认走 dry_run 模式, 0 真实 API 调用 (纯 mock fetch + parse + inject),
-   * 仅返回 QuestionScore shape contract 验证 (questionId / category / dimension / dispatchType 5 字段
-   * 与 8 项 v0.5 fetch 模式对齐). 后续 cron tick 补 (1) 真实 fetch + parse + 5 字段 semantic 解码
-   * (2) dry_run / auto_resolve / report_only 三模式 switch (3) skip_tasks 列表注入 detail
-   * (4) report_yaml 摘要嵌入 (5) 9th dispatch site 接入 run() 方法.
-   *
    * 三段 try/catch: timeout / 4xx / 5xx — 与 8 项 v0.5 fetch 完全对齐 (parallels 06-15/06-16 cron
-   * 7 项 fetch 模式); 失败路径返回 0 分 QuestionScore, 不阻塞主评测.
+   * 7 项 fetch 模式, fetchLongContextClusterScore 6-gate pattern); 失败路径返回 0 分 QuestionScore,
+   * 不阻塞主评测.
+   *
+   * 归一: clean/0-conflicts → 100; partial_skip/fail → 100 - conflicts*5 (clamp [0, 100]).
+   * mode switch (modePart): dry_run / auto_resolve / report_only — 通过 basePayload.mode 透传给 server
+   * (server-side resolver 决定如何处理 dependency_groups; client 只 echo 透传 + parse).
+   * skip_tasks 摘要嵌入 detail (top-5 + ellipsis); report_yaml 摘要嵌入 detail (80 char 截断 + ws 折叠).
+   *
+   * chain #19 wiring-prep 9 步收尾: 9th fetcher 0-skeleton → 1-real-fetch 全闭环 (skeleton 已由
+   * 9-key map / dispatch site / interface type field / cliLog parity / test ceiling closure 5 站铺垫,
+   * round 2 补 real fetch + parse + 3-mode switch + skip_tasks/report_yaml 摘要).
    */
   private async fetchLmEvalTaskConflictResolverScore(
     apiBase: string,
@@ -1328,32 +1339,86 @@ export class Evaluator {
       timeout_ms: timeoutMs,
       dispatch_type: dispatchType,
     };
-    // skeleton placeholder: dry_run 0-conflicts 响应 (后续 cron tick 替换为真实 fetch + parse)
-    // 注: 此处不调真实 API, 仅返回 sentinel QuestionScore 让 type contract 校验通过.
-    // 完整实现 (下轮): fetch(apiBase, POST, basePayload, AbortController) + parse 5 fields
-    // (conflicts_detected / resolver_status / skip_tasks / report_yaml / eval_id) +
-    // normalized = conflicts_detected === 0 ? 100 : Math.max(0, 100 - conflicts_detected * 5).
-    const placeholderConflicts = 0;
-    const normalized = 100;
     const modePart = `[${mode}|${dependencyGroups}]`;
-    // 引用 apiBase 参数 (skeleton 阶段不实际调 API, 但保留参数以与 8 项 v0.5 fetcher 4-arg signature 对齐);
-    // 下轮真实 fetch 接入时, 此行替换为 `await fetch(apiBase, { method: 'POST', body: JSON.stringify(basePayload), ... })`.
-    void apiBase;
-    void basePayload;
-    let detail = `lm_eval_task_conflict_resolver${modePart} score=${normalized.toFixed(1)} (skeleton placeholder, 0 真实 fetch, apiBase=${apiBase})`;
-    if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
-      logWarn(`  [lm_eval_task_conflict_resolver] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
-      detail += ` (anchor ⚠️ ${anchorScore})`;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'lm_eval_task_conflict_resolver',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `lm_eval_task_conflict_resolver${modePart} HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
+        };
+      }
+      const data = (await resp.json()) as {
+        conflicts_detected?: number;
+        resolver_status?: 'clean' | 'partial_skip' | 'fail';
+        skip_tasks?: string[];
+        report_yaml?: string;
+        eval_id?: string;
+        error?: string;
+      };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'lm_eval_task_conflict_resolver',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `lm_eval_task_conflict_resolver${modePart} API error: ${data.error}`,
+          dispatchType,
+        };
+      }
+      // 归一: clean/0-conflicts → 100; partial_skip/fail → 100 - conflicts*5 (clamp ≥ 0)
+      const conflicts = typeof data.conflicts_detected === 'number' ? data.conflicts_detected : 0;
+      const normalized = Math.max(0, Math.min(100, 100 - conflicts * 5));
+      const skipArr = Array.isArray(data.skip_tasks) ? data.skip_tasks : [];
+      const skipPart = skipArr.length > 0 ? `, skipped=[${skipArr.slice(0, 5).join(',')}${skipArr.length > 5 ? ',…' : ''}]` : '';
+      const statusPart = data.resolver_status ? `, status=${data.resolver_status}` : '';
+      const evalIdPart = data.eval_id ? `, eval_id=${data.eval_id}` : '';
+      const yamlReport = typeof data.report_yaml === 'string' ? data.report_yaml : '';
+      const yamlPart = yamlReport ? `, yaml=${yamlReport.slice(0, 80).replace(/\s+/g, ' ')}` : '';
+      let detail = `lm_eval_task_conflict_resolver${modePart} score=${normalized.toFixed(1)}, conflicts=${conflicts}${statusPart}${skipPart}${yamlPart}${evalIdPart}`;
+      if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
+        logWarn(`  [lm_eval_task_conflict_resolver] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return {
+        questionId,
+        category: 'lm_eval_task_conflict_resolver',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'coding',
+        modelOutput: JSON.stringify({ ...data, request: basePayload }).slice(0, 500),
+        detail,
+        dispatchType,
+      };
+    } catch (err: unknown) {
+      const msg = errorMessage(err);
+      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      return {
+        questionId,
+        category: 'lm_eval_task_conflict_resolver',
+        score: 0,
+        dimension: 'coding',
+        modelOutput: '',
+        detail: isTimeout
+          ? `lm_eval_task_conflict_resolver${modePart} timeout after ${timeoutMs}ms`
+          : `lm_eval_task_conflict_resolver${modePart} fetch error: ${msg.slice(0, 200)}`,
+        dispatchType,
+      };
     }
-    return {
-      questionId,
-      category: 'lm_eval_task_conflict_resolver',
-      score: Math.round(normalized * 10) / 10,
-      dimension: 'coding',
-      modelOutput: JSON.stringify({ placeholder: true, conflicts_detected: placeholderConflicts, mode, dependencyGroups, request: basePayload }).slice(0, 500),
-      detail,
-      dispatchType,
-    };
   }
 
 
