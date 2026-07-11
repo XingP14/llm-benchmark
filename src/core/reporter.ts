@@ -116,8 +116,9 @@ export function getDimCiCell(dimensions: DimensionScore | undefined, key: keyof 
 
 /**
  * v0.6.0 step-v6.0-4 helper: 从 EvaluationResult 取 dispatchType 展示字符串。
- * 5 fetcher (terminal_bench / benchlm_agentic / swe_bench_pro / process_aware_scoring /
- * long_context_cluster) 已在 evaluator.ts 6d71bef 把 dispatchType 透传到 QuestionScore,
+ * 9 fetcher (webdev_arena / terminal_bench / aa_omniscience / benchlm_agentic / cyberseceval3 /
+ * swe_bench_pro / long_context_cluster / process_aware_scoring / lm_eval_task_conflict_resolver)
+ * 已在 evaluator.ts 6d71bef 把 dispatchType 透传到 QuestionScore,
  * 8f8f68c 把 dispatchType 透传到 EvaluationResult 本层; 本 helper 把同一字段以
  * " (type=<dispatchType>)" 副标形式透到 Markdown / HTML 5-dim 报表。
  *
