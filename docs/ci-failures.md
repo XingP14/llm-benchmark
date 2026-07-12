@@ -226,3 +226,6 @@
 
 ## Tick note 2026-07-12 23:03 (cron watchdog)
 - V3 27 tick/d night window, picked=llm-benchmark by W→L rotation after woclaw's 22:43 closure. Both projects remained LOCKED <1h at probe time (woclaw `9c1ceed` 22:45:26, llm-benchmark `c1e7f94` 22:37:50), so this tick uses the lowest-cost `fix(docs)` exception rather than starting another real-code change. Fresh GitHub Actions evidence for `c1e7f94` is GREEN: CI and Docker both completed successfully; the local watchdog's llm-benchmark RED flag is stale cache. Next: after unlock, rotate to the highest-priority narrow real-code or test step; no roadmap/pseudo prefix. Parallels `9c1ceed` + `c1e7f94` + `36360a4` + `0bcab24`; `fix(docs)` is non-pseudo any-time ALLOW under V3 rule 1.
+
+## Tick note 2026-07-12 23:43 (cron watchdog)
+- Rotation selected llm-benchmark after woclaw `8435658`. Both repositories were inside the <1h cadence window at the 23:44 probe (woclaw 18m, llm-benchmark 38m), with clean synchronized worktrees and block counts 0/0. Fresh GitHub Actions evidence for llm-benchmark `d6cb45d` shows CI and Docker completed successfully, so the watchdog RED flag is stale cache. This operational closure uses the V3-eligible `fix(docs)` prefix; next rotation returns to woclaw and should prefer a narrow real-code/test step after unlock.
