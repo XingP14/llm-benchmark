@@ -1340,16 +1340,15 @@ export class Evaluator {
       dispatch_type: dispatchType,
     };
     const modePart = `[${mode}|${dependencyGroups}]`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
       const resp = await fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(basePayload),
         signal: controller.signal,
       });
-      clearTimeout(timer);
       if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
         return {
@@ -1418,6 +1417,8 @@ export class Evaluator {
           : `lm_eval_task_conflict_resolver${modePart} fetch error: ${msg.slice(0, 200)}`,
         dispatchType,
       };
+    } finally {
+      clearTimeout(timer);
     }
   }
 
