@@ -1,6 +1,6 @@
 // tests/types.test.ts
 
-import { ModelConfig, BenchmarkConfig } from '../src/types';
+import { ModelConfig, BenchmarkConfig, EvaluationResult, QuestionScore, ExternalDispatchType } from '../src/types';
 
 describe('Types', () => {
   describe('ModelConfig', () => {
@@ -380,6 +380,26 @@ describe('Types', () => {
       const a6: LiteralA = 'safety_evaluation';
       expect(a1).toBe('agentic_coding');
       expect(a6).toBe('safety_evaluation');
+    });
+
+    it('dispatch metadata reuses ExternalDispatchType instead of widening to string', () => {
+      type QuestionDispatch = NonNullable<QuestionScore['dispatchType']>;
+      type ResultDispatch = NonNullable<EvaluationResult['dispatchType']>;
+      type QuestionMatchesAlias = ExternalDispatchType extends QuestionDispatch
+        ? QuestionDispatch extends ExternalDispatchType
+          ? true
+          : false
+        : false;
+      type ResultMatchesAlias = ExternalDispatchType extends ResultDispatch
+        ? ResultDispatch extends ExternalDispatchType
+          ? true
+          : false
+        : false;
+
+      const questionMatchesAlias: QuestionMatchesAlias = true;
+      const resultMatchesAlias: ResultMatchesAlias = true;
+      expect(questionMatchesAlias).toBe(true);
+      expect(resultMatchesAlias).toBe(true);
     });
 
   });

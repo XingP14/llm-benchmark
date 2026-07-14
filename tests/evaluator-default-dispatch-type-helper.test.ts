@@ -1,6 +1,6 @@
 // tests/evaluator-default-dispatch-type-helper.test.ts
 // 钉住 src/core/evaluator.ts v0.6.0 step-v6.0-7 (chain #8 helper-extraction):
-// (1) DEFAULT_DISPATCH_TYPE Record<string, string> 8 entries 锁定 (key+value 都 assert)
+// (1) DEFAULT_DISPATCH_TYPE Record<string, ExternalDispatchType> entries locked (key+value assertions)
 // (2) defaultDispatchType() 8 key 全部返回正确 literal
 // (3) 未知 key (e.g. 'unknown_benchmark') 返回 'agentic_coding' 兜底
 // (4) empty string 返回 'agentic_coding' 兜底
@@ -16,13 +16,13 @@ const EVALUATOR_PATH = path.resolve(__dirname, '../src/core/evaluator.ts');
 describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () => {
   const src = fs.readFileSync(EVALUATOR_PATH, 'utf-8');
 
-  describe('DEFAULT_DISPATCH_TYPE Record<string, string>', () => {
-    it('exports DEFAULT_DISPATCH_TYPE as Record<string, string>', () => {
-      expect(src).toMatch(/export const DEFAULT_DISPATCH_TYPE: Record<string, string> = \{/);
+  describe('DEFAULT_DISPATCH_TYPE Record<string, ExternalDispatchType>', () => {
+    it('exports DEFAULT_DISPATCH_TYPE as Record<string, ExternalDispatchType>', () => {
+      expect(src).toMatch(/export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = \{/);
     });
 
-    it('declares exactly 8 entries', () => {
-      const tableMatch = src.match(/export const DEFAULT_DISPATCH_TYPE: Record<string, string> = \{([\s\S]+?)\};/);
+    it('declares exactly 9 entries', () => {
+      const tableMatch = src.match(/export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = \{([\s\S]+?)\};/);
       expect(tableMatch).not.toBeNull();
       const body = tableMatch![1];
       expect(body).toContain('terminal_bench:');
@@ -33,6 +33,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       expect(body).toContain('cyberseceval3:');
       expect(body).toContain('aa_omniscience:');
       expect(body).toContain('webdev_arena:');
+      expect(body).toContain('lm_eval_task_conflict_resolver:');
     });
 
     it('keys map to expected literals', () => {
@@ -44,12 +45,13 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       expect(src).toMatch(/cyberseceval3: 'safety_evaluation'/);
       expect(src).toMatch(/aa_omniscience: 'long_context_retrieval'/);
       expect(src).toMatch(/webdev_arena: 'agentic_coding'/);
+      expect(src).toMatch(/lm_eval_task_conflict_resolver: 'agentic_coding'/);
     });
   });
 
   describe('defaultDispatchType(benchmarkName) helper', () => {
-    it('exports defaultDispatchType(benchmarkName: string): string', () => {
-      expect(src).toMatch(/export function defaultDispatchType\(benchmarkName: string\): string \{/);
+    it('exports defaultDispatchType(benchmarkName: string): ExternalDispatchType', () => {
+      expect(src).toMatch(/export function defaultDispatchType\(benchmarkName: string\): ExternalDispatchType \{/);
     });
 
     it('helper body uses lookup with agentic_coding fallback', () => {
@@ -109,31 +111,31 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
 
   describe('6 default parameter declarations all use helper (v0.6.0 step-v6.0-13 added lm_eval_task_conflict_resolver)', () => {
     it("(terminal_bench) → defaultDispatchType('terminal_bench')", () => {
-      expect(src).toMatch(/dispatchType: string = defaultDispatchType\('terminal_bench'\)/);
+      expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('terminal_bench'\)/);
     });
     it("(benchlm_agentic) → defaultDispatchType('benchlm_agentic')", () => {
-      expect(src).toMatch(/dispatchType: string = defaultDispatchType\('benchlm_agentic'\)/);
+      expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('benchlm_agentic'\)/);
     });
     it("(swe_bench_pro) → defaultDispatchType('swe_bench_pro')", () => {
-      expect(src).toMatch(/dispatchType: string = defaultDispatchType\('swe_bench_pro'\)/);
+      expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('swe_bench_pro'\)/);
     });
     it("(process_aware_scoring) → defaultDispatchType('process_aware_scoring')", () => {
-      expect(src).toMatch(/dispatchType: string = defaultDispatchType\('process_aware_scoring'\)/);
+      expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('process_aware_scoring'\)/);
     });
     it("(long_context_cluster) → defaultDispatchType('long_context_cluster')", () => {
-      expect(src).toMatch(/dispatchType: string = defaultDispatchType\('long_context_cluster'\)/);
+      expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('long_context_cluster'\)/);
     });
 
     it("(lm_eval_task_conflict_resolver) → defaultDispatchType('lm_eval_task_conflict_resolver') [v0.6.0 step-v6.0-13 9th fetcher, 07-10 05:03 cron]", () => {
-      expect(src).toMatch(/dispatchType: string = defaultDispatchType\('lm_eval_task_conflict_resolver'\)/);
+      expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('lm_eval_task_conflict_resolver'\)/);
     });
 
     it('default parameter NO LONGER use bare 6 literals (default-param gate, excludes helper block) — bumped 5→6 after v0.6.0 step-v6.0-13', () => {
       // Scope: only check 5 fetcher signature lines (NOT the helper block DEFAULT_DISPATCH_TYPE entries
       // + NOT the helper block header comment)
-      // The 5 fetcher signatures all have the form `    dispatchType: string = ...` at column 4 (4-space indent)
+      // The 6 fetcher signatures all have the form `    dispatchType: ExternalDispatchType = ...` at column 4 (4-space indent)
       const lines = src.split('\n');
-      const defaultParamLines = lines.filter((l) => /^    dispatchType: string = /.test(l));
+      const defaultParamLines = lines.filter((l) => /^    dispatchType: ExternalDispatchType = /.test(l));
       expect(defaultParamLines.length).toBe(6);
       for (const l of defaultParamLines) {
         // Must use defaultDispatchType, not bare literal

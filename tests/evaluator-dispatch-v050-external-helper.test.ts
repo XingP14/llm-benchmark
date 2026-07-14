@@ -36,13 +36,13 @@ describe('evaluator dispatchV050External + dispatchExternalBenchmark helpers (8-
     expect(params).toMatch(/results:\s*EvaluationResult\[\]/);
     expect(params).toMatch(/benchmarkName:\s*string/);
     expect(params).toMatch(/cfg:\s*\{[^}]*enabled\?:\s*boolean/);
-    expect(params).toMatch(/cfg:\s*\{[^}]*type\?:\s*string/); // 07-01 23:43 cron: type field wired into dispatch helper
+    expect(params).toMatch(/cfg:\s*\{[^}]*type\?:\s*ExternalDispatchType/); // 07-15 05:03 cron: dispatch metadata literal reuses ExternalDispatchType alias
     expect(params).toMatch(/cfg:\s*\{[^}]*api_base\?:\s*string/);
     expect(params).toMatch(/cfg:\s*\{[^}]*timeout_ms\?:\s*number/);
     expect(params).toMatch(/cfg:\s*\{[^}]*model_id\?:\s*string/);
     expect(params).toMatch(/cfg:[\s\S]*\|\s*undefined/); // cfg: { ... } | undefined
     expect(params).toMatch(/defaultApiBase:\s*string/);
-    expect(params).toMatch(/fetcher:\s*\(apiBase:\s*string,\s*model:\s*ModelConfig,\s*timeoutMs:\s*number,\s*dispatchType:\s*string\)\s*=>\s*Promise<QuestionScore>/);
+    expect(params).toMatch(/fetcher:\s*\(apiBase:\s*string,\s*model:\s*ModelConfig,\s*timeoutMs:\s*number,\s*dispatchType:\s*ExternalDispatchType\)\s*=>\s*Promise<QuestionScore>/);
   });
 
   it('helper body canonical: enabled guard + api_base ?? default + timeout_ms ?? 30000 + Promise.all + model_id filter + scores.push + log', () => {

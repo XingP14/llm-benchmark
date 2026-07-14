@@ -16,7 +16,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Reporter, getSubLabel, getDispatchTypeCell } from '../src/core/reporter';
-import { EvaluationResult, DimensionScore, QuestionScore } from '../src/types';
+import { EvaluationResult, DimensionScore, QuestionScore, ExternalDispatchType } from '../src/types';
 
 const baseDim = (avg: number) => ({
   total: avg,
@@ -49,7 +49,10 @@ const mockScore = (
   modelName: string,
   dimensions: DimensionScore,
   scores: QuestionScore[] = [],
-  dispatchType?: string,
+  dispatchType?: ExternalDispatchType | '',
+  // 07-15 05:03 cron: ExternalDispatchType union is strict; legacy "empty string" probe
+  // case uses `''` to test the helper's tolerant contract. Allow this probe string
+  // through the fixture only — production callers are gated to the typed union.
   total = 85,
 ): EvaluationResult => ({
   modelName,
@@ -59,7 +62,7 @@ const mockScore = (
   scores,
   dimensions,
   timestamp: new Date('2026-07-05T02:03:00+08:00'),
-  ...(dispatchType !== undefined ? { dispatchType } : {}),
+  ...(dispatchType !== undefined ? { dispatchType: dispatchType as ExternalDispatchType } : {}),
 });
 
 describe('getSubLabel 4-site closure (v0.6.0 step-v6.0-5 step2, chain #7 helper-extraction)', () => {

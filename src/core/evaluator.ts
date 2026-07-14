@@ -7,6 +7,7 @@ import {
   DimensionScore,
   QuestionScore,
   ModelConfig,
+  ExternalDispatchType,
 } from '../types';
 import { LLMAdapter } from '../adapters/adapter';
 import { Scorer } from './scorer';
@@ -42,12 +43,12 @@ const logInfo = (...args: unknown[]): void => {
  * v0.6.0 step-v6.0-7 helper: 5 fetcher dispatchType literal default lookup (chain #8 helper-extraction pattern,
  * 沿 6d71bef dispatch_helper cfg.type + 7265ec0 reporter dispatchType 副标 + woclaw 06-04~07-04 跨 12 chains
  * per-prefix helper 集中模式). 11 sites 之前分散在 evaluator.ts: 5 closure inline `tb.type ?? 'agentic_coding'`
- * (L253/268/283/306/322) + 5 default parameter `dispatchType: string = 'agentic_coding'` 等 (L603/698/803/913/1026)
+ * (L253/268/283/306/322) + 5 default parameter `dispatchType: ExternalDispatchType = 'agentic_coding'` 等 (L603/698/803/913/1026)
  * + 1 dead-code fallback in dispatchV050External helper L1328 `cfg?.type ?? "agentic_coding"`. 现 11 sites 全部
  * 走 DEFAULT_DISPATCH_TYPE lookup + defaultDispatchType() helper: 加 1 项 v0.6 real fetch 只需在
  * DEFAULT_DISPATCH_TYPE 加 1 entry, 不再分散修改 2-3 处 inline.
  */
-export const DEFAULT_DISPATCH_TYPE: Record<string, string> = {
+export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = {
   terminal_bench: 'agentic_coding',
   benchlm_agentic: 'agentic_fullstack',
   swe_bench_pro: 'agentic_swe',
@@ -59,7 +60,7 @@ export const DEFAULT_DISPATCH_TYPE: Record<string, string> = {
   lm_eval_task_conflict_resolver: 'agentic_coding',
 };
 
-export function defaultDispatchType(benchmarkName: string): string {
+export function defaultDispatchType(benchmarkName: string): ExternalDispatchType {
   return DEFAULT_DISPATCH_TYPE[benchmarkName] ?? 'agentic_coding';
 }
 
@@ -774,7 +775,7 @@ export class Evaluator {
     timeoutMs: number,
     anchorScore?: number,
     subset: string = 'full',
-    dispatchType: string = defaultDispatchType('terminal_bench')
+    dispatchType: ExternalDispatchType = defaultDispatchType('terminal_bench')
   ): Promise<QuestionScore> {
     const questionId = `terminal_bench_${model.name}`;
     const basePayload = {
@@ -869,7 +870,7 @@ export class Evaluator {
     anchorScore?: number,
     nativeEvals: boolean = false,
     subset: string = 'all',
-    dispatchType: string = defaultDispatchType('benchlm_agentic')
+    dispatchType: ExternalDispatchType = defaultDispatchType('benchlm_agentic')
   ): Promise<QuestionScore> {
     const questionId = `benchlm_agentic_${model.name}`;
     const basePayload = {
@@ -974,7 +975,7 @@ export class Evaluator {
     anchorScore?: number,
     subset: string = 'verified',
     agenticMode: boolean = true,
-    dispatchType: string = defaultDispatchType('swe_bench_pro')
+    dispatchType: ExternalDispatchType = defaultDispatchType('swe_bench_pro')
   ): Promise<QuestionScore> {
     const questionId = `swe_bench_pro_${model.name}`;
     const basePayload = {
@@ -1084,7 +1085,7 @@ export class Evaluator {
     agenticBenchmark: string = 'swe_bench_pro',
     passFailWeight: number = 0.7,
     processWeight: number = 0.3,
-    dispatchType: string = defaultDispatchType('process_aware_scoring')
+    dispatchType: ExternalDispatchType = defaultDispatchType('process_aware_scoring')
   ): Promise<QuestionScore> {
     const questionId = `process_aware_scoring_${model.name}`;
     const basePayload = {
@@ -1197,7 +1198,7 @@ export class Evaluator {
     anchorScore?: number,
     subset: string = 'all',
     tasksTotal: number = 62,
-    dispatchType: string = defaultDispatchType('long_context_cluster')
+    dispatchType: ExternalDispatchType = defaultDispatchType('long_context_cluster')
   ): Promise<QuestionScore> {
     const questionId = `long_context_cluster_${model.name}`;
     const basePayload = {
@@ -1327,7 +1328,7 @@ export class Evaluator {
     anchorScore?: number,
     mode: string = 'dry_run',
     dependencyGroups: string = 'all',
-    dispatchType: string = defaultDispatchType('lm_eval_task_conflict_resolver')
+    dispatchType: ExternalDispatchType = defaultDispatchType('lm_eval_task_conflict_resolver')
   ): Promise<QuestionScore> {
     const questionId = `lm_eval_task_conflict_resolver_${model.name}`;
     const basePayload = {
@@ -1630,9 +1631,9 @@ export class Evaluator {
     results: EvaluationResult[],
     benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver',
     defaultApiBase: string,
-    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: string) => Promise<QuestionScore>,
+    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: ExternalDispatchType) => Promise<QuestionScore>,
   ): Promise<void> {
-    const ext = this.config._external_benchmarks_roadmap as Record<string, { enabled?: boolean; type?: string; api_base?: string; timeout_ms?: number; model_id?: string } | undefined> | undefined;
+    const ext = this.config._external_benchmarks_roadmap as Record<string, { enabled?: boolean; type?: ExternalDispatchType; api_base?: string; timeout_ms?: number; model_id?: string } | undefined> | undefined;
     const cfg = ext?.[benchmarkName];
     return this.dispatchV050External(results, benchmarkName, cfg, defaultApiBase, fetcher);
   }
@@ -1664,9 +1665,9 @@ export class Evaluator {
   private async dispatchExternalCall(
     results: EvaluationResult[],
     benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver',
-    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: string) => Promise<QuestionScore>,
+    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: ExternalDispatchType) => Promise<QuestionScore>,
   ): Promise<void> {
-    const ext = this.config._external_benchmarks_roadmap as Record<string, { enabled?: boolean; type?: string; api_base?: string; timeout_ms?: number; model_id?: string } | undefined> | undefined;
+    const ext = this.config._external_benchmarks_roadmap as Record<string, { enabled?: boolean; type?: ExternalDispatchType; api_base?: string; timeout_ms?: number; model_id?: string } | undefined> | undefined;
     const cfg = ext?.[benchmarkName];
     const defaultApiBase = DEFAULT_API_BASE[benchmarkName] ?? '(unset)';
     return this.dispatchV050External(results, benchmarkName, cfg, defaultApiBase, fetcher);
@@ -1685,9 +1686,9 @@ export class Evaluator {
   private async dispatchV050External(
     results: EvaluationResult[],
     benchmarkName: string,
-    cfg: { enabled?: boolean; type?: string; api_base?: string; timeout_ms?: number; model_id?: string } | undefined,
+    cfg: { enabled?: boolean; type?: ExternalDispatchType; api_base?: string; timeout_ms?: number; model_id?: string } | undefined,
     defaultApiBase: string,
-    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: string) => Promise<QuestionScore>,
+    fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: ExternalDispatchType) => Promise<QuestionScore>,
   ): Promise<void> {
     if (!cfg?.enabled) return;
     const apiBase = cfg.api_base ?? defaultApiBase;

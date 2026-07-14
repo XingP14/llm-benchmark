@@ -178,7 +178,7 @@ describe('evaluator v0.5.0 dispatch return injection (5 fetchers x 4 returns = 2
   it('5 fetcher signatures still have correct dispatchType default (literal or defaultDispatchType helper call — chain #8 regression gate)', () => {
     // v0.6 chain #8 helper-extraction: literal 'agentic_coding' default → defaultDispatchType('<name>') call
     for (const f of DISPATCH_FETCHERS) {
-      const re = new RegExp("private\\s+async\\s+" + f.shortFn + "\\([\\s\\S]*?dispatchType:\\s*string\\s*=\\s*(?:['\"]" + f.type + "['\"]|defaultDispatchType\\(['\"]\\w+['\"]\\))");
+      const re = new RegExp("private\\s+async\\s+" + f.shortFn + "\\([\\s\\S]*?dispatchType:\\s*ExternalDispatchType\\s*=\\s*(?:['\"]" + f.type + "['\"]|defaultDispatchType\\(['\"]\\w+['\"]\\))");
       expect(src).toMatch(re);
     }
   });

@@ -118,7 +118,7 @@ export interface EvaluationResult {
   /** 耗时 (ms) */
   duration: number;
   /** v0.6.0+ (optional) v0.5 dispatch_type 透传 result 层 (5 fetcher payload dispatch_type POST 字段经 dispatchV050External helper 接收后, 通过 QuestionScore.dispatchType 反向汇总至此, 让 reporter.ts 步骤 4 可在 Markdown/HTML/CSV 5-dim 副标附 (type=<dispatchType>) label). 默认 absent = v0.5 行为不变. */
-  dispatchType?: string;
+  dispatchType?: ExternalDispatchType;
 }
 
 /**
@@ -138,7 +138,7 @@ export interface QuestionScore {
   /** 评测详情 (LLM 判定) */
   detail?: string;
   /** v0.6.0+ (optional) v0.5 dispatch_type 字段 (5 fetcher: terminal_bench / benchlm_agentic / swe_bench_pro / process_aware_scoring / long_context_cluster 已在 6d71bef 把 dispatch_type POST 字段发到远程 server, 本字段把同一 dispatchType 透传回 result 层, 让 reporter.ts 步骤 4 渲染 5-dim 副标). 默认 absent = v0.5 行为不变. */
-  dispatchType?: string;
+  dispatchType?: ExternalDispatchType;
   /** v0.6.0+ step-v6.0-5 (optional) 评测子集标识 (terminal_bench.full|hard|lite / swe_bench_pro.verified|lite|multilingual / benchlm_agentic.all|design2code_only|vision2web_only|native_evals_only / long_context_cluster.longbench_v2|babilong|infinitebench|phonebook|all / process_aware_scoring.all_process_signals|commit_metrics|runtime_metrics|single 等). 由 dispatchV050External fetcher 从 cfg.subset ?? default 注入 (后续 cron 步骤). reporter.ts 步骤 2-5 据此在 Markdown/HTML 5-dim 报表附 (subset=xxx) 副标. 默认 absent = v0.5 行为不变. */
   subset?: string;
   /** v0.6.0+ step-v6.0-5 (optional) 评测模式标识 (process_aware_scoring.all|commit_count|... 等). 仅 process_aware_scoring fetcher 注入 (其余 fetcher 无 mode 字段). 默认 absent = v0.5 行为不变. */

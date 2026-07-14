@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Reporter, getDispatchTypeCell } from '../src/core/reporter';
-import { EvaluationResult, DimensionScore, QuestionScore } from '../src/types';
+import { EvaluationResult, DimensionScore, QuestionScore, ExternalDispatchType } from '../src/types';
 
 const baseDim = (avg: number) => ({
   total: avg,
@@ -26,7 +26,10 @@ const mockScore = (
   modelName: string,
   dimensions: DimensionScore,
   total = 85,
-  dispatchType?: string,
+  dispatchType?: ExternalDispatchType | '' | '   ',
+  // 07-15 05:03 cron: ExternalDispatchType union is strict; legacy "empty / whitespace" probe
+  // cases use `''` or `'   '` to test the helper's tolerant contract. Allow these probe strings
+  // through the fixture only — production callers are gated to the typed union.
 ): EvaluationResult => ({
   modelName,
   model: { name: modelName, model: modelName } as any,
@@ -35,7 +38,7 @@ const mockScore = (
   scores: [] as QuestionScore[],
   dimensions,
   timestamp: new Date('2026-07-03T03:23:00+08:00'),
-  ...(dispatchType !== undefined ? { dispatchType } : {}),
+  ...(dispatchType !== undefined ? { dispatchType: dispatchType as ExternalDispatchType } : {}),
 });
 
 describe('reporter dispatchType cell helper (v0.6.0 step-v6.0-4 step3)', () => {
@@ -52,7 +55,7 @@ describe('reporter dispatchType cell helper (v0.6.0 step-v6.0-4 step3)', () => {
       expect(getDispatchTypeCell(undefined)).toBeNull();
     });
     test('returns null when dispatchType is empty string', () => {
-      const r = mockScore('gpt-5.4', mockDims(), 85, '');
+      const r = mockScore('gpt-5.4', mockDims(), 85, '' as ExternalDispatchType);
       expect(getDispatchTypeCell(r)).toBeNull();
     });
     test('returns the literal "(type=   )" when dispatchType is whitespace-only (caller-trimming not handled here)', () => {
@@ -61,7 +64,7 @@ describe('reporter dispatchType cell helper (v0.6.0 step-v6.0-4 step3)', () => {
       expect(getDispatchTypeCell(r)).toBe(' (type=   )');
     });
     test('5 v0.5 dispatch_type literals round-trip via helper', () => {
-      const literals = ['agentic_coding', 'agentic_fullstack', 'agentic_swe', 'process_agentic', 'long_context_retrieval'];
+      const literals: ExternalDispatchType[] = ['agentic_coding', 'agentic_fullstack', 'agentic_swe', 'process_agentic', 'long_context_retrieval'];
       for (const lit of literals) {
         const r = mockScore('m', mockDims(), 50, lit);
         expect(getDispatchTypeCell(r)).toBe(` (type=${lit})`);

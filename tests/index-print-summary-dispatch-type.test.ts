@@ -12,7 +12,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Reporter, getDispatchTypeCell } from '../src/core/reporter';
-import { EvaluationResult, DimensionScore, QuestionScore } from '../src/types';
+import { EvaluationResult, DimensionScore, QuestionScore, ExternalDispatchType } from '../src/types';
 
 const baseDim = (avg: number) => ({
   total: avg,
@@ -31,7 +31,10 @@ const mockScore = (
   modelName: string,
   dimensions: DimensionScore,
   total = 85,
-  dispatchType?: string,
+  dispatchType?: ExternalDispatchType | '',
+  // 07-15 05:03 cron: ExternalDispatchType union is strict; legacy "empty string" probe
+  // case uses `''` to test the helper's tolerant contract. Allow this probe string
+  // through the fixture only — production callers are gated to the typed union.
 ): EvaluationResult => ({
   modelName,
   model: { name: modelName, model: modelName } as any,
@@ -40,7 +43,7 @@ const mockScore = (
   scores: [] as QuestionScore[],
   dimensions,
   timestamp: new Date('2026-07-04T01:33:00+08:00'),
-  ...(dispatchType !== undefined ? { dispatchType } : {}),
+  ...(dispatchType !== undefined ? { dispatchType: dispatchType as ExternalDispatchType } : {}),
 });
 
 describe('src/index.ts printSummary dispatchType 副标 closure (v0.6.0 step-v6.0-4 step4)', () => {

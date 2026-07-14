@@ -67,7 +67,7 @@ describe('index external-benchmarks-roadmap cliLog 9/9 parity (chain #19 wiring-
   });
 
   it('DEFAULT_DISPATCH_TYPE in src/core/evaluator.ts declares 9 entries (regression gate — was 8 stale)', () => {
-    const tableMatch = evaluatorSrc.match(/export const DEFAULT_DISPATCH_TYPE: Record<string, string> = \{([\s\S]+?)\};/);
+    const tableMatch = evaluatorSrc.match(/export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = \{([\s\S]+?)\};/);
     expect(tableMatch).not.toBeNull();
     const body = tableMatch![1];
     const entryCount = (body.match(/^\s*\w+:/gm) || []).length;

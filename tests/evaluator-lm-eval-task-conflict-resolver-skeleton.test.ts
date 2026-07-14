@@ -58,7 +58,7 @@ describe('evaluator fetchLmEvalTaskConflictResolverScore skeleton (v0.6 step-v6.
 
     it('fetcher 4-arg signature locked (apiBase/model/timeoutMs/dispatchType) + 3 optional (anchorScore/mode/dependencyGroups)', () => {
       // 4 必填 + 3 选填, 与 8 项 v0.5 fetcher signature 模式对齐 (parallels process_aware_scoring 7-arg)
-      expect(src).toMatch(/private async fetchLmEvalTaskConflictResolverScore\(\s*\n\s*apiBase: string,\s*\n\s*model: ModelConfig,\s*\n\s*timeoutMs: number,\s*\n\s*anchorScore\?: number,\s*\n\s*mode: string = 'dry_run',\s*\n\s*dependencyGroups: string = 'all',\s*\n\s*dispatchType: string = defaultDispatchType\('lm_eval_task_conflict_resolver'\)/);
+      expect(src).toMatch(/private async fetchLmEvalTaskConflictResolverScore\(\s*\n\s*apiBase: string,\s*\n\s*model: ModelConfig,\s*\n\s*timeoutMs: number,\s*\n\s*anchorScore\?: number,\s*\n\s*mode: string = 'dry_run',\s*\n\s*dependencyGroups: string = 'all',\s*\n\s*dispatchType: ExternalDispatchType = defaultDispatchType\('lm_eval_task_conflict_resolver'\)/);
     });
 
     it('basePayload 7 fields (api_base/model_id/tasks/mode/dependency_groups/timeout_ms/dispatch_type)', () => {
