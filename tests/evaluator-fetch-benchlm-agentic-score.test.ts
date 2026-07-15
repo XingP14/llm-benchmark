@@ -241,4 +241,37 @@ describe('fetchBenchlmAgenticScore runtime coverage (v0.5.0 dispatch, 07-14 22:5
     expect(result.detail).toBe('benchlm_agentic API error: rate_limited');
     expect(result.modelOutput).toBe('');
   });
+
+  // Case 9: HTTP 503 non-OK - score:0, detail 以 "benchlm_agentic HTTP 503:" 开头
+  // 沿 7 sibling fetcher (webdev_arena / terminal_bench / swe_bench_pro / process_aware_scoring /
+  // long_context_cluster / cyberseceval3 / aa_omniscience) 同模式 HTTP error path coverage.
+  it('HTTP 503: score 0, detail starts with "benchlm_agentic HTTP 503:"', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      text: async () => 'service unavailable',
+    }) as typeof fetch;
+
+    const result = await invoke('https://bla.invalid/v1', model, 30000);
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('coding');
+    expect(result.modelOutput).toBe('');
+    expect(result.detail).toMatch(/^benchlm_agentic HTTP 503: /);
+    expect(result.detail).toContain('service unavailable');
+  });
+
+  // Case 10: fetch rejects (network down) - score:0, detail 含 "fetch error: network down"
+  // catch 块走 buildFetcherErrorDetail('benchlm_agentic', '', timeoutMs, err) helper,
+  // 非 abort/timeout 路径 -> "<category> fetch error: <msg>"
+  it('fetch rejection (network down): score 0, detail contains "fetch error: network down"', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as typeof fetch;
+
+    const result = await invoke('https://bla.invalid/v1', model, 30000);
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('coding');
+    expect(result.modelOutput).toBe('');
+    expect(result.detail).toContain('fetch error: network down');
+  });
 });
