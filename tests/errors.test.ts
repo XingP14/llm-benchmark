@@ -13,7 +13,7 @@
 // for the common `Error` case + correct for the long tail of
 // non-Error throws (strings, plain objects, undefined).
 
-import { errorMessage, errorToString, errorName } from '../src/errors';
+import { errorMessage, errorToString, errorName, isAbortOrTimeout } from '../src/errors';
 
 describe('errors.ts helpers', () => {
   describe('errorMessage', () => {
@@ -149,6 +149,68 @@ describe('errors.ts helpers', () => {
     it('matches (x as Error).message for an Error subclass with empty message', () => {
       const err = new Error('');
       expect(errorMessage(err)).toBe((err as Error).message);
+    });
+  });
+
+  describe('isAbortOrTimeout', () => {
+    // Mirrors the byte-identical contract previously inlined 9 times across
+    // src/core/evaluator.ts (L572/660/747/840/945/1051/1168/1280/1409):
+    //   const isTimeout = msg.toLowerCase().includes('abort') ||
+    //                     msg.toLowerCase().includes('timeout');
+    // Helper-extracted into src/errors.ts in 01:23 cron 2026-07-16.
+
+    it('detects AbortError name (Node 18+ fetch DOMException)', () => {
+      const err = new Error('aborted');
+      err.name = 'AbortError';
+      expect(isAbortOrTimeout(err)).toBe(true);
+    });
+
+    it('detects "timeout" in message (case-insensitive)', () => {
+      expect(isAbortOrTimeout(new Error('Request Timeout'))).toBe(true);
+      expect(isAbortOrTimeout(new Error('timeout exceeded'))).toBe(true);
+      expect(isAbortOrTimeout(new Error('TIMEOUT exceeded'))).toBe(true);
+    });
+
+    it('detects "abort" in message (case-insensitive)', () => {
+      expect(isAbortOrTimeout(new Error('connection aborted'))).toBe(true);
+      expect(isAbortOrTimeout(new Error('Request Aborted by client'))).toBe(true);
+      expect(isAbortOrTimeout(new Error('AbortError'))).toBe(true);
+    });
+
+    it('returns false for non-abort/timeout errors', () => {
+      expect(isAbortOrTimeout(new Error('fetch failed: ENOTFOUND'))).toBe(false);
+      expect(isAbortOrTimeout(new TypeError('bad type'))).toBe(false);
+      expect(isAbortOrTimeout(new Error('JSON parse error'))).toBe(false);
+    });
+
+    it('returns false for plain object throws without abort/timeout text', () => {
+      expect(isAbortOrTimeout({ status: 500, msg: 'server error' })).toBe(false);
+      expect(isAbortOrTimeout({ code: 'ECONNRESET' })).toBe(false);
+    });
+
+    it('returns true for plain object throws with abort/timeout text', () => {
+      expect(isAbortOrTimeout({ message: 'request timeout' })).toBe(true);
+      expect(isAbortOrTimeout({ msg: 'Aborted' })).toBe(true);
+    });
+
+    it('returns false for non-object throws (string, number, undefined, null)', () => {
+      expect(isAbortOrTimeout('abort happened')).toBe(false);
+      expect(isAbortOrTimeout('timeout')).toBe(false);
+      expect(isAbortOrTimeout(undefined)).toBe(false);
+      expect(isAbortOrTimeout(null)).toBe(false);
+      expect(isAbortOrTimeout(42)).toBe(false);
+      expect(isAbortOrTimeout(true)).toBe(false);
+    });
+
+    it('returns false for object with empty message and non-AbortError name', () => {
+      expect(isAbortOrTimeout({ name: 'SomeError', message: '' })).toBe(false);
+      expect(isAbortOrTimeout({ name: 'TypeError' })).toBe(false);
+    });
+
+    it('aborts win over message ambiguity (AbortError name beats "timeout" mismatch)', () => {
+      const err = new Error('something else');
+      err.name = 'AbortError';
+      expect(isAbortOrTimeout(err)).toBe(true);
     });
   });
 });

@@ -44,3 +44,37 @@ export function errorName(e: unknown): string | undefined {
   }
   return undefined;
 }
+
+/**
+ * Detect fetch abort / timeout failures from an unknown caught value.
+ *
+ * Checks three signals (any-of wins) so it survives both thrown DOMException
+ * AbortError objects (Node 18+ fetch) and legacy string-thrown libraries:
+ *   1. `errorName(e) === 'AbortError'` — AbortController-triggered cancellation
+ *      (DOMException with `.name === 'AbortError'` on modern Node)
+ *   2. message contains "abort" / "timeout" (case-insensitive) — Node 16-era
+ *      fetch + many third-party libraries throw plain Error with descriptive
+ *      text containing these substrings (e.g. `request timeout`, `aborted`)
+ *
+ * Mirrors the byte-identical contract previously inlined 9 times across
+ * `src/core/evaluator.ts` (L572/660/747/840/945/1051/1168/1280/1409):
+ *   const isTimeout = msg.toLowerCase().includes('abort') ||
+ *                     msg.toLowerCase().includes('timeout');
+ *
+ * Returns false for non-object, undefined, and other non-abort/timeout
+ * errors (e.g. TypeError, fetch network failure), matching the inline
+ * behavior in every case except `null`/numeric throws where the old
+ * `msg.toLowerCase()` would itself throw — this helper short-circuits
+ * safely for those.
+ */
+export function isAbortOrTimeout(e: unknown): boolean {
+  if (e && typeof e === 'object') {
+    if (errorName(e) === 'AbortError') return true;
+    const msg = errorMessage(e);
+    if (msg) {
+      const lower = msg.toLowerCase();
+      if (lower.includes('abort') || lower.includes('timeout')) return true;
+    }
+  }
+  return false;
+}

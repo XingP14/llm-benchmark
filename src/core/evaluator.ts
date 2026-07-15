@@ -12,7 +12,7 @@ import {
 import { LLMAdapter } from '../adapters/adapter';
 import { Scorer } from './scorer';
 import { getAllDialogueBenchmarks } from '../benchmarks/dialogue';
-import { errorMessage } from '../errors';
+import { errorMessage, isAbortOrTimeout } from '../errors';
 import { getAllCodeBenchmarks, CodeBenchmarkQuestion } from '../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../benchmarks/function-calling';
 import { getAllLongContextBenchmarks } from '../benchmarks/long-context';
@@ -571,7 +571,7 @@ export class Evaluator {
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'cyberseceval3',
@@ -659,7 +659,7 @@ export class Evaluator {
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'webdev_arena',
@@ -746,7 +746,7 @@ export class Evaluator {
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'aa_omniscience',
@@ -839,7 +839,7 @@ export class Evaluator {
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'terminal_bench',
@@ -944,7 +944,7 @@ export class Evaluator {
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'benchlm_agentic',
@@ -1050,7 +1050,7 @@ export class Evaluator {
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'swe_bench_pro',
@@ -1167,7 +1167,7 @@ export class Evaluator {
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'process_aware_scoring',
@@ -1277,7 +1277,7 @@ export class Evaluator {
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'long_context_cluster',
@@ -1406,7 +1406,7 @@ export class Evaluator {
       };
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const isTimeout = msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout');
+      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'lm_eval_task_conflict_resolver',
