@@ -78,3 +78,37 @@ export function isAbortOrTimeout(e: unknown): boolean {
   }
   return false;
 }
+
+/**
+ * Build the standardized fetcher-error `detail` string used by the 9 fetcher
+ * `catch (err: unknown)` branches in `src/core/evaluator.ts`.
+ *
+ * Composes the two helpers above (`isAbortOrTimeout` + `errorMessage`) into the
+ * single per-fetcher shape:
+ *   - timeout / abort → `${category}${modePart} timeout after ${timeoutMs}ms`
+ *   - any other caught error → `${category}${modePart} fetch error: ${msg}`
+ *
+ * `modePart` is the per-fetcher bracketed segment (e.g. `[dry_run|all]` for
+ * `lm_eval_task_conflict_resolver`) or the empty string for the 8 plain fetchers
+ * (cyberseceval3 / webdev_arena / aa_omniscience / terminal_bench /
+ * benchlm_agentic / swe_bench_pro / process_aware_scoring / long_context_cluster).
+ *
+ * The 200-char truncation matches the inline behavior of the 9 catch sites it
+ * replaces (was previously `msg.slice(0, 200)` directly).
+ *
+ * Byte-identical to the inlined `isTimeout ? '...timeout after Xms' : '...fetch error: ...'`
+ * pattern previously duplicated at L580/669/756/849/954/1060/1177/1287/1417 of
+ * `src/core/evaluator.ts`.
+ */
+export function buildFetcherErrorDetail(
+  category: string,
+  modePart: string,
+  timeoutMs: number,
+  err: unknown,
+): string {
+  if (isAbortOrTimeout(err)) {
+    return `${category}${modePart} timeout after ${timeoutMs}ms`;
+  }
+  const msg = errorMessage(err);
+  return `${category}${modePart} fetch error: ${msg.slice(0, 200)}`;
+}

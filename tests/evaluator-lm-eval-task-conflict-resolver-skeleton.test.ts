@@ -90,10 +90,13 @@ describe('evaluator fetchLmEvalTaskConflictResolverScore skeleton (v0.6 step-v6.
       // 4xx 分支
       expect(codeOnly).toMatch(/if \(!resp\.ok\)/);
       expect(codeOnly).toMatch(/HTTP \$\{resp\.status\}: \$\{errText\.slice\(0, 200\)\}/);
-      // catch 分支 (timeout / generic fetch error)
+      // catch 分支 (timeout / generic fetch error) — 9th fetcher 同 8 个 v0.5 fetcher 一起走
+      // buildFetcherErrorDetail(...) 集中 helper-extraction (沿 219ece7 isAbortOrTimeout chain extension,
+      // chain #19 fetcher runtime coverage + chain #20 buildFetcherErrorDetail per-fetcher error detail).
+      // 此处仅 pin catch + helper 调用在场, 具体 timeout/fetch-error 分支逻辑 + 200-char 截断
+      // 在 tests/errors.test.ts 的 buildFetcherErrorDetail describe 块里有 13 个独立 case 钉死。
       expect(codeOnly).toMatch(/catch \(err: unknown\) \{/);
-      expect(codeOnly).toMatch(/timeout after \$\{timeoutMs\}ms/);
-      expect(codeOnly).toMatch(/fetch error: \$\{msg\.slice\(0, 200\)\}/);
+      expect(codeOnly).toMatch(/buildFetcherErrorDetail\('lm_eval_task_conflict_resolver', modePart, timeoutMs, err\)/);
     });
 
     it('real-fetch fetcher uses modePart inline for detail label (replaces skeleton void apiBase)', () => {

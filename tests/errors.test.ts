@@ -13,7 +13,7 @@
 // for the common `Error` case + correct for the long tail of
 // non-Error throws (strings, plain objects, undefined).
 
-import { errorMessage, errorToString, errorName, isAbortOrTimeout } from '../src/errors';
+import { errorMessage, errorToString, errorName, isAbortOrTimeout, buildFetcherErrorDetail } from '../src/errors';
 
 describe('errors.ts helpers', () => {
   describe('errorMessage', () => {
@@ -211,6 +211,111 @@ describe('errors.ts helpers', () => {
       const err = new Error('something else');
       err.name = 'AbortError';
       expect(isAbortOrTimeout(err)).toBe(true);
+    });
+  });
+
+  // buildFetcherErrorDetail composes isAbortOrTimeout + errorMessage into the
+  // standardized fetcher-error detail string used by the 9 fetcher catch sites
+  // in src/core/evaluator.ts (was previously inlined 9 times as
+  //   isTimeout ? `${category}${modePart} timeout after ${timeoutMs}ms`
+  //              : `${category}${modePart} fetch error: ${msg.slice(0, 200)}`).
+  describe('buildFetcherErrorDetail', () => {
+    it('returns "<category> timeout after <ms>ms" for an AbortError (modePart empty)', () => {
+      const err = new Error('aborted');
+      err.name = 'AbortError';
+      expect(buildFetcherErrorDetail('cyberseceval3', '', 30000, err)).toBe(
+        'cyberseceval3 timeout after 30000ms',
+      );
+    });
+
+    it('returns "<category> timeout after <ms>ms" for a message-only timeout', () => {
+      const err = new Error('request timeout');
+      expect(buildFetcherErrorDetail('webdev_arena', '', 15000, err)).toBe(
+        'webdev_arena timeout after 15000ms',
+      );
+    });
+
+    it('returns "<category> timeout after <ms>ms" for an aborted message', () => {
+      const err = new Error('connection aborted');
+      expect(buildFetcherErrorDetail('terminal_bench', '', 5000, err)).toBe(
+        'terminal_bench timeout after 5000ms',
+      );
+    });
+
+    it('interpolates modePart for the 9th fetcher (lm_eval_task_conflict_resolver)', () => {
+      const err = new Error('aborted');
+      err.name = 'AbortError';
+      expect(buildFetcherErrorDetail('lm_eval_task_conflict_resolver', '[dry_run|all]', 30000, err)).toBe(
+        'lm_eval_task_conflict_resolver[dry_run|all] timeout after 30000ms',
+      );
+    });
+
+    it('returns "<category><modePart> fetch error: <msg>" for a non-timeout Error', () => {
+      const err = new Error('JSON parse error: unexpected token');
+      expect(buildFetcherErrorDetail('aa_omniscience', '', 30000, err)).toBe(
+        'aa_omniscience fetch error: JSON parse error: unexpected token',
+      );
+    });
+
+    it('truncates the error message at 200 chars (long-message boundary)', () => {
+      const long = 'x'.repeat(500);
+      const err = new Error(long);
+      const out = buildFetcherErrorDetail('swe_bench_pro', '', 30000, err);
+      expect(out).toBe(`swe_bench_pro fetch error: ${'x'.repeat(200)}`);
+      expect(out.length).toBe('swe_bench_pro fetch error: '.length + 200);
+    });
+
+    it('truncates the error message at 200 chars with modePart interpolation', () => {
+      const long = 'y'.repeat(500);
+      const err = new Error(long);
+      const out = buildFetcherErrorDetail('lm_eval_task_conflict_resolver', '[auto_resolve|numpy_torch]', 30000, err);
+      expect(out).toBe(
+        `lm_eval_task_conflict_resolver[auto_resolve|numpy_torch] fetch error: ${'y'.repeat(200)}`,
+      );
+    });
+
+    it('falls back to the empty-string message path for undefined throws', () => {
+      expect(buildFetcherErrorDetail('benchlm_agentic', '', 30000, undefined)).toBe(
+        'benchlm_agentic fetch error: ',
+      );
+    });
+
+    it('falls back to the empty-string message path for null throws', () => {
+      // null → JSON.stringify(null) === 'null'
+      expect(buildFetcherErrorDetail('process_aware_scoring', '', 30000, null)).toBe(
+        'process_aware_scoring fetch error: null',
+      );
+    });
+
+    it('handles plain object throws by JSON-stringifying the full object', () => {
+      // errorMessage falls back to JSON.stringify for non-Error throws (mirrors
+      // the existing test in the errorMessage describe block above).
+      const err = { message: 'fetch failed: ECONNRESET', code: 'ECONNRESET' };
+      expect(buildFetcherErrorDetail('long_context_cluster', '', 30000, err)).toBe(
+        `long_context_cluster fetch error: ${JSON.stringify(err)}`,
+      );
+    });
+
+    it('aborts always win over message text (AbortError name + non-abort message)', () => {
+      const err = new Error('plain fetch failure');
+      err.name = 'AbortError';
+      expect(buildFetcherErrorDetail('cyberseceval3', '', 12345, err)).toBe(
+        'cyberseceval3 timeout after 12345ms',
+      );
+    });
+
+    it('handles numeric throw values safely (no .slice on a number)', () => {
+      // regression guard: the inline pattern `msg.toLowerCase().includes('abort')`
+      // would itself throw on a numeric err. The helper must not.
+      expect(buildFetcherErrorDetail('webdev_arena', '', 30000, 42)).toBe(
+        'webdev_arena fetch error: 42',
+      );
+    });
+
+    it('handles boolean throw values safely', () => {
+      expect(buildFetcherErrorDetail('aa_omniscience', '', 30000, true)).toBe(
+        'aa_omniscience fetch error: true',
+      );
     });
   });
 });

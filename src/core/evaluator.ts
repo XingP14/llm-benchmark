@@ -12,7 +12,7 @@ import {
 import { LLMAdapter } from '../adapters/adapter';
 import { Scorer } from './scorer';
 import { getAllDialogueBenchmarks } from '../benchmarks/dialogue';
-import { errorMessage, isAbortOrTimeout } from '../errors';
+import { errorMessage, buildFetcherErrorDetail } from '../errors';
 import { getAllCodeBenchmarks, CodeBenchmarkQuestion } from '../benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from '../benchmarks/function-calling';
 import { getAllLongContextBenchmarks } from '../benchmarks/long-context';
@@ -570,17 +570,13 @@ export class Evaluator {
         detail,
       };
     } catch (err: unknown) {
-      const msg = errorMessage(err);
-      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'cyberseceval3',
         score: 0,
         dimension: 'safety',
         modelOutput: '',
-        detail: isTimeout
-          ? `cyberseceval3 timeout after ${timeoutMs}ms`
-          : `cyberseceval3 fetch error: ${msg.slice(0, 200)}`,
+        detail: buildFetcherErrorDetail('cyberseceval3', '', timeoutMs, err),
       };
     }
   }
@@ -658,17 +654,13 @@ export class Evaluator {
         detail,
       };
     } catch (err: unknown) {
-      const msg = errorMessage(err);
-      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'webdev_arena',
         score: 0,
         dimension: 'coding',
         modelOutput: '',
-        detail: isTimeout
-          ? `webdev_arena timeout after ${timeoutMs}ms`
-          : `webdev_arena fetch error: ${msg.slice(0, 200)}`,
+        detail: buildFetcherErrorDetail('webdev_arena', '', timeoutMs, err),
       };
     }
   }
@@ -745,17 +737,13 @@ export class Evaluator {
         detail,
       };
     } catch (err: unknown) {
-      const msg = errorMessage(err);
-      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'aa_omniscience',
         score: 0,
         dimension: 'long_context',
         modelOutput: '',
-        detail: isTimeout
-          ? `aa_omniscience timeout after ${timeoutMs}ms`
-          : `aa_omniscience fetch error: ${msg.slice(0, 200)}`,
+        detail: buildFetcherErrorDetail('aa_omniscience', '', timeoutMs, err),
       };
     }
   }
@@ -838,17 +826,13 @@ export class Evaluator {
         dispatchType,
       };
     } catch (err: unknown) {
-      const msg = errorMessage(err);
-      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'terminal_bench',
         score: 0,
         dimension: 'coding',
         modelOutput: '',
-        detail: isTimeout
-          ? `terminal_bench timeout after ${timeoutMs}ms`
-          : `terminal_bench fetch error: ${msg.slice(0, 200)}`,
+        detail: buildFetcherErrorDetail('terminal_bench', '', timeoutMs, err),
         dispatchType,
       };
     }
@@ -943,17 +927,13 @@ export class Evaluator {
         dispatchType,
       };
     } catch (err: unknown) {
-      const msg = errorMessage(err);
-      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'benchlm_agentic',
         score: 0,
         dimension: 'coding',
         modelOutput: '',
-        detail: isTimeout
-          ? `benchlm_agentic timeout after ${timeoutMs}ms`
-          : `benchlm_agentic fetch error: ${msg.slice(0, 200)}`,
+        detail: buildFetcherErrorDetail('benchlm_agentic', '', timeoutMs, err),
         dispatchType,
       };
     }
@@ -1049,17 +1029,13 @@ export class Evaluator {
         dispatchType,
       };
     } catch (err: unknown) {
-      const msg = errorMessage(err);
-      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'swe_bench_pro',
         score: 0,
         dimension: 'coding',
         modelOutput: '',
-        detail: isTimeout
-          ? `swe_bench_pro timeout after ${timeoutMs}ms`
-          : `swe_bench_pro fetch error: ${msg.slice(0, 200)}`,
+        detail: buildFetcherErrorDetail('swe_bench_pro', '', timeoutMs, err),
         dispatchType,
       };
     }
@@ -1166,17 +1142,13 @@ export class Evaluator {
         dispatchType,
       };
     } catch (err: unknown) {
-      const msg = errorMessage(err);
-      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'process_aware_scoring',
         score: 0,
         dimension: 'coding',
         modelOutput: '',
-        detail: isTimeout
-          ? `process_aware_scoring timeout after ${timeoutMs}ms`
-          : `process_aware_scoring fetch error: ${msg.slice(0, 200)}`,
+        detail: buildFetcherErrorDetail('process_aware_scoring', '', timeoutMs, err),
         dispatchType,
       };
     }
@@ -1276,17 +1248,13 @@ export class Evaluator {
         dispatchType,
       };
     } catch (err: unknown) {
-      const msg = errorMessage(err);
-      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'long_context_cluster',
         score: 0,
         dimension: 'long_context',
         modelOutput: '',
-        detail: isTimeout
-          ? `long_context_cluster timeout after ${timeoutMs}ms`
-          : `long_context_cluster fetch error: ${msg.slice(0, 200)}`,
+        detail: buildFetcherErrorDetail('long_context_cluster', '', timeoutMs, err),
         dispatchType,
       };
     }
@@ -1405,17 +1373,13 @@ export class Evaluator {
         dispatchType,
       };
     } catch (err: unknown) {
-      const msg = errorMessage(err);
-      const isTimeout = isAbortOrTimeout(err);
       return {
         questionId,
         category: 'lm_eval_task_conflict_resolver',
         score: 0,
         dimension: 'coding',
         modelOutput: '',
-        detail: isTimeout
-          ? `lm_eval_task_conflict_resolver${modePart} timeout after ${timeoutMs}ms`
-          : `lm_eval_task_conflict_resolver${modePart} fetch error: ${msg.slice(0, 200)}`,
+        detail: buildFetcherErrorDetail('lm_eval_task_conflict_resolver', modePart, timeoutMs, err),
         dispatchType,
       };
     } finally {
