@@ -160,7 +160,19 @@ export function getDispatchTypeCell(result: EvaluationResult | undefined): strin
  * 因为 subset/mode/risk 字段在 QuestionScore 层, 而 dispatchType 在 EvaluationResult 层
  * via 6d71bef chain aggregation. 本 helper 接收单个 QuestionScore 是 caller 聚合时遍历
  * result.scores 取第一个非空 subset/mode/risk 调用本 helper).
+ *
+ * 跨层筛选由 findSubLabelScore 集中处理，避免 Markdown / HTML / console 四个入口
+ * 复制同一段 subset / mode / riskCategories 判定并产生漂移。
  */
+export function findSubLabelScore(scores: QuestionScore[] | undefined): QuestionScore | undefined {
+  return scores?.find((score) => {
+    if (typeof score.subset === 'string' && score.subset.length > 0) return true;
+    if (typeof score.mode === 'string' && score.mode.length > 0) return true;
+    return Array.isArray(score.riskCategories)
+      && score.riskCategories.some((category) => typeof category === 'string' && category.length > 0);
+  });
+}
+
 export function getSubLabel(qs: QuestionScore | undefined): string | null {
   if (!qs) return null;
   const parts: string[] = [];
@@ -219,7 +231,7 @@ export class Reporter {
       // v0.6.0 step-v6.0-4 (07-03 03:23 cron): dtCell 副标. 07-05 02:03 cron step-v6.0-5 chain #7 closure: subCell 副标 (05-29 cron helper-extraction 系列续集, parallels 6d71bef dispatchType 跨层).
       const dimCells = DIM_HEADERS.map((d) => getDimCell(result.dimensions, d.key));
       const dtCell = getDispatchTypeCell(result);
-      const subCell = getSubLabel(result.scores?.find((s) => s != null && (typeof s.subset === 'string' && s.subset.length > 0 || typeof s.mode === 'string' && s.mode.length > 0 || Array.isArray(s.riskCategories) && s.riskCategories.some((c) => typeof c === 'string' && c.length > 0))));
+      const subCell = getSubLabel(findSubLabelScore(result.scores));
       const modelLabel = `${result.modelName}${dtCell ?? ''}${subCell ?? ''}`;
       md += `| ${medal} | ${modelLabel} | ${result.totalScore} | ${dimCells.join(' | ')} | ${(result.duration / 1000).toFixed(1)}s |\n`;
     });
@@ -234,7 +246,7 @@ export class Reporter {
       // v0.6.0 step-v6.0-4 (07-03 03:23 cron): dtCell 副标 (5 fetcher payload dispatch_type 透传).
       // 07-05 02:03 cron step-v6.0-5 chain #7 closure: dispatchType 后附 subCell 副标 (subset/mode/risk 跨层聚合沿 6d71bef QuestionScore.dispatchType 同模式).
       const dtCell = getDispatchTypeCell(result);
-      const subCell = getSubLabel(result.scores?.find((s) => s != null && (typeof s.subset === 'string' && s.subset.length > 0 || typeof s.mode === 'string' && s.mode.length > 0 || Array.isArray(s.riskCategories) && s.riskCategories.some((c) => typeof c === 'string' && c.length > 0))));
+      const subCell = getSubLabel(findSubLabelScore(result.scores));
       if (dtCell !== null) {
         md += `- **dispatchType**:${dtCell}\n`;
       }
@@ -400,7 +412,7 @@ export class Reporter {
       // v0.6.0 step-v6.0-4 (07-03 03:23 cron): dtCell 副标 (class 'dispatch-type-tag').
       // 07-05 02:03 cron step-v6.0-5 chain #7 closure: subCell 副标 (class 'sub-label-tag').
       const dtCellHtml = getDispatchTypeCell(result);
-      const subCellHtml = getSubLabel(result.scores?.find((s) => s != null && (typeof s.subset === 'string' && s.subset.length > 0 || typeof s.mode === 'string' && s.mode.length > 0 || Array.isArray(s.riskCategories) && s.riskCategories.some((c) => typeof c === 'string' && c.length > 0))));
+      const subCellHtml = getSubLabel(findSubLabelScore(result.scores));
       if (dtCellHtml !== null) {
         html += `<p class="dispatch-type-tag">${dtCellHtml}</p>`;
       }

@@ -15,7 +15,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { Reporter, getSubLabel, getDispatchTypeCell } from '../src/core/reporter';
+import { Reporter, getSubLabel, getDispatchTypeCell, findSubLabelScore } from '../src/core/reporter';
 import { EvaluationResult, DimensionScore, QuestionScore, ExternalDispatchType } from '../src/types';
 
 const baseDim = (avg: number) => ({
@@ -73,16 +73,15 @@ describe('getSubLabel 4-site closure (v0.6.0 step-v6.0-5 step2, chain #7 helper-
       src = fs.readFileSync(reporterPath, 'utf-8');
     });
 
-    test('reporter.ts has exactly 4 getSubLabel call sites (Markdown overall + Markdown detail + HTML detail-card + find() lookup helper) closing chain #7', () => {
-      // 3 invocation sites + 1 find() lookup at Markdown overall (the find() pattern itself
-      // counts as a getSubLabel call site since it appears in the helper invocation chain).
-      // 我们只统计 getSubLabel 实际调用 (helper invocation), find() 在参数内不算 call site.
-      // 1 export declaration (`export function getSubLabel(`) + 3 call sites
-      // (Markdown overall + Markdown detail + HTML detail-card). Total 4 occurrences
-      // of `getSubLabel(`. Subtract 1 to get call-site count.
+    test('exports findSubLabelScore as the single cross-layer lookup helper', () => {
+      expect(src).toMatch(/export function findSubLabelScore\(scores: QuestionScore\[\] \| undefined\): QuestionScore \| undefined/);
+    });
+
+    test('reporter.ts has exactly 3 getSubLabel call sites across Markdown and HTML', () => {
+      // reporter.ts contains 1 export declaration plus 3 runtime calls:
+      // Markdown overall, Markdown detail, and HTML detail-card.
       const totalMatches = (src.match(/getSubLabel\s*\(/g) || []).length;
       const callSiteCount = totalMatches - 1; // -1 for export declaration
-      // Expected: 3 call sites in reporter.ts
       expect(callSiteCount).toBe(3);
     });
 
@@ -92,13 +91,12 @@ describe('getSubLabel 4-site closure (v0.6.0 step-v6.0-5 step2, chain #7 helper-
       expect(invocations.length).toBe(1);
     });
 
-    test('subCell lookup uses result.scores.find() pattern (subset/mode/risk 在 QuestionScore 层跨层聚合)', () => {
-      const reporterSrc = src;
+    test('all 4 report call sites use findSubLabelScore before getSubLabel', () => {
       const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.ts'), 'utf-8');
-      const reporterFind = reporterSrc.match(/getSubLabel\(\s*result\.scores\?\.find\(/);
-      const indexFind = indexSrc.match(/getSubLabel\(\s*result\.scores\?\.find\(/);
-      expect(reporterFind).not.toBeNull();
-      expect(indexFind).not.toBeNull();
+      const reporterCalls = src.match(/getSubLabel\(\s*findSubLabelScore\(result\.scores\)\s*\)/g) || [];
+      const indexCalls = indexSrc.match(/getSubLabel\(\s*findSubLabelScore\(result\.scores\)\s*\)/g) || [];
+      expect(reporterCalls).toHaveLength(3);
+      expect(indexCalls).toHaveLength(1);
     });
   });
 
@@ -210,10 +208,29 @@ describe('getSubLabel 4-site closure (v0.6.0 step-v6.0-5 step2, chain #7 helper-
     });
   });
 
-  describe('跨层聚合 result.scores.find() 模式', () => {
-    test('find() returns first QuestionScore with any subset/mode/risk 非空', () => {
+  describe('跨层聚合 findSubLabelScore() 模式', () => {
+    test('findSubLabelScore returns undefined when scores are absent or all labels are empty', () => {
+      expect(findSubLabelScore(undefined)).toBeUndefined();
+      expect(findSubLabelScore([])).toBeUndefined();
+      expect(findSubLabelScore([mockQs(), mockQs('', '', ['', ''])])).toBeUndefined();
+    });
+
+    test('findSubLabelScore chooses the first labeled score', () => {
+      const first = mockQs('verified');
+      const second = mockQs('full');
+      expect(findSubLabelScore([mockQs(), first, second])).toBe(first);
+    });
+
+    test('findSubLabelScore considers mode and non-empty risk categories as labels', () => {
+      const modeOnly = mockQs(undefined, 'commit_count');
+      const riskOnly = mockQs(undefined, undefined, ['', 'fuzzing']);
+      expect(findSubLabelScore([mockQs(), modeOnly, riskOnly])).toBe(modeOnly);
+      expect(findSubLabelScore([mockQs(), riskOnly])).toBe(riskOnly);
+    });
+
+    test('findSubLabelScore returns first QuestionScore with any subset/mode/risk 非空', () => {
       // 5 fetcher 注入 QuestionScore 时, 每条 score 含 subset / mode / riskCategories.
-      // reporter 跨层聚合: result.scores.find() 取首个含任一副标字段的 QuestionScore.
+      // reporter 跨层聚合: findSubLabelScore() 取首个含任一副标字段的 QuestionScore.
       const scores = [
         mockQs(), // 空 — 跳过
         mockQs('verified'), // 首个非空 — 选这个

@@ -103,11 +103,9 @@ describe('src/index.ts printSummary dispatchType 副标 closure (v0.6.0 step-v6.
       expect(src2).toMatch(/const\s+subCell\s*=\s*getSubLabel\(/);
     });
 
-    test('subCell lookup uses result.scores find() pattern (chain #7 helper跨 QuestionScore 层聚合, parallels 6d71bef dispatchType 跨层)', () => {
-      // subset/mode/risk 字段在 QuestionScore 层 (vs dispatchType 在 EvaluationResult 层),
-      // 跨层聚合需 result.scores.find() 取首个 subset/mode/risk 任一非空的 QuestionScore.
+    test('getSubLabel call site uses findSubLabelScore helper (chain #7 helper跨 QuestionScore 层聚合)', () => {
       const src2 = fs.readFileSync(indexPath, 'utf-8');
-      expect(src2).toMatch(/getSubLabel\(\s*result\.scores\?\.find\(/);
+      expect(src2).toMatch(/getSubLabel\(\s*findSubLabelScore\(result\.scores\)\s*\)/);
     });
 
     test('cell array uses modelLabel (not raw result.modelName)', () => {

@@ -3,7 +3,7 @@
 import { BenchmarkConfig, ModelConfig, EvaluationResult } from './types';
 import { version as pkgVersion } from '../package.json';
 import { Evaluator } from './core/evaluator';
-import { Reporter, DIM_HEADERS, getDimCell, getDispatchTypeCell, getSubLabel } from './core/reporter';
+import { Reporter, DIM_HEADERS, getDimCell, getDispatchTypeCell, getSubLabel, findSubLabelScore } from './core/reporter';
 import { LLMAdapter } from './adapters/adapter';
 import { errorMessage } from './errors';
 import { cliLog, cliError } from './cli/cli_log';
@@ -272,7 +272,7 @@ function printSummary(results: EvaluationResult[]) {
     // 本轮 printSummary 1 处), 修复 helper 引入但调用点未迁移的漏更 (6af9f47 同源).
     // 07-05 02:03 cron (v0.6.0 step-v6.0-5 closure step2, chain #7): subCell 副标 (parallels reporter.ts 3 sites).
     const dtCell = getDispatchTypeCell(result);
-    const subCell = getSubLabel(result.scores?.find((s) => s != null && (typeof s.subset === 'string' && s.subset.length > 0 || typeof s.mode === 'string' && s.mode.length > 0 || Array.isArray(s.riskCategories) && s.riskCategories.some((c) => typeof c === 'string' && c.length > 0))));
+    const subCell = getSubLabel(findSubLabelScore(result.scores));
     const modelLabel = `${result.modelName}${dtCell ?? ''}${subCell ?? ''}`;
     // 06-29 03:23 cron: printSummary 5-dim cell 走 getDimCell (display string),
     // parallels 06-20 cron getDimCell extraction. 闭合第 6 处 inline
