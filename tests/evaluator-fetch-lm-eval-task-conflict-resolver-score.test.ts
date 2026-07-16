@@ -17,7 +17,12 @@
 // 静态 import + closure shape 断言 + evaluator-lm-eval-timer-cleanup.test.ts 1-case
 // timer cleanup. 一旦 fetch + parse + 0-100 归一 + skip_tasks/report_yaml 摘要 +
 // mode 透传 + error 分支任一回归, 之前会 silently 走 0 分兜底;
-// 现在 8 cases 钉死所有 path (含 timeout 走 abort 后 detail 区分 timeout/fetch error).
+// 现在 10 cases 钉死所有 path (含 timeout 走 abort 后 detail 区分 timeout/fetch error
+// + 单独 catch 块非 abort/timeout 路径), chain #20 fetcher error-branch parity
+// 闭合 (parallels 06-16 06:05 cron cyberseceval3 35ce8b7 + 06-16 03:59 cron
+// benchlm_agentic 3a13ec3 + 06-14 06:43 cron swe_bench_pro 50a7924 + 06-14 06:43 cron
+// process_aware_scoring 3efff78 + 06-14 06:43 cron long_context_cluster a603e17
+// 9-key fetchers 同模式 HTTP 503 + 单独 fetch rejection 双 case 覆盖).
 //
 // parallels woclaw c7bf0a6 openai_provider 8-case + 37f32db aa_omniscience 8-case pattern.
 
@@ -256,5 +261,45 @@ describe('fetchLmEvalTaskConflictResolverScore runtime coverage (v0.6 chain #19 
     expect(result.score).toBe(0);
     expect(result.detail).toMatch(/^lm_eval_task_conflict_resolver\[dry_run\|all\] HTTP 500: /);
     expect(result.detail).toContain('resolver backend down');
+  });
+
+  // Case 9: HTTP 503 non-OK — score:0, detail 以 "lm_eval_task_conflict_resolver[dry_run|all] HTTP 503: " 开头
+  // 与 9 sibling fetcher (webdev_arena + cyberseceval3 + aa_omniscience + terminal_bench +
+  // benchlm_agentic + swe_bench_pro + process_aware_scoring + long_context_cluster)
+  // 同模式 HTTP error path coverage, 闭合 chain #20 fetcher error-branch parity
+  // (此前仅覆盖 HTTP 500 路径, 缺 503 单独钉死).
+  it('HTTP 503: score 0, detail starts with "lm_eval_task_conflict_resolver[dry_run|all] HTTP 503: "', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      text: async () => 'service unavailable',
+    }) as typeof fetch;
+
+    const result = await invoke('https://resolver.invalid/v1', model, 30000);
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('coding');
+    expect(result.modelOutput).toBe('');
+    expect(result.detail).toMatch(/^lm_eval_task_conflict_resolver\[dry_run\|all\] HTTP 503: /);
+    expect(result.detail).toContain('service unavailable');
+  });
+
+  // Case 10: fetch rejects (network down, non-abort/timeout) — score:0,
+  // detail 含 "fetch error: network down"
+  // catch 块走 buildFetcherErrorDetail('lm_eval_task_conflict_resolver', '[dry_run|all]',
+  // timeoutMs, err) helper, 非 abort/timeout 路径 ->
+  // "lm_eval_task_conflict_resolver[dry_run|all] fetch error: <msg>".
+  // parallels 06-16 06:05 cron cyberseceval3 case 10 + 06-16 03:59 cron
+  // benchlm_agentic case 10 + 06-14 06:43 cron swe_bench_pro / process_aware_scoring /
+  // long_context_cluster 各自同 mode catch 路径.
+  it('fetch rejection (network down): score 0, detail contains "fetch error: network down"', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as typeof fetch;
+
+    const result = await invoke('https://resolver.invalid/v1', model, 30000);
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('coding');
+    expect(result.modelOutput).toBe('');
+    expect(result.detail).toBe('lm_eval_task_conflict_resolver[dry_run|all] fetch error: network down');
   });
 });
