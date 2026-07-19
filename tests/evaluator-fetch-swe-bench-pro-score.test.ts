@@ -316,17 +316,15 @@ describe('fetchSweBenchProScore timer cleanup (chain #20 step-v6.0-14 timer pari
     expect(jest.getTimerCount()).toBe(0);
   });
 
-  // Branch 4 of 4: network down (catch path) — documents known catch-branch limitation.
-  // swe_bench_pro's catch (and 7 other older fetchers) does NOT call clearTimeout(timer);
-  // see 14d1338 fetchers with finally-based timer cleanup (follow-up chain #20 step-v6.0-14
-  // candidate: migrate 8 fetchers to try/finally parity with lm_eval_task_conflict_resolver).
-  it('does not leak timers on happy / HTTP-503 / API-error paths (catch-branch known limitation documented separately)', async () => {
-    // Intentionally does NOT exercise the catch-branch fetch-rejection path
-    // because swe_bench_pro's catch does not yet clearTimeout — that path's
-    // timer behavior is tracked as a known follow-up.  This case asserts that
-    // the 3 branches that DO call clearTimeout (HTTP-503 / API-error / happy-path)
-    // are already covered by the 3 sibling cases above.  Future migration to
-    // try/finally will let us add a 4th case asserting timer=0 in catch too.
-    expect(jest.getTimerCount()).toBe(0); // baseline: no leftover timers across the 3 sibling cases via afterEach
+  // Branch 4 of 4: network down (catch path) — regression for the timer leak that
+  // previously occurred because clearTimeout(timer) only ran after fetch resolved.
+  it('clears the abort timer when fetch rejects before a response arrives', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as typeof fetch;
+
+    const result = await invokeCleanup(30_000);
+
+    expect(result.score).toBe(0);
+    expect(result.detail).toBe('swe_bench_pro fetch error: network down');
+    expect(jest.getTimerCount()).toBe(0);
   });
 });
