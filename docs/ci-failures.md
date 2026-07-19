@@ -562,3 +562,10 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - The llm-benchmark hint pool remains stale-drained per the preceding 01:03/02:03/02:43 cross-checks; no TODO/FIXME residue or uncommitted/untracked real-code candidate surfaced. Its gate opens after 03:09 CST (valid for the last 5min), so an early real-code attempt is possible in the next slot but not this locked one.
 - CI gate was GREEN for llm-benchmark and RED for the untouched WoClaw peer (stale GitHub Actions signal). V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than inventing code work.
 - `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. Verification: unique heading, trailing newline, `git diff --check`, exact-message watchdog gate, push, and local/remote SHA equality readback.
+
+## Tick note 2026-07-20 04:03 (cron watchdog)
+
+- New 04-07 cycle tick #1/27. Last actual push was woclaw `02a66b4` at 03:58, so W->L rotation selects **llm-benchmark**. Probe at 04:07 CST found woclaw +9min and llm-benchmark `a623d1e` +36min: both LOCKED<1h tight, both worktrees clean and synchronized, block counts 0/0.
+- The llm-benchmark hint pool remains stale-drained per the preceding 01:03/02:03/02:43/03:14 cross-checks; no TODO/FIXME residue or uncommitted/untracked real-code candidate surfaced. Its gate opens after 04:31 CST, so no safe complete RED-GREEN code cycle fits this locked slot.
+- CI gate was GREEN for llm-benchmark and RED for the untouched WoClaw peer (stale GitHub Actions signal). V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than inventing code work.
+- `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. Verification: unique heading, trailing newline, `git diff --check`, exact-message watchdog gate, push, and local/remote SHA equality readback.
