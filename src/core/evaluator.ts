@@ -523,16 +523,15 @@ export class Evaluator {
       risk_categories: riskCategories,
       timeout_ms: timeoutMs,
     };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
       const resp = await fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(basePayload),
         signal: controller.signal,
       });
-      clearTimeout(timer);
       if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
         return {
@@ -578,6 +577,8 @@ export class Evaluator {
         modelOutput: '',
         detail: buildFetcherErrorDetail('cyberseceval3', '', timeoutMs, err),
       };
+    } finally {
+      clearTimeout(timer);
     }
   }
 

@@ -253,3 +253,108 @@ describe('fetchCyberseceval3Score runtime coverage (v0.5.0 dispatch, 06-14 22:23
     expect(result.detail).toContain('fetch error: network down');
   });
 });
+
+// ---------------------------------------------------------------------------
+// timer cleanup parity (chain #20 step-v6.0-14 extension — mirrors
+// swe_bench_pro + lm_eval_task_conflict_resolver pattern + 4d45a8b source fix).
+// 7 fetchers (cyberseceval3 + webdev_arena + aa_omniscience + terminal_bench +
+// benchlm_agentic + process_aware_scoring + long_context_cluster) currently
+// declare AbortController/setTimeout INSIDE try and call clearTimeout only after
+// fetch resolves — leaking the abort handle on fetch rejection. Migrating each
+// to finally-cleanup parity (controller/timer before try, clearTimeout in
+// finally) is the chain candidate; cyberseceval3 is the pilot for this tick.
+// ---------------------------------------------------------------------------
+
+describe('fetchCyberseceval3Score timer cleanup (chain #20 step-v6.0-14 timer parity)', () => {
+  const cleanupModel: ModelConfig = {
+    name: 'cyberseceval3-cleanup-model',
+    endpoint: 'https://model.invalid/v1',
+    apiKey: 'test-cleanup-key',
+    type: 'openai',
+    model: 'gpt-4o-mini',
+  };
+
+  const cleanupConfig: BenchmarkConfig = {
+    models: [cleanupModel],
+    benchmarks: { dialogue: false, coding: false },
+  };
+  const cleanupAdapter = {} as LLMAdapter;
+  const originalFetchRef = global.fetch;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetchRef;
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  const invokeCleanup = async (apiBase: string, timeoutMs = 30_000) => {
+    const evaluator = new Evaluator(cleanupConfig, cleanupAdapter) as unknown as FetchCyberseceval3Signature;
+    return evaluator.fetchCyberseceval3Score(apiBase, cleanupModel, timeoutMs, 'all-8');
+  };
+
+  // Branch 1 of 4: HTTP 503 (resp.ok === false path) — verifies clearTimeout is called before return.
+  it('clears the abort timer when HTTP response fails (503 Service Unavailable)', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      text: async () => 'service unavailable',
+    }) as typeof fetch;
+
+    const result = await invokeCleanup('https://cse3.invalid/v1');
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('safety');
+    expect(result.detail).toMatch(/^cyberseceval3 HTTP 503: /);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  // Branch 2 of 4: API error payload (data.error path) — verifies clearTimeout is called before return.
+  it('clears the abort timer when API payload returns error field (model_not_authorized)', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ error: 'model_not_authorized' }),
+    }) as typeof fetch;
+
+    const result = await invokeCleanup('https://cse3.invalid/v1');
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('safety');
+    expect(result.detail).toBe('cyberseceval3 API error: model_not_authorized');
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  // Branch 3 of 4: happy path success — verifies clearTimeout is called after JSON parse OK.
+  // safety=80 → 80*0.7 = 56; coverage=0.5 → 0.5*30 = 15; total = 71 → rounded to 71.
+  it('clears the abort timer on happy path success (no timer leak when fetch resolves cleanly)', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ safety_score: 80, coverage_rate: 0.5, eval_id: 'cse3-eval-67890' }),
+    }) as typeof fetch;
+
+    const result = await invokeCleanup('https://cse3.invalid/v1');
+
+    expect(result.score).toBe(71);
+    expect(result.detail).toContain('safety=80.0');
+    expect(result.detail).toContain('coverage=50.0%');
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  // Branch 4 of 4: fetch rejects (catch path) — verifies clearTimeout(timer) inside finally.
+  // REGRESSION for the timer leak that previously existed because clearTimeout ran only after
+  // fetch resolved; this is what the chain #20 source migration finally-cleanup fixes.
+  it('clears the abort timer when fetch rejects before a response arrives (network down)', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as typeof fetch;
+
+    const result = await invokeCleanup('https://cse3.invalid/v1');
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('safety');
+    expect(result.modelOutput).toBe('');
+    expect(result.detail).toContain('fetch error: network down');
+    expect(jest.getTimerCount()).toBe(0);
+  });
+});
