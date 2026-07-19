@@ -583,3 +583,11 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - The llm-benchmark hint pool remains stale-drained per the preceding cross-checks; no TODO/FIXME residue or uncommitted/untracked real-code candidate surfaced.
 - CI gate: llm-benchmark 24h GREEN via local gate post-`b4333dc` push. V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than inventing code work inside <1h lock.
 - `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. +0 Jest / +0 tsc. Verification: unique heading, trailing newline, `git diff --check`, exact-message watchdog PASS at 04:54:06, push, and local/remote SHA equality readback.
+
+## Tick note 2026-07-20 06:23 (cron watchdog)
+
+- New 04-07 cycle tick #4/27. Last actual push was woclaw `8fb94c8` at 06:24, so W→L rotation picks **llm-benchmark**. Probe at 06:23 CST found llm-benchmark `e2d5814` age 52min LOCKED<1h (unlock at 06:32): worktree clean/synchronized, block count 0.
+- The hint pool remains stale-drained per the preceding 01:03/02:03/02:43/03:14/04:03/04:23/04:43/05:32/06:03 cross-checks; no TODO/FIXME residue or uncommitted/untracked real-code candidate surfaced. The chain-#20 step-v6.0-14 next step (webdev_arena migration) is well-defined but begins cleanly only after 06:32 unlock to avoid repeating the pilot path within <1h.
+- CI gate: llm-benchmark 24h GREEN via local gate post-`e2d5814` push (real timer leak fixed at cyberseceval3 fetcher).
+- V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than rushing real-code work inside the remaining 7-min lock window.
+- `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. +0 Jest / +0 tsc. Verification: unique heading, trailing newline, `git diff --check`, exact-message watchdog check (PASS at 06:25:22), push, and SHA equality readback.
