@@ -13,8 +13,9 @@ if (!fs.existsSync(testDataDir)) {
   fs.mkdirSync(testDataDir, { recursive: true });
 }
 
-// 每次测试使用新的数据库文件
-const testDbPath = path.join(testDataDir, 'test.db');
+// 每次测试使用新的数据库文件 (per-worker unique path to avoid parallel SQLite file-lock contention)
+const workerId = process.env.JEST_WORKER_ID || '0';
+const testDbPath = path.join(testDataDir, `test-${workerId}.db`);
 if (fs.existsSync(testDbPath)) {
   try {
     fs.unlinkSync(testDbPath);
