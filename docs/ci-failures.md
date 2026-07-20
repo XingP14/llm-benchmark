@@ -591,3 +591,10 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - CI gate: llm-benchmark 24h GREEN via local gate post-`e2d5814` push (real timer leak fixed at cyberseceval3 fetcher).
 - V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than rushing real-code work inside the remaining 7-min lock window.
 - `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. +0 Jest / +0 tsc. Verification: unique heading, trailing newline, `git diff --check`, exact-message watchdog check (PASS at 06:25:22), push, and SHA equality readback.
+## Tick note 2026-07-20 22:05 (cron watchdog)
+
+- New 22-23 cycle tick #1/27. Last actual push was llm-benchmark `28578dc` at 06:25 (15h40m ago, UNLOCK). W→L rotation after woclaw tick `bc738bf` (`23edd62` → `bc738bf` +13m): picks **llm-benchmark**. Probe at 22:05 CST found llm-benchmark `28578dc` age 15h40m UNLOCK: worktree clean/synchronized, block count 0.
+- 22:05 CST sits in the 22-23 schedule window (V3 schedule `3,23,43 22-23,0-6` = 27 tick/d). Outside the 09:00 real-code window; hint pool remains stale-drained per the preceding 01:03..06:23 cross-checks. Last real-code llm-benchmark `e2d5814` was 05:32 cron tick (chain #20 step-v6.0-14 cyberseceval3 timer parity pilot). No TODO/FIXME residue in src/.
+- CI gate: llm-benchmark 24h GREEN via local gate (per `heartbeat-watchdog.sh ci-gate` at 22:04); woclaw 24h GREEN post-`bc738bf` push. Both `ci-gate` confirm pre-lock clean state.
+- V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than fabricating a 22:05-night real-code push or using a pseudo-prefix (`feat(docs)` / `docs(*)` would block under rule 4).
+- `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. +0 Jest / +0 tsc for this documentation-only append. Verification: unique heading, single trailing newline, `git diff --check`, exact-message watchdog check, push, and SHA equality readback.
