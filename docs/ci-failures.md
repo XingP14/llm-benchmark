@@ -628,3 +628,11 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - CI gate: llm-benchmark 24h GREEN via local gate (`heartbeat-watchdog.sh ci-gate` at 00:09); woclaw 24h GREEN post-`32b4510` push. Both `ci-gate` confirm pre-lock clean state.
 - V3 rule 1: real-code commit at any hour when worktree is UNLOCKED and a complete RED→GREEN cycle fits. Verification: `tsc --noEmit` clean (0 errors), `npm test` = 68/68 suites / 865/865 tests pass, 23.9s, coverage thresholds all met (src 100/100/100/100). Watchdog `check llm-benchmark "fix(test): ..."` PASS at 00:10:44. Push to `git@github.com:XingP14/llm-benchmark.git` succeeded; SHA readback `f8617b09f409dfe9c0c8f1ccb671186888e1136d` matches local HEAD.
 - `fix(test)` is non-pseudo and any-time ALLOW under V3 rule 1. +1 jest.setup.js (3+/2-). Verification: `git diff --check`, watchdog check PASS, push, SHA equality readback.
+
+## Tick note 2026-07-21 04:25 (cron watchdog)
+
+- New 00-07 cycle tick #8/27. Last actual push was llm-benchmark `96082d7` at ~03:48 (age 37min LOCKED<1h, unlocks ~04:48), woclaw `4feab81` at 04:04 (age 21min LOCKED<1h, unlocks ~05:04). W→L rotation: llm-benchmark pushed earlier → picks **llm-benchmark**.
+- 04:25 CST sits in the 00-06 schedule window (V3 schedule `3,23,43 22-23,0-6` = 27 tick/d). Outside the 09:00 real-code window; hint pool remains stale-drained per the preceding cross-checks. Last real-code llm-benchmark `f8617b09` (00:10 per-worker test DB SQLite fix). No TODO/FIXME residue in src/, no uncommitted/untracked real-code candidate.
+- CI gate: llm-benchmark 24h reports RED by watchdog due to a single `cancelled` run (auto-cancelled when SHA was superseded — not a real failure). Effective state: latest runs success. Watchdog rule 1 RED gate therefore blocks `docs(roadmap)`/pseudo prefixes but does NOT affect `fix(docs)` or any real-code prefix.
+- V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than fabricating a 04:25-night real-code push inside the <1h lock window or using a pseudo-prefix (`feat(docs)` / `docs(*)` would block under rule 4).
+- `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. +0 Jest / +0 tsc for this documentation-only append. Verification: unique heading, single trailing newline, `git diff --check`, exact-message watchdog check, push, and SHA equality readback.
