@@ -598,3 +598,10 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - CI gate: llm-benchmark 24h GREEN via local gate (per `heartbeat-watchdog.sh ci-gate` at 22:04); woclaw 24h GREEN post-`bc738bf` push. Both `ci-gate` confirm pre-lock clean state.
 - V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than fabricating a 22:05-night real-code push or using a pseudo-prefix (`feat(docs)` / `docs(*)` would block under rule 4).
 - `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. +0 Jest / +0 tsc for this documentation-only append. Verification: unique heading, single trailing newline, `git diff --check`, exact-message watchdog check, push, and SHA equality readback.
+## Tick note 2026-07-20 22:43 (cron watchdog)
+
+- New 22-23 cycle tick #2/27. Last actual push was woclaw `bc738bf` at 22:08 (+35min) + llm-benchmark `4391af4` at 22:09 (+34min). W→L rotation after woclaw `bc738bf` closure: picks **llm-benchmark**. Probe at 22:43 CST found llm-benchmark `4391af4` age 34min UNLOCKED, worktree clean/synchronized, block count 0.
+- 22:43 CST sits in the 22-23 schedule window (V3 schedule `3,23,43 22-23,0-6` = 27 tick/d). Outside the 09:00 real-code window; hint pool remains stale-drained per the preceding 01:03..22:05 cross-checks. Last real-code llm-benchmark `e2d5814` was 06-12 morning cron tick (chain #20 step-v6.0-14 cyberseceval3 timer parity pilot for 7 fetchers). No TODO/FIXME residue in src/, no uncommitted/untracked real-code candidate.
+- CI gate: llm-benchmark 24h GREEN via local gate (per `heartbeat-watchdog.sh ci-gate` at 22:42); woclaw 24h GREEN post-`bc738bf` push. Both `ci-gate` confirm pre-lock clean state.
+- V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than fabricating a 22:43-night real-code push or using a pseudo-prefix (`feat(docs)` / `docs(*)` would block under rule 4).
+- `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. +0 Jest / +0 tsc for this documentation-only append. Verification: unique heading, single trailing newline, `git diff --check`, exact-message watchdog check, push, and SHA equality readback.
