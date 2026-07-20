@@ -264,15 +264,24 @@ describe('fetchBenchlmAgenticScore runtime coverage (v0.5.0 dispatch, 07-14 22:5
   // Case 10: fetch rejects (network down) - score:0, detail 含 "fetch error: network down"
   // catch 块走 buildFetcherErrorDetail('benchlm_agentic', '', timeoutMs, err) helper,
   // 非 abort/timeout 路径 -> "<category> fetch error: <msg>"
-  it('fetch rejection (network down): score 0, detail contains "fetch error: network down"', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as typeof fetch;
+  // 提升 (TDD RED-case): 加 fake timers + getTimerCount 断言, 钉住 catch 路径的 timer 清理回归
+  it('fetch rejection (network down): score 0, detail contains "fetch error: network down", no timer leak (getTimerCount === 0)', async () => {
+    jest.useFakeTimers();
+    try {
+      global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as typeof fetch;
 
-    const result = await invoke('https://bla.invalid/v1', model, 30000);
+      const result = await invoke('https://bla.invalid/v1', model, 30000);
 
-    expect(result.score).toBe(0);
-    expect(result.dimension).toBe('coding');
-    expect(result.modelOutput).toBe('');
-    expect(result.detail).toContain('fetch error: network down');
+      expect(result.score).toBe(0);
+      expect(result.dimension).toBe('coding');
+      expect(result.modelOutput).toBe('');
+      expect(result.detail).toContain('fetch error: network down');
+      // 关键回归断言: fetch 拒绝路径必须清理 abort timer, 否则每次网络掉线泄漏一个 setTimeout
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 });
 
