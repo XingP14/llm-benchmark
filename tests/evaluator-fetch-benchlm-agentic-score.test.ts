@@ -275,3 +275,114 @@ describe('fetchBenchlmAgenticScore runtime coverage (v0.5.0 dispatch, 07-14 22:5
     expect(result.detail).toContain('fetch error: network down');
   });
 });
+
+// ---------------------------------------------------------------------------
+// timer cleanup parity (chain #20 step-v6.0-14 extension — mirrors
+// cyberseceval3 + swe_bench_pro + lm_eval_task_conflict_resolver pattern +
+// 4d45a8b source fix + e2d5814 pilot).
+//
+// benchlm_agentic specifically: the `case 10` (network down) path above runs
+// without fake timers so it observes the real setTimeout leak in the original
+// implementation (clearTimeout was inside the try block, only reachable when
+// fetch resolved, NOT on the rejection path). This new describe block pins
+// the fix (controller/timer moved above try + finally { clearTimeout(timer) })
+// across all 4 branches: HTTP 503, API error payload, happy path, fetch
+// reject. Each test asserts jest.getTimerCount() === 0 after invocation,
+// which fails (RED) on the unfixed code with "Expected 0, Received 1" on
+// the fetch-reject branch.
+// ---------------------------------------------------------------------------
+
+describe('fetchBenchlmAgenticScore timer cleanup (chain #20 step-v6.0-14 timer parity)', () => {
+  const cleanupModel: ModelConfig = {
+    name: 'benchlm-agentic-cleanup-model',
+    endpoint: 'https://model.invalid/v1',
+    apiKey: 'test-...key',
+    type: 'openai',
+    model: 'gpt-4o-mini',
+  };
+  const cleanupConfig: BenchmarkConfig = {
+    models: [cleanupModel],
+    benchmarks: { dialogue: false, coding: false },
+  };
+  const cleanupAdapter = {} as LLMAdapter;
+  const originalFetchRef = global.fetch;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetchRef;
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  const invokeCleanup = async (apiBase: string, timeoutMs = 30_000) => {
+    const evaluator = new Evaluator(cleanupConfig, cleanupAdapter) as unknown as FetchBenchlmAgenticSignature;
+    return evaluator.fetchBenchlmAgenticScore(apiBase, cleanupModel, timeoutMs);
+  };
+
+  // Branch 1 of 4: HTTP 503 (resp.ok === false path) — verifies clearTimeout is called before return.
+  it('clears the abort timer when HTTP response fails (503 Service Unavailable)', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      text: async () => 'service unavailable',
+    }) as typeof fetch;
+
+    const result = await invokeCleanup('https://bla.invalid/v1');
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('coding');
+    expect(result.detail).toMatch(/^benchlm_agentic HTTP 503: /);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  // Branch 2 of 4: API error payload (data.error path) — verifies clearTimeout is called before return.
+  it('clears the abort timer when API payload returns error field (rate_limited)', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ error: 'rate_limited' }),
+    }) as typeof fetch;
+
+    const result = await invokeCleanup('https://bla.invalid/v1');
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('coding');
+    expect(result.detail).toBe('benchlm_agentic API error: rate_limited');
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  // Branch 3 of 4: happy path success — verifies clearTimeout is called after JSON parse OK.
+  // passRate=0.6, d2c=80, v2w=70: 0.6*50 + 80*0.25 + 70*0.25 = 30 + 20 + 17.5 = 67.5 -> round 67.5
+  it('clears the abort timer on happy path success (no timer leak when fetch resolves cleanly)', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ agentic_pass_rate: 0.6, design2code_score: 80, vision2web_score: 70, eval_id: 'bla-eval-cleanup-001' }),
+    }) as typeof fetch;
+
+    const result = await invokeCleanup('https://bla.invalid/v1');
+
+    expect(result.score).toBe(67.5);
+    expect(result.detail).toContain('pass_rate=60.0%');
+    expect(result.detail).toContain('score=67.5');
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  // Branch 4 of 4: network down (catch path) — REGRESSION for the timer leak that
+  // previously occurred because clearTimeout(timer) only ran after fetch resolved.
+  // This is the strict TDD RED case that fails on unfixed code with
+  // "Expected 0, Received 1" — it pins the fetch-rejection path which was the
+  // original bug (chain #20 step-v6.0-14 pilot + 4d45a8b swe_bench_pro fix pattern).
+  it('clears the abort timer when fetch rejects before a response arrives (network down)', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as typeof fetch;
+
+    const result = await invokeCleanup('https://bla.invalid/v1');
+
+    expect(result.score).toBe(0);
+    expect(result.dimension).toBe('coding');
+    expect(result.modelOutput).toBe('');
+    expect(result.detail).toContain('fetch error: network down');
+    expect(jest.getTimerCount()).toBe(0);
+  });
+});

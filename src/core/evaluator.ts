@@ -867,16 +867,15 @@ export class Evaluator {
       subset, // 06-20 03:03 cron: 与 terminal_bench.subset / swe_bench_pro.subset / long_context_cluster.subset / cyberseceval3.risk_categories 对位
       dispatch_type: dispatchType,
     };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
       const resp = await fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(basePayload),
         signal: controller.signal,
       });
-      clearTimeout(timer);
       if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
         return {
@@ -938,6 +937,8 @@ export class Evaluator {
         detail: buildFetcherErrorDetail('benchlm_agentic', '', timeoutMs, err),
         dispatchType,
       };
+    } finally {
+      clearTimeout(timer);
     }
   }
 
