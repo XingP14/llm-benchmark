@@ -230,6 +230,7 @@ describe('fetchTerminalBenchScore runtime coverage (v0.5.0 dispatch, 07-14 05:23
 
   // Case 8: fetch rejects (timeout abort) — score:0, detail 含 "timeout after <ms>ms"
   it('fetch rejection (abort/timeout): score 0, detail contains "timeout after <ms>ms"', async () => {
+    jest.useFakeTimers();
     const abortError = new Error('The operation was aborted');
     global.fetch = jest.fn().mockRejectedValue(abortError) as typeof fetch;
 
@@ -239,5 +240,7 @@ describe('fetchTerminalBenchScore runtime coverage (v0.5.0 dispatch, 07-14 05:23
     // errorMessage(err) for Error('The operation was aborted') -> msg.toLowerCase() contains 'abort'
     // isTimeout branch -> "terminal_bench timeout after 5000ms"
     expect(result.detail).toBe('terminal_bench timeout after 5000ms');
+    expect(jest.getTimerCount()).toBe(0);
+    jest.useRealTimers();
   });
 });

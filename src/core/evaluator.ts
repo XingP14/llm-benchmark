@@ -688,16 +688,15 @@ export class Evaluator {
       model_id: model.model ?? model.name,
       timeout_ms: timeoutMs,
     };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
       const resp = await fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(basePayload),
         signal: controller.signal,
       });
-      clearTimeout(timer);
       if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
         return {
@@ -747,6 +746,8 @@ export class Evaluator {
         modelOutput: '',
         detail: buildFetcherErrorDetail('aa_omniscience', '', timeoutMs, err),
       };
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -775,16 +776,15 @@ export class Evaluator {
       subset,
       dispatch_type: dispatchType,
     };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
       const resp = await fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(basePayload),
         signal: controller.signal,
       });
-      clearTimeout(timer);
       if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
         return {
@@ -837,6 +837,8 @@ export class Evaluator {
         detail: buildFetcherErrorDetail('terminal_bench', '', timeoutMs, err),
         dispatchType,
       };
+    } finally {
+      clearTimeout(timer);
     }
   }
 
