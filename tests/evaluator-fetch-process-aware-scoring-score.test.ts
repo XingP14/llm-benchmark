@@ -76,6 +76,7 @@ describe('fetchProcessAwareScoringScore runtime coverage', () => {
   afterEach(() => {
     global.fetch = originalFetch;
     console.warn = originalWarn;
+    jest.useRealTimers();
   });
 
   it('uses the server composite score and reports every process signal', async () => {
@@ -262,5 +263,16 @@ describe('fetchProcessAwareScoringScore runtime coverage', () => {
     expect(timedOut.detail).toBe('process_aware_scoring timeout after 1ms');
     expect(failed.score).toBe(0);
     expect(failed.detail).toBe('process_aware_scoring fetch error: socket closed');
+  });
+
+  it('clears the abort timer when fetch rejects before a response arrives', async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as typeof fetch;
+
+    const result = await invoke('https://process.invalid/v1');
+
+    expect(result.score).toBe(0);
+    expect(result.detail).toBe('process_aware_scoring fetch error: network down');
+    expect(jest.getTimerCount()).toBe(0);
   });
 });
