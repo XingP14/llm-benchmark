@@ -73,6 +73,7 @@ describe('fetchWebdevArenaScore runtime coverage (v0.5.0 dispatch, 06-14 03:23 c
 
   afterEach(() => {
     global.fetch = originalFetch;
+    jest.useRealTimers();
   });
 
   // Case 1: happy path — 真实 fetch 成功 + parse 正常 + 0-100 归一正确
@@ -206,12 +207,14 @@ describe('fetchWebdevArenaScore runtime coverage (v0.5.0 dispatch, 06-14 03:23 c
   });
 
   // Case 8: fetch rejects (network down) — score:0, detail 含 "fetch error: network down"
-  it('fetch rejection (network down): score 0, detail contains "fetch error: network down"', async () => {
+  it('fetch rejection (network down): score 0, detail contains "fetch error: network down" and clears the abort timer', async () => {
+    jest.useFakeTimers();
     global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as typeof fetch;
 
     const result = await invoke('https://webdevarena.com/api/v1/eval', model, 30000);
 
     expect(result.score).toBe(0);
     expect(result.detail).toContain('fetch error: network down');
+    expect(jest.getTimerCount()).toBe(0);
   });
 });

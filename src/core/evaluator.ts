@@ -604,16 +604,15 @@ export class Evaluator {
       prompt: 'Generate a full-stack web application (HTML+CSS+JS) per WebDevArena standard task prompt set.',
       timeout_ms: timeoutMs,
     };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
       const resp = await fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(basePayload),
         signal: controller.signal,
       });
-      clearTimeout(timer);
       if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
         return {
@@ -663,6 +662,8 @@ export class Evaluator {
         modelOutput: '',
         detail: buildFetcherErrorDetail('webdev_arena', '', timeoutMs, err),
       };
+    } finally {
+      clearTimeout(timer);
     }
   }
 
