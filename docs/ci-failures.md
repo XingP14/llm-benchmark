@@ -612,3 +612,11 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - CI gate: llm-benchmark 24h GREEN via local gate (`heartbeat-watchdog.sh ci-gate` at 23:02); woclaw 24h GREEN post-`dd7adbc` push. Both `ci-gate` confirm pre-lock clean state.
 - V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than fabricating a 23:03-night real-code push inside the <1h lock window or using a pseudo-prefix (`feat(docs)` / `docs(*)` would block under rule 4).
 - `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. +0 Jest / +0 tsc for this documentation-only append. Verification: unique heading, single trailing newline, `git diff --check`, exact-message watchdog check, push, and SHA equality readback.
+
+## Tick note 2026-07-20 23:23 (cron watchdog)
+
+- New 22-23 cycle tick #4/27. After woclaw `32b4510` closure at 23:25 (+17min LOCKED<1h from prior `dd7adbc`, unlock at ~23:49), W→L rotation picks **llm-benchmark**. Probe at 23:23 CST found llm-benchmark `e33c9c5` age 17min LOCKED<1h at tick start, head == remote SHA, block count 0.
+- 23:23 CST sits in the 22-23 schedule window (V3 schedule `3,23,43 22-23,0-6` = 27 tick/d). Outside the 09:00 real-code window; hint pool remains stale-drained per the preceding 01:03..23:03 cross-checks. Last real-code llm-benchmark `e2d5814` (06-12 cyberseceval3 timer parity pilot for 7 fetchers). No TODO/FIXME residue in src/, no uncommitted/untracked real-code candidate.
+- CI gate: llm-benchmark 24h GREEN via local gate (`heartbeat-watchdog.sh ci-gate` at 23:22); woclaw 24h GREEN post-`32b4510` push. Both `ci-gate` confirm pre-lock clean state.
+- V3 rule 4 selects the minimum-cost `fix(docs)` closure rather than fabricating a 23:23-night real-code push inside the <1h lock window or using a pseudo-prefix (`feat(docs)` / `docs(*)` would block under rule 4).
+- `fix(docs)` is non-pseudo and any-time ALLOW under V3 rule 1. +0 Jest / +0 tsc for this documentation-only append. Verification: unique heading, single trailing newline, `git diff --check`, exact-message watchdog check, push, and SHA equality readback.
