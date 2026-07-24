@@ -88,7 +88,7 @@ describe('evaluator dispatchExternalCall helper (v0.6 step-v6.0-11 chain #12)', 
       // dispatchExternalCall takes (results, name, fetcher) — url pulled from DEFAULT_API_BASE inside
       expect(src).toMatch(/private async dispatchExternalCall\(\s*results: EvaluationResult\[\],\s*\n\s*benchmarkName:/);
       // The signature should NOT have defaultApiBase: string param (since url is in DEFAULT_API_BASE)
-      const sig = src.match(/private async dispatchExternalCall\([\s\S]{0,400}?\): Promise<void>/);
+      const sig = src.match(/private async dispatchExternalCall\([\s\S]{0,500}?\): Promise<void>/);
       expect(sig).not.toBeNull();
       expect(sig![0]).not.toMatch(/defaultApiBase: string/);
     });
@@ -124,23 +124,23 @@ describe('evaluator dispatchExternalCall helper (v0.6 step-v6.0-11 chain #12)', 
       expect(j).toMatch(/dispatch-call-extraction/);
     });
 
-    it('helper benchmarkName typed as 8-key literal union (TypeScript narrow on cfg lookup)', () => {
-      expect(src).toMatch(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster'/);
+    it('helper benchmarkName typed as 10-key literal union (TypeScript narrow on cfg lookup)', () => {
+      expect(src).toMatch(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster' \| 'lm_eval_task_conflict_resolver' \| 'livebench_2026_h1_quarterly_v3'/);
     });
   });
 
-  // see 9 dispatch sites below — chain #19 lm_eval_task_conflict_resolver 9th-site closure
-  describe('9 dispatch sites migrated to 3-arg dispatchExternalCall', () => {
-    const NAMES = ['webdev_arena', 'cyberseceval3', 'aa_omniscience', 'terminal_bench', 'benchlm_agentic', 'swe_bench_pro', 'process_aware_scoring', 'long_context_cluster'];
+  // see 10 dispatch sites below — chain #20 livebench_2026_h1_quarterly_v3 10th-site closure
+  describe('10 dispatch sites migrated to 3-arg dispatchExternalCall', () => {
+    const NAMES = ['webdev_arena', 'cyberseceval3', 'aa_omniscience', 'terminal_bench', 'benchlm_agentic', 'swe_bench_pro', 'process_aware_scoring', 'long_context_cluster', 'lm_eval_task_conflict_resolver', 'livebench_2026_h1_quarterly_v3'];
 
     it.each(NAMES)('site %s uses dispatchExternalCall 3-arg (results, name, fetcher)', (name) => {
-                              const callSiteRe = new RegExp(`dispatchExternalCall[\\s\\S]*?results[\\s\\S]*?'${name}',`);
+      const callSiteRe = new RegExp(`dispatchExternalCall[\\s\\S]*?results[\\s\\S]*?'${name}',`);
       expect(src).toMatch(callSiteRe);
     });
 
-    it('exactly 9 dispatchExternalCall call sites in run()', () => {
+    it('exactly 10 dispatchExternalCall call sites in run()', () => {
       const matches = src.match(/^\s*await this\.dispatchExternalCall\(/gm) || [];
-      expect(matches.length).toBe(9); // bumped 8→9 after chain #19 lm_eval_task_conflict_resolver 9th dispatch site (vs chain #12 8/8 closure; 现 9/9 full parity)
+      expect(matches.length).toBe(10); // bumped 9→10 after chain #20 livebench_2026_h1_quarterly_v3 10th dispatch site (vs chain #19 9/9; 现 10/10 full parity)
     });
 
     it('zero remaining `await this.dispatchExternalBenchmark(` call sites (all migrated)', () => {

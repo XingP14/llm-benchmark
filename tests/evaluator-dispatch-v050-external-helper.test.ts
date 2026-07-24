@@ -20,7 +20,7 @@ describe('evaluator dispatchV050External + dispatchExternalBenchmark helpers (8-
     expect(src).toBeDefined();
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1300);
-    expect(lineCount).toBeLessThan(1820); // bumped 1750→1820 after chain #19 lm_eval_task_conflict_resolver 9th site (chain #12 left 1619 baseline, +91 JSDoc+9th-site+union-ext+anchor/mode/dependency_groups closure lines vs 1710 actual; 留 40 行 slack) dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
+    expect(lineCount).toBeLessThan(1950); // bumped 1750→1820→1950 after chain #20 livebench_2026_h1_quarterly_v3 10th site (chain #12 left 1619 baseline, +91 JSDoc+9th-site+union-ext+anchor/mode/dependency_groups closure lines vs 1710 actual; 留 40 行 slack) dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
   });
 
   it('declares exactly one private async dispatchV050External helper', () => {
@@ -81,7 +81,7 @@ describe('evaluator dispatchV050External + dispatchExternalBenchmark helpers (8-
     // 仅数代码行 (排除 JSDoc `* await this.dispatchExternalCall(...)` 例行); 1 JSDoc example 已被排除
     const codeOnly = src.split('\n').filter(l => !/^\s*\*/.test(l)).join('\n');
     const totalCalls = (codeOnly.match(/await this\.dispatchExternalCall\(/g) || []).length;
-    expect(totalCalls).toBe(9); // bumped 8→9 after chain #19 lm_eval_task_conflict_resolver 9th dispatch site (vs chain #12 8/8 closure; 现 9/9 full parity)
+    expect(totalCalls).toBe(10); // bumped 8→9→10 after chain #20 livebench_2026_h1_quarterly_v3 10th dispatch site (vs chain #19 9/9; 现 10/10 full parity)
   });
 
   it('chain #10 dispatchExternalBenchmark 4-arg wrapper retained as back-compat alias (zero callers at run() level — chain #12 collapsed all 8 sites to dispatchExternalCall 3-arg)', () => {

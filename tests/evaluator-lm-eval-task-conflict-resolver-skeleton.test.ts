@@ -176,19 +176,21 @@ describe('evaluator fetchLmEvalTaskConflictResolverScore skeleton (v0.6 step-v6.
       expect(src).toMatch(/\.lm_eval_task_conflict_resolver!\.dependency_groups \?\? 'all'/);
     });
 
-    it('9 dispatch sites total: 8 v0.5 + 1 v0.6 (lm_eval_task_conflict_resolver, full 9-key chain #19 closure)', () => {
-      // run() 方法内 await this.dispatchExternalCall 总数 = 9 (8 + 1)
+    it('10 dispatch sites total: 8 v0.5 + 2 v0.6 (lm_eval_task_conflict_resolver + livebench_2026_h1_quarterly_v3, full 10-key chain #20 closure)', () => {
+      // run() 方法内 await this.dispatchExternalCall 总数 = 10 (8 + 2)
       // 用 name (单引号 string literal 形式) 计数
       const matches = src.match(/await this\.dispatchExternalCall\(\s*\n\s*results, '([^']+)'/g);
       expect(matches).not.toBeNull();
-      expect(matches!.length).toBe(9);
+      expect(matches!.length).toBe(10); // 10 dispatch sites total (8 v0.5 + 2 v0.6)
       // 第 9 个必须是 lm_eval_task_conflict_resolver
       expect(matches![8]).toContain("'lm_eval_task_conflict_resolver'");
+      // 第 10 个必须是 livebench_2026_h1_quarterly_v3
+      expect(matches![9]).toContain("'livebench_2026_h1_quarterly_v3'");
     });
 
-    it('8-key union regression gate (rejects accidental 8-key rollback)', () => {
-      // 如未来误删 union 中 'lm_eval_task_conflict_resolver', 这个正则会失败
-      const unionMatch = src.match(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster' \| 'lm_eval_task_conflict_resolver'/);
+    it('10-key union regression gate (rejects accidental 8/9-key rollback)', () => {
+      // 如未来误删 union 中 'lm_eval_task_conflict_resolver' 或 'livebench_2026_h1_quarterly_v3', 这个正则会失败
+      const unionMatch = src.match(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster' \| 'lm_eval_task_conflict_resolver' \| 'livebench_2026_h1_quarterly_v3'/);
       expect(unionMatch).not.toBeNull();
     });
   });

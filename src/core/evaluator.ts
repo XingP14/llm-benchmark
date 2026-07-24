@@ -58,6 +58,7 @@ export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = {
   aa_omniscience: 'long_context_retrieval',
   webdev_arena: 'agentic_coding',
   lm_eval_task_conflict_resolver: 'agentic_coding',
+  livebench_2026_h1_quarterly_v3: 'agentic_coding',
 };
 
 export function defaultDispatchType(benchmarkName: string): ExternalDispatchType {
@@ -89,6 +90,7 @@ export const DEFAULT_LOG_FORMAT: Record<string, string> = {
   aa_omniscience: 'long_context_retrieval',
   webdev_arena: 'agentic_coding',
   lm_eval_task_conflict_resolver: 'agentic_coding',
+  livebench_2026_h1_quarterly_v3: 'agentic_coding',
 };
 /**
  * v0.6.0 step-v6.0-10 helper: subset default literal 集中 helper-extraction
@@ -156,6 +158,12 @@ export const DEFAULT_API_BASE: Record<string, string> = {
   // lm-eval-harness 任务冲突依赖管理自动化 (CSDN 2026-03-30 实战痛点, [dependency-groups] 已知冲突组合自动检测
   //   + numpy/torch/datasets 跨 version resolver). 与 lm_eval_harness_v0_4_0 配对 (60+ 学术基准跨 task conflict 自动化 resolver).
   lm_eval_task_conflict_resolver: 'https://llm-benchmark.local/api/v1/lm_eval_task_conflict_resolver/v1',
+  // v0.6.0 step-v6.0-14 (07-25 03:24 cron, chain #20 10th real fetch extension):
+  // LiveBench 2026 H1 contamination-free quarterly refresh v3 (https://livebench.ai, 06-09 commit)
+  //   3.5-month cadence, 06 月 leaderboard SOTA: GPT-5.5 Thinking xHigh 87.71 / Claude 4.6 Opus Thinking High 88.67
+  //   POST https://api.livebench.ai/v1/refresh/v3 body 含 api_base/model_id/refresh_cadence/contamination_check/timeout_ms
+  //   解析 {livebench_score / category_scores / refresh_date / eval_model / contamination_status / error}
+  livebench_2026_h1_quarterly_v3: 'https://api.livebench.ai/v1/refresh/v3',
 };
 
 
@@ -214,6 +222,22 @@ export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): st
       const procWeight = ext?.process_weight ?? 0.3;
       const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
       suffix = `, subset=${subset}, mode=${mode}, agentic_benchmark=${bench}, weights=${passWeight}/${procWeight}${anchor}`;
+      break;
+    }
+    case 'lm_eval_task_conflict_resolver': {
+      const mode = ext?.mode ?? 'dry_run';
+      const deps = ext?.dependency_groups ?? 'all';
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `, mode=${mode}, deps=${deps}${anchor}`;
+      break;
+    }
+    case 'livebench_2026_h1_quarterly_v3': {
+      const task = ext?.task ?? 'all';
+      const cadence = ext?.refresh_cadence ?? 'quarterly_3_5_month';
+      const contam = ext?.contamination_check ?? 'enabled';
+      const timeout = ext?.timeout_ms != null ? `, timeout=${ext.timeout_ms}ms` : '';
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `, task=${task}, cadence=${cadence}, contam=${contam}${timeout}${anchor}`;
       break;
     }
     default:
@@ -496,6 +520,20 @@ export class Evaluator {
     await this.dispatchExternalCall(
       results, 'lm_eval_task_conflict_resolver',
       (apiBase, model, timeoutMs) => this.fetchLmEvalTaskConflictResolverScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.anchor_score, this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.mode ?? 'dry_run', this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.dependency_groups ?? 'all'),
+    );
+
+    // v0.6.0 step-v6.0-14 chain #20: livebench_2026_h1_quarterly_v3 真实 fetch + parse 接入
+    // (07-25 03:24 cron tick, 沿 8769f27 type stub + 07-23 23:23 ade6422 chain #19 9th fetcher basePayload echo pattern):
+    // round 1: 10th fetcher 0-skeleton → 1-real-fetch 全闭环 (parallels fetchLongContextClusterScore 6-gate pattern).
+    // - 仅当 ext.livebench_2026_h1_quarterly_v3.enabled (默认 false)
+    // - 错误处理: timeout / 4xx / 5xx 三段 try/catch, 不阻塞主评测, 仅 logWarn + 注入 detail
+    // - 注入: EvaluationResult.scores[] 追加 1 个 livebench_2026_h1_quarterly_v3 QuestionScore (questionId=`livebench_2026_h1_quarterly_v3_${model.name}`,
+    //   category=`livebench_2026_h1_quarterly_v3`, dimension=`coding` 走 v0.4.0 默认,
+    //   score = livebench_score 0-100 归一; category_scores 摘要嵌入 detail (3 项 + ellipsis), refresh_date + contamination_status 摘要嵌入 detail)
+    // - 注: LiveBench 2026 H1 contamination-free quarterly refresh v3 (https://livebench.ai, 06-09 commit, 3.5-month cadence)
+    await this.dispatchExternalCall(
+      results, 'livebench_2026_h1_quarterly_v3',
+      (apiBase, model, timeoutMs) => this.fetchLiveBench2026H1QuarterlyV3Score(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.anchor_score, this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.task ?? 'all', this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.refresh_cadence ?? 'quarterly_3_5_month', this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.contamination_check ?? 'enabled'),
     );
 
     return results;
@@ -1394,6 +1432,113 @@ export class Evaluator {
     }
   }
 
+  /**
+   * v0.6.0 step-v6.0-14 chain #20 round 1 (07-25 03:24 cron):
+   * livebench_2026_h1_quarterly_v3 真实 fetch + parse (沿 fetchLmEvalTaskConflictResolverScore 模式).
+   * POST {api_base} body={api_base, model_id, task, refresh_cadence, contamination_check, timeout_ms, dispatch_type}
+   * 解析 {livebench_score: number; category_scores: Record<string, number>; refresh_date: string; eval_model: string; contamination_status: string; error?: string}
+   * 三段 try/catch: timeout / 4xx / 5xx.
+   * 归一: livebench_score 0-100 (已是百分制, clamp [0, 100]).
+   * category_scores 摘要嵌入 detail (top-3 + ellipsis), refresh_date + contamination_status 摘要嵌入 detail.
+   */
+  private async fetchLiveBench2026H1QuarterlyV3Score(
+    apiBase: string,
+    model: ModelConfig,
+    timeoutMs: number,
+    anchorScore?: number,
+    task: string = 'all',
+    refreshCadence: string = 'quarterly_3_5_month',
+    contaminationCheck: string = 'enabled',
+    dispatchType: ExternalDispatchType = defaultDispatchType('livebench_2026_h1_quarterly_v3')
+  ): Promise<QuestionScore> {
+    const questionId = `livebench_2026_h1_quarterly_v3_${model.name}`;
+    const basePayload = {
+      api_base: model.endpoint,
+      model_id: model.model ?? model.name,
+      task,
+      refresh_cadence: refreshCadence,
+      contamination_check: contaminationCheck,
+      timeout_ms: timeoutMs,
+      dispatch_type: dispatchType,
+    };
+    const taskPart = `[${task}|${refreshCadence}|${contaminationCheck}]`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const resp = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basePayload),
+        signal: controller.signal,
+      });
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return {
+          questionId,
+          category: 'livebench_2026_h1_quarterly_v3',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `livebench_2026_h1_quarterly_v3${taskPart} HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
+        };
+      }
+      const data = (await resp.json()) as {
+        livebench_score?: number;
+        category_scores?: Record<string, number>;
+        refresh_date?: string;
+        eval_model?: string;
+        contamination_status?: string;
+        error?: string;
+      };
+      if (data.error) {
+        return {
+          questionId,
+          category: 'livebench_2026_h1_quarterly_v3',
+          score: 0,
+          dimension: 'coding',
+          modelOutput: '',
+          detail: `livebench_2026_h1_quarterly_v3${taskPart} API error: ${data.error}`,
+          dispatchType,
+        };
+      }
+      const raw = typeof data.livebench_score === 'number' ? data.livebench_score : 0;
+      const normalized = Math.max(0, Math.min(100, raw));
+      const catEntries = data.category_scores ? Object.entries(data.category_scores) : [];
+      const catTop = catEntries.slice(0, 3).map(([k, v]) => `${k}=${v.toFixed(1)}`).join(',');
+      const catPart = catEntries.length > 0 ? `, cats=[${catTop}${catEntries.length > 3 ? ',…' : ''}]` : '';
+      const datePart = data.refresh_date ? `, date=${data.refresh_date}` : '';
+      const contamPart = data.contamination_status ? `, contam=${data.contamination_status}` : '';
+      const evalModelPart = data.eval_model ? `, eval=${data.eval_model}` : '';
+      let detail = `livebench_2026_h1_quarterly_v3${taskPart} score=${normalized.toFixed(1)}${catPart}${datePart}${contamPart}${evalModelPart}`;
+      if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
+        logWarn(`  [livebench_2026_h1_quarterly_v3] ⚠️ anchor mismatch for ${model.name}: got ${normalized.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return {
+        questionId,
+        category: 'livebench_2026_h1_quarterly_v3',
+        score: Math.round(normalized * 10) / 10,
+        dimension: 'coding',
+        modelOutput: JSON.stringify({ ...data, request: basePayload }).slice(0, 500),
+        detail,
+        dispatchType,
+      };
+    } catch (err: unknown) {
+      return {
+        questionId,
+        category: 'livebench_2026_h1_quarterly_v3',
+        score: 0,
+        dimension: 'coding',
+        modelOutput: '',
+        detail: buildFetcherErrorDetail('livebench_2026_h1_quarterly_v3', taskPart, timeoutMs, err),
+        dispatchType,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
 
   private async evaluateModel(
     model: ModelConfig,
@@ -1635,7 +1780,7 @@ export class Evaluator {
    */
   private async dispatchExternalCall(
     results: EvaluationResult[],
-    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver',
+    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver' | 'livebench_2026_h1_quarterly_v3',
     fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: ExternalDispatchType) => Promise<QuestionScore>,
   ): Promise<void> {
     const ext = this.config._external_benchmarks_roadmap as Record<string, { enabled?: boolean; type?: ExternalDispatchType; api_base?: string; timeout_ms?: number; model_id?: string } | undefined> | undefined;

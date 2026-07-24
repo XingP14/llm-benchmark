@@ -98,14 +98,14 @@ async function runBenchmark(args: string[]) {
   try {
     const results = await evaluator.run();
 
-    // v0.5.0+ 外部基准路线图提示 (roadmap-only, PR 进度: type ✅ 2150d07 / dispatch 9/9 ✅
+    // v0.5.0+ 外部基准路线图提示 (roadmap-only, PR 进度: type ✅ 2150d07 / dispatch 10/10 ✅
     // — 见下方 console.info 同步刷新, 沿 6af9f47 5-dim 默认值 lookup 集中 stale drift 模式).
     if (config._external_benchmarks_roadmap) {
       const enabled = Object.entries(config._external_benchmarks_roadmap)
         .filter(([_, v]) => v?.enabled)
         .map(([k]) => k);
       if (enabled.length > 0) {
-        cliLog(`\n🧪 v0.5.0+ external benchmark roadmap detected: ${enabled.join(', ')} (PR progress: type ✅ 2150d07 / dispatch 9/9 真实化 (webdev_arena/terminal_bench/aa_omniscience/benchlm_agentic/cyberseceval3/swe_bench_pro/long_context_cluster/process_aware_scoring/lm_eval_task_conflict_resolver, per src/core/evaluator.ts line 161) / 真连接 adapter 仍 partial — full PR 估 30-45min)`);
+        cliLog(`\n🧪 v0.5.0+ external benchmark roadmap detected: ${enabled.join(', ')} (PR progress: type ✅ 2150d07 / dispatch 10/10 真实化 (webdev_arena/terminal_bench/aa_omniscience/benchlm_agentic/cyberseceval3/swe_bench_pro/long_context_cluster/process_aware_scoring/lm_eval_task_conflict_resolver/livebench_2026_h1_quarterly_v3, per src/core/evaluator.ts line 161) / 真连接 adapter 仍 partial — full PR 估 30-45min)`);
       }
     }
 

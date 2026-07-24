@@ -6,7 +6,7 @@
 // (4) empty string 返回 'agentic_coding' 兜底
 // (5) L1352 dispatchV050External 调用 defaultDispatchType(benchmarkName) 不再硬编码 (substring grep)
 // (6) 5 closure L277/292/307/330/346 全部从 lookup 取值
-// (7) 6 default parameter L756/851/956/1066/1179/1302 全部用 helper 调用 (v0.6.0 step-v6.0-13 加 lm_eval_task_conflict_resolver 第 6 处)
+// (7) 7 default parameter L756/851/956/1066/1179/1302/LIVEBENCH 全部用 helper 调用 (v0.6.0 step-v6.0-14 加 livebench_2026_h1_quarterly_v3 第 7 处)
 // (8) 1 helper fallback L1616 调用 helper (dispatchV050External)
 import * as fs from 'fs';
 import * as path from 'path';
@@ -21,7 +21,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       expect(src).toMatch(/export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = \{/);
     });
 
-    it('declares exactly 9 entries', () => {
+    it('declares exactly 10 entries', () => {
       const tableMatch = src.match(/export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = \{([\s\S]+?)\};/);
       expect(tableMatch).not.toBeNull();
       const body = tableMatch![1];
@@ -34,6 +34,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       expect(body).toContain('aa_omniscience:');
       expect(body).toContain('webdev_arena:');
       expect(body).toContain('lm_eval_task_conflict_resolver:');
+      expect(body).toContain('livebench_2026_h1_quarterly_v3:');
     });
 
     it('keys map to expected literals', () => {
@@ -46,6 +47,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       expect(src).toMatch(/aa_omniscience: 'long_context_retrieval'/);
       expect(src).toMatch(/webdev_arena: 'agentic_coding'/);
       expect(src).toMatch(/lm_eval_task_conflict_resolver: 'agentic_coding'/);
+      expect(src).toMatch(/livebench_2026_h1_quarterly_v3: 'agentic_coding'/);
     });
   });
 
@@ -109,7 +111,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     });
   });
 
-  describe('6 default parameter declarations all use helper (v0.6.0 step-v6.0-13 added lm_eval_task_conflict_resolver)', () => {
+  describe('7 default parameter declarations all use helper (v0.6.0 step-v6.0-14 added livebench_2026_h1_quarterly_v3)', () => {
     it("(terminal_bench) → defaultDispatchType('terminal_bench')", () => {
       expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('terminal_bench'\)/);
     });
@@ -125,18 +127,20 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     it("(long_context_cluster) → defaultDispatchType('long_context_cluster')", () => {
       expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('long_context_cluster'\)/);
     });
-
     it("(lm_eval_task_conflict_resolver) → defaultDispatchType('lm_eval_task_conflict_resolver') [v0.6.0 step-v6.0-13 9th fetcher, 07-10 05:03 cron]", () => {
       expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('lm_eval_task_conflict_resolver'\)/);
     });
+    it("(livebench_2026_h1_quarterly_v3) → defaultDispatchType('livebench_2026_h1_quarterly_v3') [v0.6.0 step-v6.0-14 10th fetcher, 07-25 03:24 cron]", () => {
+      expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('livebench_2026_h1_quarterly_v3'\)/);
+    });
 
-    it('default parameter NO LONGER use bare 6 literals (default-param gate, excludes helper block) — bumped 5→6 after v0.6.0 step-v6.0-13', () => {
-      // Scope: only check 5 fetcher signature lines (NOT the helper block DEFAULT_DISPATCH_TYPE entries
+    it('default parameter NO LONGER use bare 7 literals (default-param gate, excludes helper block) — bumped 6→7 after v0.6.0 step-v6.0-14', () => {
+      // Scope: only check 7 fetcher signature lines (NOT the helper block DEFAULT_DISPATCH_TYPE entries
       // + NOT the helper block header comment)
-      // The 6 fetcher signatures all have the form `    dispatchType: ExternalDispatchType = ...` at column 4 (4-space indent)
+      // The 7 fetcher signatures all have the form `    dispatchType: ExternalDispatchType = ...` at column 4 (4-space indent)
       const lines = src.split('\n');
       const defaultParamLines = lines.filter((l) => /^    dispatchType: ExternalDispatchType = /.test(l));
-      expect(defaultParamLines.length).toBe(6);
+      expect(defaultParamLines.length).toBe(7);
       for (const l of defaultParamLines) {
         // Must use defaultDispatchType, not bare literal
         expect(l).toMatch(/defaultDispatchType\(/);
@@ -166,8 +170,8 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     });
   });
 
-  describe('closure + default param + helper fallback total = 12 sites consolidated (v0.6.0 step-v6.0-13 bumped 11→12)', () => {
-    it('total defaultDispatchType() call sites = 12 (5 closure + 6 default param + 1 helper fallback)', () => {
+  describe('closure + default param + helper fallback total = 13 sites consolidated (v0.6.0 step-v6.0-14 bumped 12→13)', () => {
+    it('total defaultDispatchType() call sites = 13 (5 closure + 7 default param + 1 helper fallback)', () => {
       // Count occurrences of `defaultDispatchType(` that are NOT inside a `*` comment line + NOT the declaration
       const lines = src.split('\n');
       let callCount = 0;
@@ -181,15 +185,15 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
         const matches = l.match(/defaultDispatchType\(/g);
         if (matches) callCount += matches.length;
       }
-      expect(callCount).toBe(12);
+      expect(callCount).toBe(13);
     });
   });
 
   describe('file size + header chain-#8 attribution', () => {
-    it('file size in expected range (1420..1460 — helper block added ~24 lines)', () => {
+    it('file size in expected range (1420..1900 — helper block added ~24 lines, chain #20 added ~110 lines)', () => {
       const lineCount = src.split('\n').length;
       expect(lineCount).toBeGreaterThanOrEqual(1420);
-      expect(lineCount).toBeLessThan(1820); // bumped 1750→1820 after chain #19 lm_eval_task_conflict_resolver 9th site (chain #12 left 1619 baseline, +91 JSDoc+9th-site+union-ext+anchor/mode/dependency_groups closure lines vs 1710 actual; 留 40 行 slack) dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
+      expect(lineCount).toBeLessThan(1900); // bumped 1820→1900 after chain #20 livebench_2026_h1_quarterly_v3 10th fetcher (chain #19 left ~1786, +107 lines for 10th fetcher + dispatch site + union ext + logExternalBenchmarkEnabled case)
     });
     it('chain #8 attribution header comment present', () => {
       expect(src).toMatch(/v0\.6\.0 step-v6\.0-7 helper: 5 fetcher dispatchType literal default lookup/);
