@@ -176,21 +176,23 @@ describe('evaluator fetchLmEvalTaskConflictResolverScore skeleton (v0.6 step-v6.
       expect(src).toMatch(/\.lm_eval_task_conflict_resolver!\.dependency_groups \?\? 'all'/);
     });
 
-    it('10 dispatch sites total: 8 v0.5 + 2 v0.6 (lm_eval_task_conflict_resolver + livebench_2026_h1_quarterly_v3, full 10-key chain #20 closure)', () => {
-      // run() 方法内 await this.dispatchExternalCall 总数 = 10 (8 + 2)
+    it('11 dispatch sites total: 8 v0.5 + 3 v0.6 (lm_eval_task_conflict_resolver + livebench + Stirrup)', () => {
+      // run() 方法内 await this.dispatchExternalCall 总数 = 11 (8 + 3)
       // 用 name (单引号 string literal 形式) 计数
       const matches = src.match(/await this\.dispatchExternalCall\(\s*\n\s*results, '([^']+)'/g);
       expect(matches).not.toBeNull();
-      expect(matches!.length).toBe(10); // 10 dispatch sites total (8 v0.5 + 2 v0.6)
+      expect(matches!.length).toBe(11); // 11 dispatch sites total (8 v0.5 + 3 v0.6)
       // 第 9 个必须是 lm_eval_task_conflict_resolver
       expect(matches![8]).toContain("'lm_eval_task_conflict_resolver'");
       // 第 10 个必须是 livebench_2026_h1_quarterly_v3
       expect(matches![9]).toContain("'livebench_2026_h1_quarterly_v3'");
+      // 第 11 个必须是 Artificial Analysis Stirrup
+      expect(matches![10]).toContain("'artificial_analysis_stirrup_agent_framework_v1'");
     });
 
-    it('10-key union regression gate (rejects accidental 8/9-key rollback)', () => {
+    it('11-key union regression gate (rejects accidental 8/9-key rollback)', () => {
       // 如未来误删 union 中 'lm_eval_task_conflict_resolver' 或 'livebench_2026_h1_quarterly_v3', 这个正则会失败
-      const unionMatch = src.match(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster' \| 'lm_eval_task_conflict_resolver' \| 'livebench_2026_h1_quarterly_v3'/);
+      const unionMatch = src.match(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster' \| 'lm_eval_task_conflict_resolver' \| 'livebench_2026_h1_quarterly_v3' \| 'artificial_analysis_stirrup_agent_framework_v1'/);
       expect(unionMatch).not.toBeNull();
     });
   });

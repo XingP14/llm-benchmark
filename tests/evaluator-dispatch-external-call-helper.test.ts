@@ -124,23 +124,23 @@ describe('evaluator dispatchExternalCall helper (v0.6 step-v6.0-11 chain #12)', 
       expect(j).toMatch(/dispatch-call-extraction/);
     });
 
-    it('helper benchmarkName typed as 10-key literal union (TypeScript narrow on cfg lookup)', () => {
-      expect(src).toMatch(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster' \| 'lm_eval_task_conflict_resolver' \| 'livebench_2026_h1_quarterly_v3'/);
+    it('helper benchmarkName typed as 11-key literal union (TypeScript narrow on cfg lookup)', () => {
+      expect(src).toMatch(/benchmarkName: 'webdev_arena' \| 'cyberseceval3' \| 'aa_omniscience' \| 'terminal_bench' \| 'benchlm_agentic' \| 'swe_bench_pro' \| 'process_aware_scoring' \| 'long_context_cluster' \| 'lm_eval_task_conflict_resolver' \| 'livebench_2026_h1_quarterly_v3' \| 'artificial_analysis_stirrup_agent_framework_v1'/);
     });
   });
 
-  // see 10 dispatch sites below — chain #20 livebench_2026_h1_quarterly_v3 10th-site closure
-  describe('10 dispatch sites migrated to 3-arg dispatchExternalCall', () => {
-    const NAMES = ['webdev_arena', 'cyberseceval3', 'aa_omniscience', 'terminal_bench', 'benchlm_agentic', 'swe_bench_pro', 'process_aware_scoring', 'long_context_cluster', 'lm_eval_task_conflict_resolver', 'livebench_2026_h1_quarterly_v3'];
+  // see 11 dispatch sites below — chain #20 livebench_2026_h1_quarterly_v3 10th-site closure
+  describe('11 dispatch sites migrated to 3-arg dispatchExternalCall', () => {
+    const NAMES = ['webdev_arena', 'cyberseceval3', 'aa_omniscience', 'terminal_bench', 'benchlm_agentic', 'swe_bench_pro', 'process_aware_scoring', 'long_context_cluster', 'lm_eval_task_conflict_resolver', 'livebench_2026_h1_quarterly_v3', 'artificial_analysis_stirrup_agent_framework_v1'];
 
     it.each(NAMES)('site %s uses dispatchExternalCall 3-arg (results, name, fetcher)', (name) => {
       const callSiteRe = new RegExp(`dispatchExternalCall[\\s\\S]*?results[\\s\\S]*?'${name}',`);
       expect(src).toMatch(callSiteRe);
     });
 
-    it('exactly 10 dispatchExternalCall call sites in run()', () => {
+    it('exactly 11 dispatchExternalCall call sites in run()', () => {
       const matches = src.match(/^\s*await this\.dispatchExternalCall\(/gm) || [];
-      expect(matches.length).toBe(10); // bumped 9→10 after chain #20 livebench_2026_h1_quarterly_v3 10th dispatch site (vs chain #19 9/9; 现 10/10 full parity)
+      expect(matches.length).toBe(11); // bumped 9→10 after chain #20 livebench_2026_h1_quarterly_v3 10th dispatch site (vs chain #19 9/9; 现 11/11 full parity)
     });
 
     it('zero remaining `await this.dispatchExternalBenchmark(` call sites (all migrated)', () => {

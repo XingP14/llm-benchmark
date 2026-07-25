@@ -21,7 +21,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       expect(src).toMatch(/export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = \{/);
     });
 
-    it('declares exactly 10 entries', () => {
+    it('declares exactly 11 entries', () => {
       const tableMatch = src.match(/export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = \{([\s\S]+?)\};/);
       expect(tableMatch).not.toBeNull();
       const body = tableMatch![1];
@@ -35,6 +35,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       expect(body).toContain('webdev_arena:');
       expect(body).toContain('lm_eval_task_conflict_resolver:');
       expect(body).toContain('livebench_2026_h1_quarterly_v3:');
+      expect(body).toContain('artificial_analysis_stirrup_agent_framework_v1:');
     });
 
     it('keys map to expected literals', () => {
@@ -48,6 +49,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       expect(src).toMatch(/webdev_arena: 'agentic_coding'/);
       expect(src).toMatch(/lm_eval_task_conflict_resolver: 'agentic_coding'/);
       expect(src).toMatch(/livebench_2026_h1_quarterly_v3: 'agentic_coding'/);
+      expect(src).toMatch(/artificial_analysis_stirrup_agent_framework_v1: 'agentic_coding'/);
     });
   });
 
@@ -111,7 +113,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     });
   });
 
-  describe('7 default parameter declarations all use helper (v0.6.0 step-v6.0-14 added livebench_2026_h1_quarterly_v3)', () => {
+  describe('8 default parameter declarations all use helper (Stirrup added after livebench)', () => {
     it("(terminal_bench) → defaultDispatchType('terminal_bench')", () => {
       expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('terminal_bench'\)/);
     });
@@ -133,14 +135,17 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     it("(livebench_2026_h1_quarterly_v3) → defaultDispatchType('livebench_2026_h1_quarterly_v3') [v0.6.0 step-v6.0-14 10th fetcher, 07-25 03:24 cron]", () => {
       expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('livebench_2026_h1_quarterly_v3'\)/);
     });
+    it("(artificial_analysis_stirrup_agent_framework_v1) → defaultDispatchType('artificial_analysis_stirrup_agent_framework_v1')", () => {
+      expect(src).toMatch(/dispatchType: ExternalDispatchType = defaultDispatchType\('artificial_analysis_stirrup_agent_framework_v1'\)/);
+    });
 
-    it('default parameter NO LONGER use bare 7 literals (default-param gate, excludes helper block) — bumped 6→7 after v0.6.0 step-v6.0-14', () => {
-      // Scope: only check 7 fetcher signature lines (NOT the helper block DEFAULT_DISPATCH_TYPE entries
+    it('default parameters no longer use bare literals (default-param gate)', () => {
+      // Scope: only check 8 fetcher signature lines (NOT the helper block DEFAULT_DISPATCH_TYPE entries
       // + NOT the helper block header comment)
-      // The 7 fetcher signatures all have the form `    dispatchType: ExternalDispatchType = ...` at column 4 (4-space indent)
+      // The 8 fetcher signatures all have the form `    dispatchType: ExternalDispatchType = ...` at column 4 (4-space indent)
       const lines = src.split('\n');
       const defaultParamLines = lines.filter((l) => /^    dispatchType: ExternalDispatchType = /.test(l));
-      expect(defaultParamLines.length).toBe(7);
+      expect(defaultParamLines.length).toBe(8);
       for (const l of defaultParamLines) {
         // Must use defaultDispatchType, not bare literal
         expect(l).toMatch(/defaultDispatchType\(/);
@@ -170,8 +175,8 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     });
   });
 
-  describe('closure + default param + helper fallback total = 13 sites consolidated (v0.6.0 step-v6.0-14 bumped 12→13)', () => {
-    it('total defaultDispatchType() call sites = 13 (5 closure + 7 default param + 1 helper fallback)', () => {
+  describe('closure + default param + helper fallback sites consolidated', () => {
+    it('total defaultDispatchType() call sites = 15 (6 closure + 8 default param + 1 helper fallback)', () => {
       // Count occurrences of `defaultDispatchType(` that are NOT inside a `*` comment line + NOT the declaration
       const lines = src.split('\n');
       let callCount = 0;
@@ -185,7 +190,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
         const matches = l.match(/defaultDispatchType\(/g);
         if (matches) callCount += matches.length;
       }
-      expect(callCount).toBe(13);
+      expect(callCount).toBe(15);
     });
   });
 
@@ -193,7 +198,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
     it('file size in expected range (1420..1900 — helper block added ~24 lines, chain #20 added ~110 lines)', () => {
       const lineCount = src.split('\n').length;
       expect(lineCount).toBeGreaterThanOrEqual(1420);
-      expect(lineCount).toBeLessThan(1900); // bumped 1820→1900 after chain #20 livebench_2026_h1_quarterly_v3 10th fetcher (chain #19 left ~1786, +107 lines for 10th fetcher + dispatch site + union ext + logExternalBenchmarkEnabled case)
+      expect(lineCount).toBeLessThan(2020); // bumped 1820→1900 after chain #20 livebench_2026_h1_quarterly_v3 10th fetcher (chain #19 left ~1786, +107 lines for 10th fetcher + dispatch site + union ext + logExternalBenchmarkEnabled case)
     });
     it('chain #8 attribution header comment present', () => {
       expect(src).toMatch(/v0\.6\.0 step-v6\.0-7 helper: 5 fetcher dispatchType literal default lookup/);

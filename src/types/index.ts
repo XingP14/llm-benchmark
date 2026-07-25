@@ -1046,6 +1046,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Response (POST https://api.artificialanalysis.ai/v1/stirrup/v1/agent): { framework_name: string; language: string; agent_capability_score: number; cross_lang_compat: boolean; eval_model: string; release_date: string; error?: string } */
   artificial_analysis_stirrup_agent_framework_v1?: {
     enabled: boolean;
+    /** dispatch 类别标签: Stirrup agent framework 评测默认走 agentic_coding */
+    type?: ExternalDispatchType;
     api_base?: string;
     model_id?: string;
     /** language: 'python' (MIT 433 stars) | 'typescript' (MIT 16 stars) | 'all' (跨语言) */

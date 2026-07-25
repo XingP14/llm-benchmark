@@ -59,6 +59,7 @@ export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = {
   webdev_arena: 'agentic_coding',
   lm_eval_task_conflict_resolver: 'agentic_coding',
   livebench_2026_h1_quarterly_v3: 'agentic_coding',
+  artificial_analysis_stirrup_agent_framework_v1: 'agentic_coding',
 };
 
 export function defaultDispatchType(benchmarkName: string): ExternalDispatchType {
@@ -91,6 +92,7 @@ export const DEFAULT_LOG_FORMAT: Record<string, string> = {
   webdev_arena: 'agentic_coding',
   lm_eval_task_conflict_resolver: 'agentic_coding',
   livebench_2026_h1_quarterly_v3: 'agentic_coding',
+  artificial_analysis_stirrup_agent_framework_v1: 'agentic_coding',
 };
 /**
  * v0.6.0 step-v6.0-10 helper: subset default literal 集中 helper-extraction
@@ -164,6 +166,7 @@ export const DEFAULT_API_BASE: Record<string, string> = {
   //   POST https://api.livebench.ai/v1/refresh/v3 body 含 api_base/model_id/refresh_cadence/contamination_check/timeout_ms
   //   解析 {livebench_score / category_scores / refresh_date / eval_model / contamination_status / error}
   livebench_2026_h1_quarterly_v3: 'https://api.livebench.ai/v1/refresh/v3',
+  artificial_analysis_stirrup_agent_framework_v1: 'https://api.artificialanalysis.ai/v1/stirrup/v1/agent',
 };
 
 
@@ -238,6 +241,14 @@ export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): st
       const timeout = ext?.timeout_ms != null ? `, timeout=${ext.timeout_ms}ms` : '';
       const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
       suffix = `, task=${task}, cadence=${cadence}, contam=${contam}${timeout}${anchor}`;
+      break;
+    }
+    case 'artificial_analysis_stirrup_agent_framework_v1': {
+      const language = ext?.language ?? 'all';
+      const role = ext?.framework_role ?? 'agent_builder';
+      const timeout = ext?.timeout_ms != null ? `, timeout=${ext.timeout_ms}ms` : '';
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `, language=${language}, role=${role}, cross_language=${language === 'all'}${timeout}${anchor}`;
       break;
     }
     default:
@@ -534,6 +545,14 @@ export class Evaluator {
     await this.dispatchExternalCall(
       results, 'livebench_2026_h1_quarterly_v3',
       (apiBase, model, timeoutMs) => this.fetchLiveBench2026H1QuarterlyV3Score(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.anchor_score, this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.task ?? 'all', this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.refresh_cadence ?? 'quarterly_3_5_month', this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.contamination_check ?? 'enabled'),
+    );
+
+    await this.dispatchExternalCall(
+      results, 'artificial_analysis_stirrup_agent_framework_v1',
+      (apiBase, model, timeoutMs) => {
+        const stirrup = this.config._external_benchmarks_roadmap!.artificial_analysis_stirrup_agent_framework_v1!;
+        return this.fetchArtificialAnalysisStirrupAgentFrameworkV1Score(apiBase, model, timeoutMs, stirrup.anchor_score, stirrup.language ?? 'all', stirrup.framework_role ?? 'agent_builder', stirrup.type ?? defaultDispatchType('artificial_analysis_stirrup_agent_framework_v1'));
+      },
     );
 
     return results;
@@ -1539,6 +1558,39 @@ export class Evaluator {
     }
   }
 
+  private async fetchArtificialAnalysisStirrupAgentFrameworkV1Score(
+    apiBase: string, model: ModelConfig, timeoutMs: number, anchorScore?: number,
+    language: string = 'all', frameworkRole: string = 'agent_builder',
+    dispatchType: ExternalDispatchType = defaultDispatchType('artificial_analysis_stirrup_agent_framework_v1')
+  ): Promise<QuestionScore> {
+    const benchmark = 'artificial_analysis_stirrup_agent_framework_v1';
+    const questionId = `${benchmark}_${model.name}`;
+    const basePayload = { api_base: model.endpoint, model_id: model.model ?? model.name, language,
+      framework_role: frameworkRole, cross_language: language === 'all', timeout_ms: timeoutMs, dispatch_type: dispatchType };
+    const context = `[${language}|${frameworkRole}|cross_language=${language === 'all'}]`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const resp = await fetch(apiBase, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(basePayload), signal: controller.signal });
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        return { questionId, category: benchmark, score: 0, dimension: 'coding', modelOutput: '', detail: `${benchmark}${context} HTTP ${resp.status}: ${text.slice(0, 200)}`, dispatchType };
+      }
+      const data = await resp.json() as { framework_name?: string; language?: string; agent_capability_score?: number; cross_lang_compat?: boolean; eval_model?: string; release_date?: string; error?: string };
+      if (data.error) return { questionId, category: benchmark, score: 0, dimension: 'coding', modelOutput: '', detail: `${benchmark}${context} API error: ${data.error}`, dispatchType };
+      const score = Math.max(0, Math.min(100, typeof data.agent_capability_score === 'number' ? data.agent_capability_score : 0));
+      let detail = `${benchmark}${context} score=${score.toFixed(1)}, framework=${data.framework_name ?? 'unknown'}, language=${data.language ?? language}, cross_lang=${data.cross_lang_compat ?? false}`;
+      if (data.eval_model) detail += `, eval=${data.eval_model}`;
+      if (data.release_date) detail += `, release=${data.release_date}`;
+      if (typeof anchorScore === 'number' && Math.abs(score - anchorScore) > 5) {
+        logWarn(`  [${benchmark}] anchor mismatch for ${model.name}: got ${score.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return { questionId, category: benchmark, score: Math.round(score * 10) / 10, dimension: 'coding', modelOutput: JSON.stringify({ ...data, request: basePayload }).slice(0, 500), detail, dispatchType };
+    } catch (err: unknown) {
+      return { questionId, category: benchmark, score: 0, dimension: 'coding', modelOutput: '', detail: buildFetcherErrorDetail(benchmark, context, timeoutMs, err), dispatchType };
+    } finally { clearTimeout(timer); }
+  }
 
   private async evaluateModel(
     model: ModelConfig,
@@ -1780,7 +1832,7 @@ export class Evaluator {
    */
   private async dispatchExternalCall(
     results: EvaluationResult[],
-    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver' | 'livebench_2026_h1_quarterly_v3',
+    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver' | 'livebench_2026_h1_quarterly_v3' | 'artificial_analysis_stirrup_agent_framework_v1',
     fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: ExternalDispatchType) => Promise<QuestionScore>,
   ): Promise<void> {
     const ext = this.config._external_benchmarks_roadmap as Record<string, { enabled?: boolean; type?: ExternalDispatchType; api_base?: string; timeout_ms?: number; model_id?: string } | undefined> | undefined;
