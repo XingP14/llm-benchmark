@@ -60,6 +60,14 @@ export const DEFAULT_DISPATCH_TYPE: Record<string, ExternalDispatchType> = {
   lm_eval_task_conflict_resolver: 'agentic_coding',
   livebench_2026_h1_quarterly_v3: 'agentic_coding',
   artificial_analysis_stirrup_agent_framework_v1: 'agentic_coding',
+  // v0.6.0 step-v6.0-16 (07-26 05:23 cron, chain #22 12th real fetch extension):
+  // AA-AgentPerf v2 (agentic workloads) — Artificial Analysis 2026-06-14 launch AA-AgentPerf v2 (agentic AI workloads benchmark,
+  //   https://artificialanalysis.ai/leaderboards/agentperf + https://wccftech.com/nvidia-gb300-dominates-agentic-ai-workloads-20x-performance-leap-over-hopper/)
+  //   3 维度 active coding agents × concurrent sessions × GPU utilization. **NVIDIA Blackwell GB300 20x perf/MW over HGX H200**,
+  //   NVL72 全 GPU 利用率跨并发 agent sessions. POST https://api.artificialanalysis.ai/api/v1/agentperf/v2
+  //   body 含 api_base/model_id/agent_count/session_mode/gpu_hardware/workload/timeout_ms
+  //   解析 {active_agents_supported/concurrent_sessions/gpu_utilization_pct/perf_per_mw/model_id/gpu_hardware/eval_id/error}
+  aa_agentperf_v2_agentic_workloads: 'agentic_coding',
 };
 
 export function defaultDispatchType(benchmarkName: string): ExternalDispatchType {
@@ -93,6 +101,8 @@ export const DEFAULT_LOG_FORMAT: Record<string, string> = {
   lm_eval_task_conflict_resolver: 'agentic_coding',
   livebench_2026_h1_quarterly_v3: 'agentic_coding',
   artificial_analysis_stirrup_agent_framework_v1: 'agentic_coding',
+  // v0.6.0 step-v6.0-16 (chain #22 12th real fetch extension): AA-AgentPerf v2 agentic workloads default agentic_coding
+  aa_agentperf_v2_agentic_workloads: 'agentic_coding',
 };
 /**
  * v0.6.0 step-v6.0-10 helper: subset default literal 集中 helper-extraction
@@ -167,6 +177,13 @@ export const DEFAULT_API_BASE: Record<string, string> = {
   //   解析 {livebench_score / category_scores / refresh_date / eval_model / contamination_status / error}
   livebench_2026_h1_quarterly_v3: 'https://api.livebench.ai/v1/refresh/v3',
   artificial_analysis_stirrup_agent_framework_v1: 'https://api.artificialanalysis.ai/v1/stirrup/v1/agent',
+  // v0.6.0 step-v6.0-16 (07-26 05:23 cron, chain #22 12th real fetch extension):
+  // AA-AgentPerf v2 (agentic workloads) — Artificial Analysis 2026-06-14 launch AA-AgentPerf v2
+  //   3 维度 active coding agents × concurrent sessions × GPU utilization
+  //   **NVIDIA Blackwell GB300 20x perf/MW over HGX H200**, NVL72 全 GPU 利用率跨并发 agent sessions
+  //   POST https://api.artificialanalysis.ai/api/v1/agentperf/v2 body 含 api_base/model_id/agent_count/session_mode/gpu_hardware/workload/timeout_ms
+  //   解析 {active_agents_supported/concurrent_sessions/gpu_utilization_pct/perf_per_mw/model_id/gpu_hardware/eval_id/error}
+  aa_agentperf_v2_agentic_workloads: 'https://api.artificialanalysis.ai/api/v1/agentperf/v2',
 };
 
 
@@ -249,6 +266,16 @@ export function logExternalBenchmarkEnabled(benchmarkName: string, ext: any): st
       const timeout = ext?.timeout_ms != null ? `, timeout=${ext.timeout_ms}ms` : '';
       const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
       suffix = `, language=${language}, role=${role}, cross_language=${language === 'all'}${timeout}${anchor}`;
+      break;
+    }
+    case 'aa_agentperf_v2_agentic_workloads': {
+      const agentCount = ext?.agent_count ?? 32;
+      const sessionMode = ext?.session_mode ?? 'single';
+      const gpu = ext?.gpu_hardware ?? 'blackwell_gb300';
+      const workload = ext?.workload ?? 'agentic_coding';
+      const timeout = ext?.timeout_ms != null ? `, timeout=${ext.timeout_ms}ms` : '';
+      const anchor = ext?.anchor_score != null ? `, anchor=${ext.anchor_score}` : '';
+      suffix = `, agent_count=${agentCount}, session=${sessionMode}, gpu=${gpu}, workload=${workload}${timeout}${anchor}`;
       break;
     }
     default:
@@ -552,6 +579,19 @@ export class Evaluator {
       (apiBase, model, timeoutMs) => {
         const stirrup = this.config._external_benchmarks_roadmap!.artificial_analysis_stirrup_agent_framework_v1!;
         return this.fetchArtificialAnalysisStirrupAgentFrameworkV1Score(apiBase, model, timeoutMs, stirrup.anchor_score, stirrup.language ?? 'all', stirrup.framework_role ?? 'agent_builder', stirrup.type ?? defaultDispatchType('artificial_analysis_stirrup_agent_framework_v1'));
+      },
+    );
+
+    // v0.6.0 step-v6.0-16 (07-26 05:23 cron, chain #22 12th real fetch extension): aa_agentperf_v2_agentic_workloads real fetch + parse
+    // - 仅当 ext.aa_agentperf_v2_agentic_workloads.enabled (默认 false)
+    // - 注入: EvaluationResult.scores[] 追加 1 个 aa_agentperf_v2_agentic_workloads QuestionScore
+    //   (questionId=`aa_agentperf_v2_agentic_workloads_${model.name}`, category=`aa_agentperf_v2_agentic_workloads`,
+    //   dimension=`agentic_coding` 走 v0.4.0 默认, score = active_agents_supported 归一到 0-100 + perf_per_mw bonus 0-10)
+    await this.dispatchExternalCall(
+      results, 'aa_agentperf_v2_agentic_workloads',
+      (apiBase, model, timeoutMs) => {
+        const agentperf = this.config._external_benchmarks_roadmap!.aa_agentperf_v2_agentic_workloads!;
+        return this.fetchAaAgentperfV2AgenticWorkloadsScore(apiBase, model, timeoutMs, agentperf.anchor_score, agentperf.agent_count ?? 32, agentperf.session_mode ?? 'single', agentperf.gpu_hardware ?? 'blackwell_gb300', agentperf.workload ?? 'agentic_coding', agentperf.type ?? defaultDispatchType('aa_agentperf_v2_agentic_workloads'));
       },
     );
 
@@ -1592,6 +1632,56 @@ export class Evaluator {
     } finally { clearTimeout(timer); }
   }
 
+  /**
+   * v0.6.0 step-v6.0-16: AA-AgentPerf v2 (agentic workloads) 真实 fetch + parse (沿 fetchArtificialAnalysisStirrupAgentFrameworkV1Score 模式,
+   *   chain #22 12th real fetch extension, https://artificialanalysis.ai/leaderboards/agentperf).
+   * - 评测 "active agents inference deployment can support under realistic workloads":
+   *   3 维度 active coding agents × concurrent sessions × GPU utilization.
+   * - **NVIDIA Blackwell GB300 20x perf/MW over HGX H200**, NVL72 全 GPU 利用率跨并发 agent sessions.
+   * - POST https://api.artificialanalysis.ai/api/v1/agentperf/v2 body 含 api_base/model_id/agent_count/session_mode/gpu_hardware/workload/timeout_ms
+   * - 解析 { active_agents_supported: number; concurrent_sessions: number; gpu_utilization_pct: number; perf_per_mw: number; model_id: string; gpu_hardware: string; eval_id: string; error?: string }
+   * - 注入 QuestionScore: dimension=`coding` (走 v0.4.0 默认 stirrup precedent chain #21 fetchArtificialAnalysisStirrupAgentFrameworkV1Score)
+   * - 0 真实 API 调用 (纯 mock fetch + parse + inject, parallels chain #21 fetchArtificialAnalysisStirrupAgentFrameworkV1Score 模式).
+   * 返回 QuestionScore: dimension='coding' (GPU-utilization + agentic-workloads 评测)
+   */
+  private async fetchAaAgentperfV2AgenticWorkloadsScore(
+    apiBase: string, model: ModelConfig, timeoutMs: number, anchorScore?: number,
+    agentCount: number = 32, sessionMode: string = 'single',
+    gpuHardware: string = 'blackwell_gb300', workload: string = 'agentic_coding',
+    dispatchType: ExternalDispatchType = defaultDispatchType('aa_agentperf_v2_agentic_workloads')
+  ): Promise<QuestionScore> {
+    const benchmark = 'aa_agentperf_v2_agentic_workloads';
+    const questionId = `${benchmark}_${model.name}`;
+    const basePayload = { api_base: model.endpoint, model_id: model.model ?? model.name,
+      agent_count: agentCount, session_mode: sessionMode, gpu_hardware: gpuHardware,
+      workload, timeout_ms: timeoutMs, dispatch_type: dispatchType };
+    const context = `[agents=${agentCount}|session=${sessionMode}|gpu=${gpuHardware}|workload=${workload}]`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const resp = await fetch(apiBase, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(basePayload), signal: controller.signal });
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        return { questionId, category: benchmark, score: 0, dimension: 'coding', modelOutput: '', detail: `${benchmark}${context} HTTP ${resp.status}: ${text.slice(0, 200)}`, dispatchType };
+      }
+      const data = await resp.json() as { active_agents_supported?: number; concurrent_sessions?: number; gpu_utilization_pct?: number; perf_per_mw?: number; model_id?: string; gpu_hardware?: string; eval_id?: string; error?: string };
+      if (data.error) return { questionId, category: benchmark, score: 0, dimension: 'coding', modelOutput: '', detail: `${benchmark}${context} API error: ${data.error}`, dispatchType };
+      const agentsRaw = typeof data.active_agents_supported === 'number' ? data.active_agents_supported : 0;
+      const agentsScore = Math.max(0, Math.min(64, agentsRaw));
+      const perfPerMw = typeof data.perf_per_mw === 'number' ? data.perf_per_mw : 0;
+      // Score formula: agentsScore / 64 * 90 + perf_per_mw bonus 0-10 (clamped).
+      const score = Math.max(0, Math.min(100, agentsScore / 64 * 90 + Math.min(10, perfPerMw / 2)));
+      let detail = `${benchmark}${context} score=${score.toFixed(1)}, agents=${agentsRaw}, sessions=${data.concurrent_sessions ?? 0}, gpu_util=${data.gpu_utilization_pct ?? 0}%, perf/MW=${perfPerMw}, eval_id=${data.eval_id ?? 'unknown'}`;
+      if (typeof anchorScore === 'number' && Math.abs(score - anchorScore) > 5) {
+        logWarn(`  [${benchmark}] anchor mismatch for ${model.name}: got ${score.toFixed(1)}, expected ~${anchorScore}`);
+        detail += ` (anchor ⚠️ ${anchorScore})`;
+      }
+      return { questionId, category: benchmark, score: Math.round(score * 10) / 10, dimension: 'coding', modelOutput: JSON.stringify({ ...data, request: basePayload }).slice(0, 500), detail, dispatchType };
+    } catch (err: unknown) {
+      return { questionId, category: benchmark, score: 0, dimension: 'coding', modelOutput: '', detail: buildFetcherErrorDetail(benchmark, context, timeoutMs, err), dispatchType };
+    } finally { clearTimeout(timer); }
+  }
+
   private async evaluateModel(
     model: ModelConfig,
     modelIndex: number
@@ -1832,7 +1922,7 @@ export class Evaluator {
    */
   private async dispatchExternalCall(
     results: EvaluationResult[],
-    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver' | 'livebench_2026_h1_quarterly_v3' | 'artificial_analysis_stirrup_agent_framework_v1',
+    benchmarkName: 'webdev_arena' | 'cyberseceval3' | 'aa_omniscience' | 'terminal_bench' | 'benchlm_agentic' | 'swe_bench_pro' | 'process_aware_scoring' | 'long_context_cluster' | 'lm_eval_task_conflict_resolver' | 'livebench_2026_h1_quarterly_v3' | 'artificial_analysis_stirrup_agent_framework_v1' | 'aa_agentperf_v2_agentic_workloads',
     fetcher: (apiBase: string, model: ModelConfig, timeoutMs: number, dispatchType: ExternalDispatchType) => Promise<QuestionScore>,
   ): Promise<void> {
     const ext = this.config._external_benchmarks_roadmap as Record<string, { enabled?: boolean; type?: ExternalDispatchType; api_base?: string; timeout_ms?: number; model_id?: string } | undefined> | undefined;

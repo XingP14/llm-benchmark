@@ -999,6 +999,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Response (POST https://artificialanalysis.ai/api/v1/agentperf): { active_agents_supported: number; concurrent_sessions: number; gpu_utilization_pct: number; perf_per_mw: number; model_id: string; gpu_hardware: string; eval_id: string; error?: string } */
   aa_agentperf_v2_agentic_workloads?: {
     enabled: boolean;
+    /** dispatch 类别标签: AA-AgentPerf v2 agentic workloads 默认走 agentic_coding */
+    type?: ExternalDispatchType;
     api_base?: string;
     model_id?: string;
     /** agent_count 6 选 1: 1 (单 agent baseline) | 4 (low concurrent) | 8 (medium) | 16 (high) | 32 (NVL72 满载, default) | 64 (extreme scale) */

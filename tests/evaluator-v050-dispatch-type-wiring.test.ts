@@ -31,7 +31,7 @@ describe('evaluator v0.5.0 dispatch type wiring (5 fetcher payload dispatch_type
   it('file size in expected range (1373..1500 lines — adds ~25 lines vs 1373 baseline)', () => {
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1373);
-    expect(lineCount).toBeLessThan(2020); // bumped 1750→1820→1950 after chain #20 livebench_2026_h1_quarterly_v3 10th site (chain #12 left 1619 baseline, +91 JSDoc+9th-site+union-ext+anchor/mode/dependency_groups closure lines vs 1710 actual; 留 40 行 slack) dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
+    expect(lineCount).toBeLessThan(2100); // bumped 1750→1820→1950 after chain #20 livebench_2026_h1_quarterly_v3 10th site (chain #12 left 1619 baseline, +91 JSDoc+9th-site+union-ext+anchor/mode/dependency_groups closure lines vs 1710 actual; 留 40 行 slack) dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack); bumped 1950→2020 after chain #21 Stirrup 11th site; bumped 2020→2100 after chain #22 AA-AgentPerf v2 12th site (+50 JSDoc+12th-site+union-ext+fetcher~70 lines, 现 ~1995)
   });
 
   it('dispatchV050External cfg type includes type?: ExternalDispatchType field', () => {

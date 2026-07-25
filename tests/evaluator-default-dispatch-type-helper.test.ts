@@ -176,7 +176,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
   });
 
   describe('closure + default param + helper fallback sites consolidated', () => {
-    it('total defaultDispatchType() call sites = 15 (6 closure + 8 default param + 1 helper fallback)', () => {
+    it('total defaultDispatchType() call sites = 17 (7 closure + 9 default param + 1 helper fallback)', () => {
       // Count occurrences of `defaultDispatchType(` that are NOT inside a `*` comment line + NOT the declaration
       const lines = src.split('\n');
       let callCount = 0;
@@ -190,15 +190,15 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
         const matches = l.match(/defaultDispatchType\(/g);
         if (matches) callCount += matches.length;
       }
-      expect(callCount).toBe(15);
+      expect(callCount).toBe(17);
     });
   });
 
   describe('file size + header chain-#8 attribution', () => {
-    it('file size in expected range (1420..1900 — helper block added ~24 lines, chain #20 added ~110 lines)', () => {
+    it('file size in expected range (1420..1900 — helper block added ~24 lines, chain #20 added ~110 lines, chain #22 added ~50)', () => {
       const lineCount = src.split('\n').length;
       expect(lineCount).toBeGreaterThanOrEqual(1420);
-      expect(lineCount).toBeLessThan(2020); // bumped 1820→1900 after chain #20 livebench_2026_h1_quarterly_v3 10th fetcher (chain #19 left ~1786, +107 lines for 10th fetcher + dispatch site + union ext + logExternalBenchmarkEnabled case)
+      expect(lineCount).toBeLessThan(2100); // bumped 1820→1900 after chain #20 livebench_2026_h1_quarterly_v3 10th fetcher (chain #19 left ~1786, +107 lines for 10th fetcher + dispatch site + union ext + logExternalBenchmarkEnabled case); bumped 1900→2020 after chain #21 Stirrup 11th fetcher (~1786→~1820); bumped 2020→2100 after chain #22 AA-AgentPerf v2 12th fetcher (~1820→~2036)
     });
     it('chain #8 attribution header comment present', () => {
       expect(src).toMatch(/v0\.6\.0 step-v6\.0-7 helper: 5 fetcher dispatchType literal default lookup/);
