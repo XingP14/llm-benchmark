@@ -88,7 +88,7 @@ describe('evaluator dispatchExternalCall helper (v0.6 step-v6.0-11 chain #12)', 
       // dispatchExternalCall takes (results, name, fetcher) — url pulled from DEFAULT_API_BASE inside
       expect(src).toMatch(/private async dispatchExternalCall\(\s*results: EvaluationResult\[\],\s*\n\s*benchmarkName:/);
       // The signature should NOT have defaultApiBase: string param (since url is in DEFAULT_API_BASE)
-      const sig = src.match(/private async dispatchExternalCall\([\s\S]{0,500}?\): Promise<void>/);
+      const sig = src.match(/private async dispatchExternalCall\([\s\S]{0,1200}?\): Promise<void>/);
       expect(sig).not.toBeNull();
       expect(sig![0]).not.toMatch(/defaultApiBase: string/);
     });
@@ -138,9 +138,9 @@ describe('evaluator dispatchExternalCall helper (v0.6 step-v6.0-11 chain #12)', 
       expect(src).toMatch(callSiteRe);
     });
 
-    it('exactly 11 dispatchExternalCall call sites in run()', () => {
+    it('exactly 12 dispatchExternalCall call sites in run()', () => {
       const matches = src.match(/^\s*await this\.dispatchExternalCall\(/gm) || [];
-      expect(matches.length).toBe(11); // bumped 9→10 after chain #20 livebench_2026_h1_quarterly_v3 10th dispatch site (vs chain #19 9/9; 现 11/11 full parity)
+      expect(matches.length).toBe(12); // AA-AgentPerf v2 is the 12th real fetcher.
     });
 
     it('zero remaining `await this.dispatchExternalBenchmark(` call sites (all migrated)', () => {

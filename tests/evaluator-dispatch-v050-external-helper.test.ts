@@ -20,7 +20,7 @@ describe('evaluator dispatchV050External + dispatchExternalBenchmark helpers (8-
     expect(src).toBeDefined();
     const lineCount = src.split('\n').length;
     expect(lineCount).toBeGreaterThanOrEqual(1300);
-    expect(lineCount).toBeLessThan(2020); // bumped 1750→1820→1950 after chain #20 livebench_2026_h1_quarterly_v3 10th site (chain #12 left 1619 baseline, +91 JSDoc+9th-site+union-ext+anchor/mode/dependency_groups closure lines vs 1710 actual; 留 40 行 slack) dispatch-call-extraction (DEFAULT_API_BASE 8-key map + dispatchExternalCall 3-arg wrapper + 8 sites collapse ~75 JSDoc+helper lines vs chain #11 1560 baseline; 现 1619, 留 81 行 slack)
+    expect(lineCount).toBeLessThan(2100); // AA-AgentPerf v2 added the 12th real fetcher and its dispatch wiring.
   });
 
   it('declares exactly one private async dispatchV050External helper', () => {
@@ -81,7 +81,7 @@ describe('evaluator dispatchV050External + dispatchExternalBenchmark helpers (8-
     // 仅数代码行 (排除 JSDoc `* await this.dispatchExternalCall(...)` 例行); 1 JSDoc example 已被排除
     const codeOnly = src.split('\n').filter(l => !/^\s*\*/.test(l)).join('\n');
     const totalCalls = (codeOnly.match(/await this\.dispatchExternalCall\(/g) || []).length;
-    expect(totalCalls).toBe(11); // 8 v0.5 + 3 v0.6 dispatch sites
+    expect(totalCalls).toBe(12); // 8 v0.5 + 4 v0.6 dispatch sites
   });
 
   it('chain #10 dispatchExternalBenchmark 4-arg wrapper retained as back-compat alias', () => {

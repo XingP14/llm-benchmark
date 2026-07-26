@@ -145,7 +145,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       // The 8 fetcher signatures all have the form `    dispatchType: ExternalDispatchType = ...` at column 4 (4-space indent)
       const lines = src.split('\n');
       const defaultParamLines = lines.filter((l) => /^    dispatchType: ExternalDispatchType = /.test(l));
-      expect(defaultParamLines.length).toBe(8);
+      expect(defaultParamLines.length).toBe(9);
       for (const l of defaultParamLines) {
         // Must use defaultDispatchType, not bare literal
         expect(l).toMatch(/defaultDispatchType\(/);
