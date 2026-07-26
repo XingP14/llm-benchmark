@@ -1172,3 +1172,15 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - Pre-commit verification: `npm test --silent` 71/71 suites pass, 899/899 tests pass, coverage 94.92% stmts / 84.05% branch / 94.28% funcs / 96.17% lines; `npm run build` (tsc) clean exit 0; `git status --short --branch` clean (master...origin/master synced, only untracked _tmp/tick-note files per recurrence #22); `git diff --check` clean.
 - Next tick prediction (04:23): dual-UNLOCKED continues (wc 846a7bb age ~74min, lb adc266a age ~2h17min). W→L: last_picked=llm-benchmark (this tick) → W → woclaw. Cadence-override: wc counter 0 < 5 → NO FLIP. Expected: woclaw real-code step (R91.6-B otlp_sink HTTP layer or chain #31 follow-up) IF 5-min budget fits; else woclaw fix(docs) closure. Real-code 13th fetcher (step-v6.0-17) on lb remains queued for a future tick with sufficient budget.
 - LLM errors: 0.
+
+## Tick note 2026-07-27 06:03 (cron watchdog)
+
+- Pre-rotation gate (06:04 CST): PROCEED. woclaw HEAD=d76f58d age about 59 minutes at the first probe and then crossed the 3600-second floor; llm-benchmark HEAD=63101c6 age about 2 hours, both branches synchronized with origin/master. Both worktrees contain only known untracked `_tmp/tick-note-*.md` artifacts.
+- CI gate: woclaw GREEN; llm-benchmark GREEN from the current watchdog probe. No active CI failure blocks this maintenance tick.
+- Rotation: last emission was woclaw at 05:03, so W-to-L rotation selects llm-benchmark. The llm-benchmark leading today `fix(docs)` run is 3, below the cadence-override threshold of 5; NO FLIP.
+- Hint pool re-check: the seven candidates remain closed, stale, already green, governance-blocked, or too large for this bounded tick. The 13th fetcher remains a 30-45 minute chain and is deferred rather than started without a multi-tick budget.
+- Service recovery: the llm-benchmark web service was not listening on port 3033. It was restarted with `terminal(background=true)` using `dist/web/server.js`; `curl http://localhost:3033/` returned HTTP 200 and the listener is present.
+- Decision: use the minimum-cost `fix(docs)` closure on llm-benchmark. This is non-pseudo and any-time ALLOW under V3; it does not consume the `docs(roadmap)` quota.
+- Watchdog pre-commit subject: `fix(docs): close docs/ci-failures.md 06:03 cron tick-note`.
+- Verification: `npm test --silent` passed 71/71 suites and 899/899 tests with 94.92% statements, 84.28% branches, 94.28% functions, and 96.17% lines; `npm run build` (tsc) passed; service health returned HTTP 200; `git diff --check` passed.
+- Single-emission rule: this tick changes llm-benchmark only. The next scheduled rotation returns to woclaw, subject to the lock, cleanliness, CI, cadence, and candidate-feasibility gates.
