@@ -1142,3 +1142,16 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - Pre-commit verification: `npm test --silent` 71/71 suites pass, 899/899 tests pass, coverage 94.92% stmts / 84.05% branch / 94.28% funcs / 96.17% lines; `npm run build` (tsc) clean exit 0; `git status --short --branch` clean (master...origin/master synced, only untracked _tmp/tick-note files per recurrence #22); `git diff --check` clean.
 - Next tick prediction (00:23): dual-UNLOCKED continues (wc e52cfdb age ~74min, lb 4f0177d age ~2h08min). W→L: last_picked=llm-benchmark (this tick) → W → woclaw. Cadence-override: wc counter 0 < 5 → NO FLIP. Expected: woclaw real-code step (R91.6-B otlp_sink HTTP layer or chain #31 follow-up) IF 5-min budget fits; else woclaw fix(docs) closure. Real-code 13th fetcher (step-v6.0-17) on lb remains queued for a future tick with sufficient budget.
 - LLM errors: 0.
+
+## Tick note 2026-07-27 02:03 (cron watchdog)
+
+- Pre-state (02:03 CST): woclaw HEAD=d75ef84 age ~56min LOCKED<1h, synced with origin/master; llm-benchmark HEAD=b1724ab age ~1h51min UNLOCKED, synced with origin/master. Both repositories have only known `_tmp/tick-note-*.md` artifacts.
+- CI gate: woclaw GREEN; llm-benchmark watchdog 24h gate stale-RED because a legacy failure remains in the rolling window, while the current head is locally healthy. Real-code remains eligible under V3, but no fresh bounded candidate was identified.
+- W→L rotation: last_picked=woclaw (01:23 tick, d75ef84) → **llm-benchmark** by rotation default. llm-benchmark is UNLOCKED; woclaw remains inside the one-hour floor.
+- Cadence override: llm-benchmark has one `fix(docs)` emission today, below the threshold of 5; NO FLIP.
+- Hint pool re-check: all seven llm-benchmark hints are stale, already complete, already green, or governance-blocked. The next real-code candidate, step-v6.0-17 13th fetcher, still requires a full fetcher + dispatch + regression-test chain and does not fit this tick's bounded maintenance window.
+- Decision: use the minimum-cost `fix(docs)` closure on llm-benchmark. This subject is non-pseudo and any-time ALLOW under V3; no `docs(roadmap)` quota is consumed.
+- Watchdog pre-commit subject: `fix(docs): close docs/ci-failures.md 02:03 cron tick-note`.
+- Verification before append: full Jest suite 71/71 and 899/899 passed; coverage 94.92% statements / 84.28% branches / 94.28% functions / 96.17% lines; `npm run build` passed; `git diff --check` passed.
+- ROADMAP drift: step-v6.0-16 is realized by chain #22; step-v6.0-17 remains queued as the next substantive fetcher extension.
+- Single-emission rule: this tick changes llm-benchmark only. Next scheduled slot is 02:23; rotation default will return to woclaw, subject to lock, CI, cadence, and candidate feasibility gates.
