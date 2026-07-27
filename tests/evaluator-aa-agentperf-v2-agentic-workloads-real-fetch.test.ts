@@ -52,6 +52,13 @@ describe('AA-AgentPerf v2 agentic workloads real fetch (step-v6.0-16 chain #22 1
     expect(result.score).toBe(100);
   });
 
+  it('treats non-finite API metrics as zero instead of emitting NaN', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ active_agents_supported: Number.NaN, perf_per_mw: Number.POSITIVE_INFINITY }) });
+    const result = await invoke();
+    expect(result.score).toBe(0);
+    expect(Number.isFinite(result.score)).toBe(true);
+  });
+
   it('returns zero for API error', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ error: 'gpu hardware unavailable' }) });
     expect((await invoke()).detail).toContain('API error: gpu hardware unavailable');

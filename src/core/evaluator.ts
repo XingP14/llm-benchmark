@@ -1666,9 +1666,9 @@ export class Evaluator {
       }
       const data = await resp.json() as { active_agents_supported?: number; concurrent_sessions?: number; gpu_utilization_pct?: number; perf_per_mw?: number; model_id?: string; gpu_hardware?: string; eval_id?: string; error?: string };
       if (data.error) return { questionId, category: benchmark, score: 0, dimension: 'coding', modelOutput: '', detail: `${benchmark}${context} API error: ${data.error}`, dispatchType };
-      const agentsRaw = typeof data.active_agents_supported === 'number' ? data.active_agents_supported : 0;
+      const agentsRaw = typeof data.active_agents_supported === 'number' && Number.isFinite(data.active_agents_supported) ? data.active_agents_supported : 0;
       const agentsScore = Math.max(0, Math.min(64, agentsRaw));
-      const perfPerMw = typeof data.perf_per_mw === 'number' ? data.perf_per_mw : 0;
+      const perfPerMw = typeof data.perf_per_mw === 'number' && Number.isFinite(data.perf_per_mw) ? data.perf_per_mw : 0;
       // Score formula: agentsScore / 64 * 90 + perf_per_mw bonus 0-10 (clamped).
       const score = Math.max(0, Math.min(100, agentsScore / 64 * 90 + Math.min(10, perfPerMw / 2)));
       let detail = `${benchmark}${context} score=${score.toFixed(1)}, agents=${agentsRaw}, sessions=${data.concurrent_sessions ?? 0}, gpu_util=${data.gpu_utilization_pct ?? 0}%, perf/MW=${perfPerMw}, eval_id=${data.eval_id ?? 'unknown'}`;
