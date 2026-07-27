@@ -1,4 +1,18 @@
-## 🩺 07-26 02:23 轮 (2026-07-26) — llm-benchmark (V3 tick, 02:23 夜间窗口, 双项目 LOCKED<1h gate, woclaw e8531a9 feat(hub) extract agent_stream.ts age ~7min LOCKED<1h, llm-benchmark f48b9f7 feat(evaluator) aa_stirrup_real_fetch age ~34min LOCKED<1h, ROADMAP 顶部 next: 漂移 stale pending step-v6.0-14 → 实际 step-v6.0-15 已 01:48 f48b9f7 闭合 ✅ → 立 next: step-v6.0-16 aa_agentperf_v2_real_fetch_v1)
+## 🩺 07-28 05:03 轮 (2026-07-28) — llm-benchmark (V3 tick, 0-6 夜间窗口, pre-rotation gate PROCEED: woclaw LOCKED<1h / llm-benchmark DEEP UNLOCKED, rotation L→llm-benchmark, ROADMAP drift 已校正后继续推进 step-v6.0-17)
+
+- **触发与门禁**: 07-28 05:03 Asia/Shanghai cron tick。强制 pre-rotation gate 返回 `PROCEED`：woclaw 最近提交 `3c680df`（04:09，age 3295s，LOCKED<1h），llm-benchmark 最近提交 `ceea233`（01:09，age 14102s，DEEP UNLOCKED），因此不满足双项目 LOCKED<1h 的 SKIP 条件。llm-benchmark `ci-gate` 返回 `CI 24h: GREEN`；本 tick 只修改 ROADMAP，不触碰现有 `_tmp/` scratch artifacts。
+
+- **轮转判定**: 最近 emission 为 woclaw，按 L→W 轮转选择 llm-benchmark；woclaw 仍在 1h lock 内，llm-benchmark 是本轮唯一可安全发射的项目。llm-benchmark 当日 `docs(roadmap)` 计数 0/2，本轮使用 1 slot；真实代码主线 `step-v6.0-17` 需要跨多个 tick，当前先保留可执行的 real-fetch 计划，不伪造实现进度。
+
+- **step-v6.0-16 状态回写**: `aa_agentperf_v2_real_fetch_v1` 已由 `16706e5` 闭合，后续 `ceea233` 修复非有限 AA-AgentPerf v2 指标归零并补回归断言；ROADMAP 顶部 stale next 已校正为 `next: step-v6.0-17`。
+
+- **调研与下一步**: `next: step-v6.0-17` — `mcp_atlas_real_fetch_v1`（v0.6.0 第 5 件 real-fetch 扩展）。后续从 `src/core/evaluator.ts` 新增 `fetchMcpAtlasScore(results, model, timeoutMs, dispatchType)` 与第 13 个 `dispatchExternalCall` site 开始；同步 `src/types/index.ts` 的 `mcp_atlas` 配置字段；新增 mock-fetch 回归测试，覆盖 POST payload、`atlas_score` / `tool_coverage` / `mcp_protocol_compliance` 解析、QuestionScore 注入、错误/超时路径与文件规模约束。全程只用 mock，不进行真实外部 API 调用；完成后运行针对性 Jest、`npx tsc --noEmit -p tsconfig.json`、`npm run build`，再提交真实代码。
+
+- **本 tick 验证**: `/usr/local/bin/heartbeat-watchdog.sh check llm-benchmark "docs(roadmap): 05:03 cron tick-note next: step-v6.0-17 mcp-atlas real-fetch follow-up"` → `PASS`；`ci-gate llm-benchmark` → `CI 24h: GREEN`；`check --dry-run` → `✅ [DRY-RUN] watchdog would PASS`。
+
+- **遗留 / 下次轮转**: 本轮无真实代码提交；llm-benchmark 的下一条真实代码候选为 `step-v6.0-17`，woclaw 按 W→L 轮转等待其解除 1h lock 后再评估；本 tick 的 docs(roadmap) 配额为 1/2。
+
+
 
 - **触发**: 07-26 02:23 Asia/Shanghai cron tick (V3 节奏 27 tick/d, 夜间 00-07 时段内). 距 woclaw commit e8531a9 2026-07-26 02:16:38 距 ~7min **LOCKED** (< 1h gate), 距 llm-benchmark commit f48b9f7 2026-07-26 01:48:54 距 ~34min **LOCKED** (< 1h gate). 双项目 LOCKED<1h + 双 git 干净 + 双 CI 24h GREEN → 走 docs(roadmap) tick-note 模式 (V3 rule 3 any-time ALLOW + 当日 ≤ 2 docs(roadmap) gate 0/2 → 1 slot 用).
 
