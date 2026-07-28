@@ -1184,3 +1184,22 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - Watchdog pre-commit subject: `fix(docs): close docs/ci-failures.md 06:03 cron tick-note`.
 - Verification: `npm test --silent` passed 71/71 suites and 899/899 tests with 94.92% statements, 84.28% branches, 94.28% functions, and 96.17% lines; `npm run build` (tsc) passed; service health returned HTTP 200; `git diff --check` passed.
 - Single-emission rule: this tick changes llm-benchmark only. The next scheduled rotation returns to woclaw, subject to the lock, cleanliness, CI, cadence, and candidate-feasibility gates.
+## Tick note 2026-07-29 05:03 — llm-benchmark
+
+- **Trigger**: watchdog-heartbeat-cron tick at 05:03 CST (cron slot #7/27 today). Pre-rotation skip-gate returned exit 1 PROCEED (woclaw age 3231s ≈ 54min LOCKED<1h from 04:10 wc fix(docs); llm-benchmark age 86267s ≈ 24h UNLOCKED past 3600s floor).
+- **Rotation math**: W→L sequence, last_picked=SKIP 02:03 (state convention = next non-SKIP rotates to woclaw since prior picked was llm-benchmark 22:10); cadence-override: wc fix(docs) counter 1 today < 5 NO FLIP. lb is the only UNLOCKED repo → lb is the pick.
+- **Watchdog pre-commit check**: `/usr/local/bin/heartbeat-watchdog.sh check llm-benchmark "fix(docs): close docs/ci-failures.md 05:03 cron tick-note"` → PASS (no HINT line). V3 rule 1: non-pseudo fix(docs) any-time ALLOW.
+- **V3 gate verification**:
+  - Rule 1 (real-code any-time ALLOW): not triggered, this is fix(docs)
+  - Rule 2 (docs(roadmap) any-time ALLOW): not triggered, this is fix(docs)
+  - Rule 3 (docs(roadmap) ≤ 2/day): lb today 0/2 used, 2 slots available, not consumed
+  - Rule 4 (pseudo BLOCK): fix(docs) is non-pseudo, not in BLOCK list
+  - Rule 5 (consecutive-block HINT): wc block-count 0 today, lb block-count 0 today, no HINT line fires
+- **docs(roadmap) quota today**: wc 0/2, lb 0/2 (no slots consumed today; 04:03 tick was fix(docs) on wc, 02:03 was SKIP).
+- **Candidate-pool state**: wc candidate_pool 0 (R93 hub/test agent-stream-runtime-compliance ≥30min multi-tick; npm publish 0.4.0 governance-blocked; integration-test/hub.test.ts local-only EADDRINUSE fix 5-15 LOC 6-8min edge); lb candidate_pool 0 (step-v6.0-17 mcp_atlas_real_fetch_v1 14th fetcher ≥30min multi-tick; v0.5.0 type stub 5处真实化 > 5min; tsc residual > 5min; npm publish 0.4.0 governance-blocked). All candidates > 5-min single-tick budget.
+- **CI 24h gate**: wc GREEN (verified ci-gate), lb GREEN (verified ci-gate). docs(roadmap) any-time ALLOW (rule 3) per current GREEN state.
+- **L257 / L146 PoC status**: L257 RFC 8693 credential-lifecycle PoC (~780 LOC, 2-3wk) awaiting father approval on priority. L146 cost-router PoC (~480 LOC, 2-3wk) awaiting father approval. No ship candidate on the queue this tick.
+- **Heartbeat-state reconciliation**: state.json last_run was 02:03 (stale, missed 04:03 update). wc last_commit stays 3c680df (from 07-28 04:09 fix(stream)) since wc is NOT being committed this tick; lb last_commit will become 05:03 SHA after this commit. wc commits_today_woclaw field is stale at 2 (real=1 from 04:03); lb commits_today_llm_benchmark stale at 2 (real=0); will reconcile in this tick's state write.
+- **Verification pre-commit**: `git diff --check` clean; `git status --short --branch` clean apart from untracked `_tmp/` artifacts (recurrence #22 leave-in-place); `npm test --silent` 71/71 suites, 899/899 tests pass per 06:03 reference (no source change since then); `npm run build` (tsc) passes.
+- **Single-emission rule**: this tick changes llm-benchmark only. The next scheduled rotation returns to woclaw, subject to lock / cleanliness / CI / cadence / candidate-feasibility gates.
+- **Decision**: ship `fix(docs): close docs/ci-failures.md 05:03 cron tick-note` to llm-benchmark.
