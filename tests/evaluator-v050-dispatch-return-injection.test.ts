@@ -14,10 +14,9 @@
  * 2) Each of those dispatchType-bearing return blocks corresponds to a
  *    QuestionScore (we infer by checking the block is preceded by category
  *    literal matching the dispatch category name)
- * 3) 3 non-dispatch fetchers (cyberseceval3 / webdev_arena / aa_omniscience)
- *    do NOT inject dispatchType on their returns (0 functional break for
- *    absent-callsite callers; parity with 8f8f68c comment that says "默认
- *    absent = v0.5 行为不变")
+ * 3) 3 legacy fetchers (cyberseceval3 / webdev_arena / aa_omniscience)
+ *    now inject dispatchType on successful returns while preserving existing
+ *    error-return shapes for direct callers.
  * 4) The 5 literal default values align with the 5 fetcher signatures
  *    (agentic_coding / agentic_fullstack / agentic_swe / process_agentic /
  *    long_context_retrieval) — no cross-wiring
@@ -40,7 +39,7 @@ describe('evaluator v0.5.0 dispatch return injection (5 fetchers x 4 returns = 2
     { name: 'long_context_cluster',  shortFn: 'fetchLongContextClusterScore',   type: 'long_context_retrieval', category: 'long_context_cluster' },
   ] as const;
 
-  const NON_DISPATCH_FETCHERS = [
+  const LEGACY_DISPATCH_FETCHERS = [
     { name: 'cyberseceval3',  shortFn: 'fetchCyberseceval3Score',  category: 'cyberseceval3' },
     { name: 'webdev_arena',   shortFn: 'fetchWebdevArenaScore',    category: 'webdev_arena' },
     { name: 'aa_omniscience', shortFn: 'fetchAAOmniscienceScore',  category: 'aa_omniscience' },
@@ -130,8 +129,8 @@ describe('evaluator v0.5.0 dispatch return injection (5 fetchers x 4 returns = 2
     }
   );
 
-  describe.each(NON_DISPATCH_FETCHERS)(
-    '$name non-dispatch fetcher: returns do NOT carry dispatchType (absent = v0.5 parity)',
+  describe.each(LEGACY_DISPATCH_FETCHERS)(
+    '$name legacy fetcher: successful return carries dispatchType',
     ({ shortFn, category }) => {
       const body = extractFunctionBody(src, shortFn);
       const blocks = extractReturnBlocks(body);
@@ -141,10 +140,10 @@ describe('evaluator v0.5.0 dispatch return injection (5 fetchers x 4 returns = 2
         expect(blocks.length).toBeLessThanOrEqual(5);
       });
 
-      it('all return blocks do NOT include dispatchType field', () => {
-        for (const b of blocks) {
-          expect(b).not.toMatch(/^\s*dispatchType\s*,?\s*$/m);
-        }
+      it('exactly one successful return block includes dispatchType', () => {
+        const withDispatch = blocks.filter((b) => /^\s*dispatchType\s*,?\s*$/m.test(b));
+        expect(withDispatch).toHaveLength(1);
+        expect(withDispatch[0]).toContain("category: '" + category + "'");
       });
 
       it('all return blocks still correspond to this non-dispatch category', () => {

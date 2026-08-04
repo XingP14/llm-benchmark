@@ -21,6 +21,12 @@ import { LLMAdapter } from '../src/adapters/adapter';
 import { BenchmarkConfig, ModelConfig } from '../src/types';
 
 interface FetchAAOmniscienceSignature {
+  run: () => Promise<Array<{
+    scores: Array<{
+      category: string;
+      dispatchType?: string;
+    }>;
+  }>>;
   fetchAAOmniscienceScore: (
     apiBase: string,
     modelConfig: ModelConfig,
@@ -68,6 +74,28 @@ describe('fetchAAOmniscienceScore runtime coverage (v0.5.0 dispatch, 06-15 00:03
 
   afterEach(() => {
     global.fetch = originalFetch;
+  });
+
+  it('run forwards configured dispatch type into the AA Omniscience fetcher', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ accuracy_score: 80, hallucination_rate: 0.2 }),
+    }) as typeof fetch;
+    const runConfig: BenchmarkConfig = {
+      ...config,
+      _external_benchmarks_roadmap: {
+        aa_omniscience: {
+          enabled: true,
+          type: 'safety_evaluation',
+        },
+      },
+    };
+    const evaluator = new Evaluator(runConfig, adapter) as unknown as FetchAAOmniscienceSignature;
+
+    const results = await evaluator.run();
+
+    const score = results[0].scores.find(candidate => candidate.category === 'aa_omniscience');
+    expect(score?.dispatchType).toBe('safety_evaluation');
   });
 
   // Case 1: happy path — 真实 fetch 成功 + parse 正常 + 0-100 归一正确

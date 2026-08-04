@@ -25,6 +25,12 @@ import { LLMAdapter } from '../src/adapters/adapter';
 import { BenchmarkConfig, ModelConfig } from '../src/types';
 
 interface FetchCyberseceval3Signature {
+  run: () => Promise<Array<{
+    scores: Array<{
+      category: string;
+      dispatchType?: string;
+    }>;
+  }>>;
   fetchCyberseceval3Score: (
     apiBase: string,
     modelConfig: ModelConfig,
@@ -72,6 +78,28 @@ describe('fetchCyberseceval3Score runtime coverage (v0.5.0 dispatch, 06-14 22:23
 
   afterEach(() => {
     global.fetch = originalFetch;
+  });
+
+  it('run forwards configured dispatch type into the cyberseceval3 fetcher', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ safety_score: 80, coverage_rate: 0.5 }),
+    }) as typeof fetch;
+    const runConfig: BenchmarkConfig = {
+      ...config,
+      _external_benchmarks_roadmap: {
+        cyberseceval3: {
+          enabled: true,
+          type: 'agentic_coding',
+        },
+      },
+    };
+    const evaluator = new Evaluator(runConfig, adapter) as unknown as FetchCyberseceval3Signature;
+
+    const results = await evaluator.run();
+
+    const score = results[0].scores.find(candidate => candidate.category === 'cyberseceval3');
+    expect(score?.dispatchType).toBe('agentic_coding');
   });
 
   // Case 1: happy path — 真实 fetch 成功 + parse 正常 + 0-100 归一正确

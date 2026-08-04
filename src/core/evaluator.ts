@@ -440,7 +440,7 @@ export class Evaluator {
     // - 注入: EvaluationResult.scores[] 追加 1 个 webdev_arena QuestionScore (questionId=`webdev_arena_${model.name}`, category=`webdev_arena`, dimension=`coding` 走 v0.4.0 默认, score = elo_score * 0.9 + pass_rate * 10 归一到 0-100)
     await this.dispatchExternalCall(
       results, 'webdev_arena',
-      (apiBase, model, timeoutMs) => this.fetchWebdevArenaScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.webdev_arena!.anchor_score),
+      (apiBase, model, timeoutMs, dispatchType) => this.fetchWebdevArenaScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.webdev_arena!.anchor_score, dispatchType),
     );
 
     // v0.5.0 dispatch: cyberseceval3 real fetch (06-14 22:23 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/cyberseceval3/v3)
@@ -450,10 +450,10 @@ export class Evaluator {
     // - 注: CyberSecEval3 官方 (Meta, 2025-12 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 Meta 真实 API
     await this.dispatchExternalCall(
       results, 'cyberseceval3',
-      (apiBase, model, timeoutMs) => {
+      (apiBase, model, timeoutMs, dispatchType) => {
         const cse3 = this.config._external_benchmarks_roadmap!.cyberseceval3!;
         const cats = cse3.risk_categories?.join(',') ?? 'all-8';
-        return this.fetchCyberseceval3Score(apiBase, model, timeoutMs, cats);
+        return this.fetchCyberseceval3Score(apiBase, model, timeoutMs, cats, dispatchType);
       },
     );
 
@@ -464,7 +464,7 @@ export class Evaluator {
     // - 注: Artificial Analysis Omniscience (2026-05-25 发布) 未提供 public hosted API endpoint, 默认 api_base 为本仓库 stub 端点 (部署者可接自托管适配层), 不调 AA 真实 API
     await this.dispatchExternalCall(
       results, 'aa_omniscience',
-      (apiBase, model, timeoutMs) => this.fetchAAOmniscienceScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.aa_omniscience!.anchor_score),
+      (apiBase, model, timeoutMs, dispatchType) => this.fetchAAOmniscienceScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.aa_omniscience!.anchor_score, dispatchType),
     );
 
     // v0.5.0 dispatch: terminal_bench real fetch (06-15 03:03 cron, logInfo stub → POST https://llm-benchmark.local/api/v1/terminal_bench/v2)
@@ -611,7 +611,8 @@ export class Evaluator {
     apiBase: string,
     model: ModelConfig,
     timeoutMs: number,
-    riskCategories: string
+    riskCategories: string,
+    dispatchType: ExternalDispatchType = defaultDispatchType('cyberseceval3')
   ): Promise<QuestionScore> {
     const questionId = `cyberseceval3_${model.name}`;
     const basePayload = {
@@ -664,6 +665,7 @@ export class Evaluator {
         dimension: 'safety',
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
+        dispatchType,
       };
     } catch (err: unknown) {
       return {
@@ -692,7 +694,8 @@ export class Evaluator {
     apiBase: string,
     model: ModelConfig,
     timeoutMs: number,
-    anchorScore?: number
+    anchorScore?: number,
+    dispatchType: ExternalDispatchType = defaultDispatchType('webdev_arena')
   ): Promise<QuestionScore> {
     const questionId = `webdev_arena_${model.name}`;
     const basePayload = {
@@ -749,6 +752,7 @@ export class Evaluator {
         dimension: 'coding',
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
+        dispatchType,
       };
     } catch (err: unknown) {
       return {
@@ -777,7 +781,8 @@ export class Evaluator {
     apiBase: string,
     model: ModelConfig,
     timeoutMs: number,
-    anchorScore?: number
+    anchorScore?: number,
+    dispatchType: ExternalDispatchType = defaultDispatchType('aa_omniscience')
   ): Promise<QuestionScore> {
     const questionId = `aa_omniscience_${model.name}`;
     const basePayload = {
@@ -833,6 +838,7 @@ export class Evaluator {
         dimension: 'long_context',
         modelOutput: JSON.stringify(data).slice(0, 500),
         detail,
+        dispatchType,
       };
     } catch (err: unknown) {
       return {

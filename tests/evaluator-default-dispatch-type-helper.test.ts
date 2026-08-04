@@ -145,7 +145,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
       // The 8 fetcher signatures all have the form `    dispatchType: ExternalDispatchType = ...` at column 4 (4-space indent)
       const lines = src.split('\n');
       const defaultParamLines = lines.filter((l) => /^    dispatchType: ExternalDispatchType = /.test(l));
-      expect(defaultParamLines.length).toBe(9);
+      expect(defaultParamLines.length).toBe(12);
       for (const l of defaultParamLines) {
         // Must use defaultDispatchType, not bare literal
         expect(l).toMatch(/defaultDispatchType\(/);
@@ -176,7 +176,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
   });
 
   describe('closure + default param + helper fallback sites consolidated', () => {
-    it('total defaultDispatchType() call sites = 17 (7 closure + 9 default param + 1 helper fallback)', () => {
+    it('total defaultDispatchType() call sites = 20 (7 closure + 12 default param + 1 helper fallback)', () => {
       // Count occurrences of `defaultDispatchType(` that are NOT inside a `*` comment line + NOT the declaration
       const lines = src.split('\n');
       let callCount = 0;
@@ -190,7 +190,7 @@ describe('evaluator defaultDispatchType helper (v0.6 step-v6.0-7 chain #8)', () 
         const matches = l.match(/defaultDispatchType\(/g);
         if (matches) callCount += matches.length;
       }
-      expect(callCount).toBe(17);
+      expect(callCount).toBe(20);
     });
   });
 

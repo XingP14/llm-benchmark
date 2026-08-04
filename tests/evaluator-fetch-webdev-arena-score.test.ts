@@ -26,6 +26,12 @@ import { LLMAdapter } from '../src/adapters/adapter';
 import { BenchmarkConfig, ModelConfig } from '../src/types';
 
 interface FetchWebdevArenaSignature {
+  run: () => Promise<Array<{
+    scores: Array<{
+      category: string;
+      dispatchType?: string;
+    }>;
+  }>>;
   fetchWebdevArenaScore: (
     apiBase: string,
     modelConfig: ModelConfig,
@@ -74,6 +80,28 @@ describe('fetchWebdevArenaScore runtime coverage (v0.5.0 dispatch, 06-14 03:23 c
   afterEach(() => {
     global.fetch = originalFetch;
     jest.useRealTimers();
+  });
+
+  it('run forwards configured dispatch type into the webdev arena fetcher', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elo_score: 900, pass_rate: 0.8 }),
+    }) as typeof fetch;
+    const runConfig: BenchmarkConfig = {
+      ...config,
+      _external_benchmarks_roadmap: {
+        webdev_arena: {
+          enabled: true,
+          type: 'safety_evaluation',
+        },
+      },
+    };
+    const evaluator = new Evaluator(runConfig, adapter) as unknown as FetchWebdevArenaSignature;
+
+    const results = await evaluator.run();
+
+    const score = results[0].scores.find(candidate => candidate.category === 'webdev_arena');
+    expect(score?.dispatchType).toBe('safety_evaluation');
   });
 
   // Case 1: happy path — 真实 fetch 成功 + parse 正常 + 0-100 归一正确
