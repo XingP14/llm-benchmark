@@ -1025,6 +1025,8 @@ export interface ExternalBenchmarkRoadmap {
    * — Response (POST https://api.livebench.ai/v1/refresh/v3): { livebench_score: number; category_scores: Record<string, number>; refresh_date: string; eval_model: string; contamination_status: string; error?: string } */
   livebench_2026_h1_quarterly_v3?: {
     enabled: boolean;
+    /** dispatch 类别标签: LiveBench 默认走 agentic_coding，可按部署策略覆盖 */
+    type?: ExternalDispatchType;
     api_base?: string;
     model_id?: string;
     /** task: 'integrals_with_game' (博弈论+积分计算融合) | 'logic_with_navigation' (逻辑题+2D 空间导航) | 'math_comp' (最新数学竞赛题刷新) | 'olympiad' (奥数刷新) | 'connections' (拼图刷新) | 'instruction_following' (指令跟随刷新) | 'all' */

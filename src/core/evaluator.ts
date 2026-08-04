@@ -571,7 +571,7 @@ export class Evaluator {
     // - 注: LiveBench 2026 H1 contamination-free quarterly refresh v3 (https://livebench.ai, 06-09 commit, 3.5-month cadence)
     await this.dispatchExternalCall(
       results, 'livebench_2026_h1_quarterly_v3',
-      (apiBase, model, timeoutMs) => this.fetchLiveBench2026H1QuarterlyV3Score(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.anchor_score, this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.task ?? 'all', this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.refresh_cadence ?? 'quarterly_3_5_month', this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.contamination_check ?? 'enabled'),
+      (apiBase, model, timeoutMs, dispatchType) => this.fetchLiveBench2026H1QuarterlyV3Score(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.anchor_score, this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.task ?? 'all', this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.refresh_cadence ?? 'quarterly_3_5_month', this.config._external_benchmarks_roadmap!.livebench_2026_h1_quarterly_v3!.contamination_check ?? 'enabled', dispatchType),
     );
 
     await this.dispatchExternalCall(

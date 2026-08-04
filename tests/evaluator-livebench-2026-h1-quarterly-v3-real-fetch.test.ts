@@ -22,6 +22,12 @@ import { LLMAdapter } from '../src/adapters/adapter';
 import { BenchmarkConfig, ModelConfig } from '../src/types';
 
 interface FetchLiveBenchSignature {
+  run: () => Promise<Array<{
+    scores: Array<{
+      category: string;
+      dispatchType?: string;
+    }>;
+  }>>;
   fetchLiveBench2026H1QuarterlyV3Score: (
     apiBase: string,
     modelConfig: ModelConfig,
@@ -77,6 +83,36 @@ describe('fetchLiveBench2026H1QuarterlyV3Score runtime coverage (v0.6 chain #20 
 
   afterEach(() => {
     global.fetch = originalFetch;
+  });
+
+  it('run forwards configured dispatch type into the livebench fetcher', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        livebench_score: 88.67,
+        category_scores: {},
+        refresh_date: '2026-06-09',
+        eval_model: 'gpt-5.5-thinking-xhigh',
+        contamination_status: 'clean',
+      }),
+    });
+    const runConfig: BenchmarkConfig = {
+      ...config,
+      _external_benchmarks_roadmap: {
+        livebench_2026_h1_quarterly_v3: {
+          enabled: true,
+          type: 'safety_evaluation',
+        },
+      },
+    };
+    const evaluator = new Evaluator(runConfig, adapter) as unknown as FetchLiveBenchSignature;
+
+    const results = await evaluator.run();
+
+    const score = results[0].scores.find(
+      candidate => candidate.category === 'livebench_2026_h1_quarterly_v3',
+    );
+    expect(score?.dispatchType).toBe('safety_evaluation');
   });
 
   // Case 1: happy path — livebench_score=88.67 → score=88.7 (rounded to 1dp), detail 含 taskPart + cats + date + contam
