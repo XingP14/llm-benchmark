@@ -557,7 +557,7 @@ export class Evaluator {
     // - 注: lm-eval-harness 任务冲突依赖管理自动化 (CSDN 2026-03-30 实战痛点, [dependency-groups] 已知冲突组合自动检测 + numpy/torch/datasets 跨 version resolver)
     await this.dispatchExternalCall(
       results, 'lm_eval_task_conflict_resolver',
-      (apiBase, model, timeoutMs) => this.fetchLmEvalTaskConflictResolverScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.anchor_score, this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.mode ?? 'dry_run', this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.dependency_groups ?? 'all'),
+      (apiBase, model, timeoutMs, dispatchType) => this.fetchLmEvalTaskConflictResolverScore(apiBase, model, timeoutMs, this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.anchor_score, this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.mode ?? 'dry_run', this.config._external_benchmarks_roadmap!.lm_eval_task_conflict_resolver!.dependency_groups ?? 'all', dispatchType),
     );
 
     // v0.6.0 step-v6.0-14 chain #20: livebench_2026_h1_quarterly_v3 真实 fetch + parse 接入

@@ -169,11 +169,12 @@ describe('evaluator fetchLmEvalTaskConflictResolverScore skeleton (v0.6 step-v6.
       expect(unionBody.split('|').length).toBe(9);
     });
 
-    it('9th site 闭包透传 anchorScore + mode + dependencyGroups 3 字段 (沿 8 项 v0.5 fetcher 模式)', () => {
-      // 9th site fetcher 闭包必须读 cfg.lm_eval_task_conflict_resolver.anchor_score + mode + dependency_groups (skeleton 阶段 mode=dry_run, dependency_groups=all)
+    it('9th site 闭包透传 anchorScore + mode + dependencyGroups + dispatchType 4 字段 (沿 type-field parity)', () => {
+      // dispatchExternalCall 已统一从 cfg.type ?? defaultDispatchType(name) 解析 override；9th 闭包必须接收并转发该参数。
       expect(src).toMatch(/this\.config\._external_benchmarks_roadmap!\.lm_eval_task_conflict_resolver!\.anchor_score/);
       expect(src).toMatch(/\.lm_eval_task_conflict_resolver!\.mode \?\? 'dry_run'/);
       expect(src).toMatch(/\.lm_eval_task_conflict_resolver!\.dependency_groups \?\? 'all'/);
+      expect(src).toMatch(/\(apiBase, model, timeoutMs, dispatchType\) => this\.fetchLmEvalTaskConflictResolverScore\([\s\S]{0,800}?, dispatchType\)/);
     });
 
     it('12 dispatch sites total: 8 v0.5 + 4 v0.6 (lm_eval_task_conflict_resolver + livebench + Stirrup + AA-AgentPerf v2)', () => {
