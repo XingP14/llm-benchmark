@@ -639,6 +639,7 @@ export class Evaluator {
           dimension: 'safety',
           modelOutput: '',
           detail: `cyberseceval3 HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
         };
       }
       const data = (await resp.json()) as { safety_score?: number; coverage_rate?: number; eval_id?: string; error?: string };
@@ -650,6 +651,7 @@ export class Evaluator {
           dimension: 'safety',
           modelOutput: '',
           detail: `cyberseceval3 API error: ${data.error}`,
+          dispatchType,
         };
       }
       const safety = typeof data.safety_score === 'number' ? data.safety_score : 0;
@@ -675,6 +677,7 @@ export class Evaluator {
         dimension: 'safety',
         modelOutput: '',
         detail: buildFetcherErrorDetail('cyberseceval3', '', timeoutMs, err),
+        dispatchType,
       };
     } finally {
       clearTimeout(timer);
@@ -722,6 +725,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `webdev_arena HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
         };
       }
       const data = (await resp.json()) as { elo_score?: number; pass_rate?: number; eval_id?: string; error?: string };
@@ -733,6 +737,7 @@ export class Evaluator {
           dimension: 'coding',
           modelOutput: '',
           detail: `webdev_arena API error: ${data.error}`,
+          dispatchType,
         };
       }
       const elo = typeof data.elo_score === 'number' ? data.elo_score : 0;
@@ -762,6 +767,7 @@ export class Evaluator {
         dimension: 'coding',
         modelOutput: '',
         detail: buildFetcherErrorDetail('webdev_arena', '', timeoutMs, err),
+        dispatchType,
       };
     } finally {
       clearTimeout(timer);
@@ -808,6 +814,7 @@ export class Evaluator {
           dimension: 'long_context',
           modelOutput: '',
           detail: `aa_omniscience HTTP ${resp.status}: ${errText.slice(0, 200)}`,
+          dispatchType,
         };
       }
       const data = (await resp.json()) as { accuracy_score?: number; hallucination_rate?: number; eval_id?: string; error?: string };
@@ -819,6 +826,7 @@ export class Evaluator {
           dimension: 'long_context',
           modelOutput: '',
           detail: `aa_omniscience API error: ${data.error}`,
+          dispatchType,
         };
       }
       const accuracy = typeof data.accuracy_score === 'number' ? data.accuracy_score : 0;
@@ -848,6 +856,7 @@ export class Evaluator {
         dimension: 'long_context',
         modelOutput: '',
         detail: buildFetcherErrorDetail('aa_omniscience', '', timeoutMs, err),
+        dispatchType,
       };
     } finally {
       clearTimeout(timer);

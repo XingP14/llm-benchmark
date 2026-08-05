@@ -140,10 +140,12 @@ describe('evaluator v0.5.0 dispatch return injection (5 fetchers x 4 returns = 2
         expect(blocks.length).toBeLessThanOrEqual(5);
       });
 
-      it('exactly one successful return block includes dispatchType', () => {
-        const withDispatch = blocks.filter((b) => /^\s*dispatchType\s*,?\s*$/m.test(b));
-        expect(withDispatch).toHaveLength(1);
-        expect(withDispatch[0]).toContain("category: '" + category + "'");
+      it('all 4 return blocks include dispatchType so configured attribution survives errors', () => {
+        expect(blocks).toHaveLength(4);
+        for (const b of blocks) {
+          expect(b).toMatch(/^\s*dispatchType\s*,?\s*$/m);
+          expect(b).toContain("category: '" + category + "'");
+        }
       });
 
       it('all return blocks still correspond to this non-dispatch category', () => {
