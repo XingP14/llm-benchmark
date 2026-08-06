@@ -1320,3 +1320,33 @@ dispatchType cell helper chain. fix(docs) non-pseudo any-time ALLOW per V3 watch
 - **Verification pre-commit**: `git diff --check` clean; `git status --short --branch` clean apart from untracked `_tmp/` artifacts (recurrence #22 leave-in-place); `npm test --silent` baseline passes per prior ticks (no source change since 08-05 23:15:21 `fc32354` fix(evaluator) — strictly docs/ci-failures.md which doesn't affect runtime); `npm run build` (tsc) clean exit 0 per prior baseline; llm-benchmark docs/ci-failures.md ends with `\\n` pattern verified (`tail -c 5 | od -c` → `0 . \n`); `git push` remote configured to git@github.com:XingP14/llm-benchmark.git (verified).
 - **Decision**: ship `fix(docs): close docs/ci-failures.md 04:03 cron tick-note` to llm-benchmark — minimum-cost path mirroring 03:03 wc pattern. Real-code chain #23 step-v6.0-17 mcp_atlas_real_fetch_v1 ≥30min cross-tick ladder on lb remains queued for sustained UNLOCK window (≥6 min sustained). Real-code chain #32 R93 agent-stream runtime compliance tests on wc remains queued for sustained multi-tick window (≥6 min).
 - **LLM errors**: 0.
+
+
+## Tick note 2026-08-07 04:03 — llm-benchmark
+
+- **Trigger**: watchdog-heartbeat-cron tick at 04:03 CST (cron slot #5/9 of nightly cycle; per live expr `3 0-6,22-23 * * *` = 9 tick/d, drifted from prompt's claimed 27 tick/d cadence per `references/schedule-expr-drift-2026-07-29.md`). Wall-clock fired at ~04:08 (cron SIGTERM/slot drift within 5-6 min tolerance).
+- **Phase 1.5 silent-tick probe**: `croniter-silent-tick-probe.py` reported `[SILENT-TICK DETECTED]` (gap 6min > 5min tolerance). Commit-probe ran: `wc git log --since='2026-08-07T03:06:54+08:00'` returned `9502226 fix(docs)` (the 03:03 ship — out of probe range edge). State pointer reconcile: state.last_commit=9502226 already matches. Pitfall #138 round-2 crosscheck: state.json `last_commit_time=2026-08-07T03:06:54+08:00` vs git log actual `9502226` commit-time `2026-08-07T03:07:04+08:00` (10s drift = the commit was created 10s after the state timestamp — pre-write-stale-timestamp risk per #89 is bounded; no reconcile needed since both refer to the same ship event).
+- **Pre-rotation skip-gate PROCEED**: wc `9502226` age ≈ 1h00m UNLOCKED-edge past 3600s floor (jitter from 03:07:04 ship); lb `56a94cb` age ≈ 24h00m DEEP UNLOCKED past 3600s floor.
+- **Rotation math**: last actual master emission = `9502226` (woclaw fix(docs) 08-07 03:07:04). Per pitfall #88 stale-pointer recovery, last_picked by emission = woclaw. W→L sequence → **llm-benchmark is the pick this tick** (matches state.last_picked=woclaw at tick start, rotation-default = lb). Cadence-override §1: wc fix(docs) today = 1 < 5 → NO FLIP; lb fix(docs) today = 0 < 5 → NO FLIP.
+- **Watchdog pre-commit check** (live, not dry-run): `/usr/local/bin/heartbeat-watchdog.sh check llm-benchmark "fix(docs): close docs/ci-failures.md 04:03 cron tick-note"` → PASS. V3 rule 1: non-pseudo fix(docs) any-time ALLOW.
+- **V3 gate verification**:
+  - Rule 1 (real-code any-time ALLOW): not triggered, this is fix(docs).
+  - Rule 2 (docs(roadmap) any-time ALLOW): not triggered, this is fix(docs).
+  - Rule 3 (docs(roadmap) ≤ 2/day): lb 0/2 today, wc 0/2 today — slots available, not consumed.
+  - Rule 4 (pseudo BLOCK): fix(docs) is non-pseudo, not in BLOCK list.
+  - Rule 5 (consecutive-block HINT): wc block-count 0 today, lb block-count 0 today — no HINT fires.
+- **ROADMAP tops accurate** (verified at 04:03 truth-probe):
+  - wc `next: step-w-24 R93-hub-test-agent-stream-runtime-compliance-tests` (set 22:03 07-27 `8fd239b`)
+  - lb `next: step-v6.0-17 mcp_atlas_real_fetch_v1` (set 05:03 07-28 `13a538e`)
+  - **No drift requiring correction** at 04:03 — same as 03:03 state.
+- **CI 24h gate**: wc GREEN (no source change since 03:07:04 `9502226` fix(docs) — strictly docs/ci-failures.md); lb GREEN (no source change since 08-06 04:07:48 `56a94cb` fix(docs)).
+- **§A worktree clean**: both repos clean for tracked files (only `_tmp/` untracked tick-notes per recurrence #22 leave-in-place).
+- **§B real-code ≤5min budget**: NO. wc candidate_pool 0 (R93 hub/test agent-stream-runtime-compliance ≥30min multi-tick; L257 RFC 8693 PoC ~780 LOC father-gated; L146 cost-router PoC ~480 LOC father-gated; npm publish 0.4.0 governance-blocked). lb candidate_pool 0 (step-v6.0-17 mcp_atlas_real_fetch_v1 13th fetcher ≥30min cross-tick; v0.5.0 type stub 5 处真实化 sub-tasks > 5min; tsc residual `2fb572a` sub-tasks > 5min; npm publish 0.4.0 governance-blocked). **All real-code candidates > 5-min single-tick budget** → real-code path OPEN but no ship candidate this tick.
+- **§C docs(roadmap)**: NO candidate staged in worktree. No ROADMAP drift pending recovery. Budget 0/2 + 0/2 available if next tick chooses roadmap recovery.
+- **§D pseudo**: NO candidate.
+- **Truth probe (Pitfall #137)**: `wc git log --pretty=format:'%h %s' --since='2026-08-07 00:00' | grep -c .` = **1** (matches `9502226`); `lb git log --pretty=format:'%h %s' --since='2026-08-07 00:00' | grep -c .` = **0**. Confirms `heartbeat-watchdog.sh daily` documented-bug 0/0/0/0/0 lie (per #134/#137).
+- **Cadence-override §1**: wc fix(docs) today = 1 < 5 → NO FLIP; lb fix(docs) today = 0 < 5 → NO FLIP.
+- **Single-emission rule**: this tick changes llm-benchmark only. W→L next expected pick at 04:23 = woclaw (subject to dual-UNLOCKED + candidate-feasibility + cadence gates).
+- **Verification pre-commit**: `git diff --check` clean; `git status --short --branch` clean apart from untracked `_tmp/` artifacts (recurrence #22 leave-in-place); lb docs/ci-failures.md trailing-newline verified post-append: `tail -c 5 | od -c` → `0 . \n` (Pitfall #78 / recurrence #47 compliance); `git push` to git@github.com:XingP14/llm-benchmark.git configured.
+- **Decision**: SHIP `fix(docs): close docs/ci-failures.md 04:03 cron tick-note` to llm-benchmark — minimum-cost path mirroring 03:03 wc pattern. Dual-side `_tmp/tick-note-2026-08-07-0403.md` written on both repos per Pitfall #133 dual-side convention.
+- **LLM errors**: 0.
