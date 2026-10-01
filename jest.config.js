@@ -13,8 +13,14 @@
 //   但 benchmarks 的 3 个 getXByCategory helper 是 core/evaluator.ts 按 category dispatch 的真实产品路径, 已被
 //   tests/benchmarks-by-category.test.ts 覆盖; cli/cli_log.ts 早已 100%。实测阈值 statements 99.36 / branches 98.86
 //   / lines 99.7 / functions 96.92, 阈值保持 statements 90 / branches 70 / lines 90 / functions 85 不变。
-// 后续 v0.6.0 补 src/web/engine/evaluator.ts 8 dispatch 真实 fetch 单测 + src/core/evaluator.ts CLI 入口 mock
-//   (CLI input/output JSON 快照) 后, 再讨论是否把 src/core/evaluator.ts 拉回 coverage scope (沿 06-04 阈值收敛).
+//   (2026-10-02 05:03 cron) src/core/evaluator.ts 也拉回 scope —— 上面 06-20 那段 "1366 行 CLI 引擎 / 52.26 stmts" 的
+//   理由已被证伪: 文件现在是 2050 行, 且自 00:29-03:29 一系列的 real-code 测试 (evaluator-dimensions /
+//   evaluator-dispatch-defaults / benchmarks-by-category, 1096 tests) 已把它压到 91.68 stmts / 78.43 branches /
+//   86.86 lines / 92.78 functions —— 四道 90/70/90/85 闸门全部有富余。exclude 的是"没人测的引擎",
+//   现在不是了, exclude 本身就成了覆盖率报告里的盲区。
+//   阈值保持 90/70/90/85 不变: 这次是让真实阈值第一次真正约束到 evaluator.ts, 不是为了让数字好看而下调。
+// 后续 v0.6.0: 补 src/web/engine/evaluator.ts 8 dispatch 真实 fetch 单测 + CLI 入口 mock (JSON 快照),
+//   把 branches 78.43 往 90 推。
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
@@ -27,6 +33,7 @@ module.exports = {
     'src/cli/**/*.ts',
     'src/core/reporter.ts',
     'src/core/scorer.ts',
+    'src/core/evaluator.ts',
     'src/errors.ts',
     'src/sandbox/python-sandbox.ts',
     'src/types/**/*.ts',
@@ -34,7 +41,6 @@ module.exports = {
     // explicit excludes (CLI 引擎 / re-export / sandbox cli / 无 isolated test)
     '!src/**/*.d.ts',
     '!src/index.ts',                          // re-export barrel
-    '!src/core/evaluator.ts',                 // 1366 行 CLI 引擎, 通过 web harness 间接触发
     '!src/sandbox/executor.ts',               // 沙箱 CLI 入口, 测过 python-sandbox 即可
   ],
   coverageThreshold: {
