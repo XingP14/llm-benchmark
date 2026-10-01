@@ -8,9 +8,11 @@
 //   间接触发, 没必要把所有 CLI 路径都加单测 (相当于 6 维度 × 8 dispatch × 真实 fetch = 48 个 mock 测试, ROI 低).
 // 本轮收紧 collectCoverageFrom 到 6 个有测试覆盖的目录 (src/adapters/* src/core/reporter.ts src/core/scorer.ts
 //   src/errors.ts src/sandbox/python-sandbox.ts src/types/* src/web/**/*), 排除 src/core/evaluator.ts (CLI 引擎)
-//   + src/index.ts (re-export) + src/sandbox/executor.ts (sandbox cli) + src/benchmarks/{function-calling,long-context,multi-turn}.ts
-//   (no isolated test). 实测阈值 statements 95.86 / branches 76.45 / lines 96.43 / functions 91.36, 阈值上调回
-//   statements 90 / branches 70 / lines 90 / functions 85 (留 buffer 容许后续加 8 dispatch 单测时回落).
+//   + src/index.ts (re-export) + src/sandbox/executor.ts (sandbox cli).
+//   (2026-10-02 01:03 cron) src/benchmarks/** + src/cli/** 拉回 scope: 这两个目录此前无 isolated test 而被整体排除,
+//   但 benchmarks 的 3 个 getXByCategory helper 是 core/evaluator.ts 按 category dispatch 的真实产品路径, 已被
+//   tests/benchmarks-by-category.test.ts 覆盖; cli/cli_log.ts 早已 100%。实测阈值 statements 99.36 / branches 98.86
+//   / lines 99.7 / functions 96.92, 阈值保持 statements 90 / branches 70 / lines 90 / functions 85 不变。
 // 后续 v0.6.0 补 src/web/engine/evaluator.ts 8 dispatch 真实 fetch 单测 + src/core/evaluator.ts CLI 入口 mock
 //   (CLI input/output JSON 快照) 后, 再讨论是否把 src/core/evaluator.ts 拉回 coverage scope (沿 06-04 阈值收敛).
 module.exports = {
@@ -21,9 +23,10 @@ module.exports = {
   collectCoverageFrom: [
     // tested modules (每个目录/文件都有对应 *.test.ts)
     'src/adapters/**/*.ts',
+    'src/benchmarks/**/*.ts',
+    'src/cli/**/*.ts',
     'src/core/reporter.ts',
     'src/core/scorer.ts',
-    
     'src/errors.ts',
     'src/sandbox/python-sandbox.ts',
     'src/types/**/*.ts',
@@ -33,9 +36,6 @@ module.exports = {
     '!src/index.ts',                          // re-export barrel
     '!src/core/evaluator.ts',                 // 1366 行 CLI 引擎, 通过 web harness 间接触发
     '!src/sandbox/executor.ts',               // 沙箱 CLI 入口, 测过 python-sandbox 即可
-    '!src/benchmarks/function-calling.ts',    // 无 isolated test (只通过 core/evaluator.ts 调)
-    '!src/benchmarks/long-context.ts',        // 同上
-    '!src/benchmarks/multi-turn.ts',          // 同上
   ],
   coverageThreshold: {
     global: {
