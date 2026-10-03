@@ -398,7 +398,7 @@ function showHelp() {
 `);
 }
 
-export { runBenchmark, loadConfig };
+export { runBenchmark, loadConfig, printSummary };
 
 main().catch((error: unknown) => {
   cliError('Fatal error:', errorMessage(error));
