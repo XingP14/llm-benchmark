@@ -927,7 +927,7 @@ export class Evaluator {
       const normalized = Math.max(0, Math.min(100, passRate * 70 + (1 - durSec / 3600) * 30));
       const trajPart = data.trajectory_id ? `, trajectory_id=${data.trajectory_id}` : '';
       const detail = `terminal_bench[${subset}] pass_rate=${(passRate * 100).toFixed(1)}%, avg_duration=${durSec.toFixed(0)}s, score=${normalized.toFixed(1)}${trajPart}`;
-      if (anchorScore != null && Math.abs(normalized - anchorScore) > 5) {
+      if (typeof anchorScore === 'number' && Math.abs(normalized - anchorScore) > 5) {
         logWarn(`  [terminal_bench] anchor mismatch: model=${model.name} score=${normalized.toFixed(1)} anchor=${anchorScore} (diff > 5)`);
       }
       return {
