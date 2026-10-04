@@ -4,46 +4,18 @@ import { BenchmarkConfig, ModelConfig, EvaluationResult } from './types';
 import { version as pkgVersion } from '../package.json';
 import { Evaluator } from './core/evaluator';
 import { Reporter, DIM_HEADERS, getDimCell, getDispatchTypeCell, getSubLabel, findSubLabelScore } from './core/reporter';
-import { LLMAdapter } from './adapters/adapter';
 import { errorMessage } from './errors';
 import { cliLog, cliError } from './cli/cli_log';
-import { OpenAIAdapter } from './adapters/openai-adapter';
-import { AnthropicAdapter } from './adapters/anthropic-adapter';
-import { GLMAdapter } from './adapters/glm-adapter';
-import { DeepSeekAdapter } from './adapters/deepseek-adapter';
-import { QwenAdapter } from './adapters/qwen-adapter';
-import { OllamaAdapter } from './adapters/ollama-adapter';
+// 供应商路由的单点真源: 之前 CLI 与 web 各有一份手维护 switch 副本,
+// 已真实漂移过一次 (ecf1e07 手工对齐), 共享函数才是唯一的不变量。
+// 下方 export { ..., createAdapter } 直接 re-export 这个 import, 导出面不变。
+import { createAdapter } from './adapters/create-adapter';
 import * as fs from 'fs';
 import { getAllDialogueBenchmarks } from './benchmarks/dialogue';
 import { getAllCodeBenchmarks } from './benchmarks/coding';
 import { getAllFunctionCallingBenchmarks } from './benchmarks/function-calling';
 import { getAllLongContextBenchmarks } from './benchmarks/long-context';
 import { getAllMultiTurnBenchmarks } from './benchmarks/multi-turn';
-
-/**
- * 创建适配器
- */
-function createAdapter(type: string): LLMAdapter {
-  switch (type.toLowerCase()) {
-    case 'anthropic':
-      return new AnthropicAdapter();
-    case 'glm':
-    case 'zhipu':
-      return new GLMAdapter();
-    case 'deepseek':
-      return new DeepSeekAdapter();
-    case 'qwen':
-    case 'tongyi':
-    case 'dashscope':
-      return new QwenAdapter();
-    case 'ollama':
-    case 'local':
-      return new OllamaAdapter();
-    case 'openai':
-    default:
-      return new OpenAIAdapter();
-  }
-}
 
 async function main() {
   const args = process.argv.slice(2);

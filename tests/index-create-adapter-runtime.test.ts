@@ -32,6 +32,7 @@ import * as path from 'path';
 type AdapterFactory = (type: string) => { constructor: { name: string } };
 
 const INDEX_PATH = path.join(__dirname, '..', 'src', 'index.ts');
+const CREATE_ADAPTER_PATH = path.join(__dirname, '..', 'src', 'adapters', 'create-adapter.ts');
 
 describe('src/index.ts createAdapter (runtime)', () => {
   const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -116,7 +117,14 @@ describe('src/index.ts createAdapter (runtime)', () => {
     // not re-implement the switch, it only asserts that a future edit which
     // rewrites the table as a lookup object has not silently dropped a label
     // that no test reaches because it is unreachable-by-design.
-    const src = fs.readFileSync(INDEX_PATH, 'utf-8');
+    //
+    // It reads the SHARED routing file, not src/index.ts. The switch used to
+    // be hand-maintained in both src/index.ts and src/web/engine/evaluator.ts;
+    // it now lives only in src/adapters/create-adapter.ts, and the CLI entry
+    // point re-exports that one function. Grepping src/index.ts would have gone
+    // to 0 matches and read as a routing-table wipe -- a false alarm, which is
+    // the same class of error as counting a survivor that was never measured.
+    const src = fs.readFileSync(CREATE_ADAPTER_PATH, 'utf-8');
     for (const label of ['anthropic', 'glm', 'zhipu', 'deepseek', 'qwen', 'tongyi', 'dashscope', 'ollama', 'local']) {
       expect(src).toContain(`case '${label}'`);
     }

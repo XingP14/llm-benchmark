@@ -4,13 +4,8 @@ import { getDatabase } from '../db/database';
 import type Database from 'better-sqlite3';
 import { taskManager } from './task';
 import type { WSSender } from '../websocket';
-import { OpenAIAdapter } from '../../adapters/openai-adapter';
-import { AnthropicAdapter } from '../../adapters/anthropic-adapter';
-import { GLMAdapter } from '../../adapters/glm-adapter';
-import { DeepSeekAdapter } from '../../adapters/deepseek-adapter';
-import { QwenAdapter } from '../../adapters/qwen-adapter';
-import { OllamaAdapter } from '../../adapters/ollama-adapter';
-import { LLMAdapter } from '../../adapters/adapter';
+import { createAdapter } from '../../adapters/create-adapter';
+import type { LLMAdapter } from '../../adapters/adapter';
 import { ModelConfig } from '../../types';
 import { errorMessage } from '../../errors';
 import { Scorer } from '../../core/scorer';
@@ -194,28 +189,16 @@ export class EvaluatorEngine {
 
   /**
    * 创建适配器
+   *
+   * 路由真源在 src/adapters/create-adapter.ts —— 本方法保留为一层委派, 因为
+   * webScorer() 与 run() 两处调用点、以及 tests/web/evaluator-web-scorer-helper
+   * 的源码断言都指向 `this.createAdapter(...)`。真正需要单点真源的是那份 switch,
+   * 不是这个方法名; 委派后两份手维护副本不可能再各自漂移。
+   * 历史上它们已经漂移过一次 (ecf1e07 手工对齐: web 侧曾大小写敏感且缺 'zhipu'
+   * 别名), 手对齐不是不变量, 共享函数才是。
    */
   private createAdapter(type: string): LLMAdapter {
-    // 与 src/index.ts CLI 路径对齐：toLowerCase + 接受 'zhipu' 别名,
-    // 避免老 v0.2.0 时期配置 (type: "ZHIPU" / "zhipu") 走 default → OpenAI
-    switch (type.toLowerCase()) {
-      case 'anthropic':
-        return new AnthropicAdapter();
-      case 'glm':
-      case 'zhipu':
-        return new GLMAdapter();
-      case 'deepseek':
-        return new DeepSeekAdapter();
-      case 'qwen':
-      case 'tongyi':
-      case 'dashscope':
-        return new QwenAdapter();
-      case 'ollama':
-      case 'local':
-        return new OllamaAdapter();
-      default:
-        return new OpenAIAdapter();
-    }
+    return createAdapter(type);
   }
 
   /**
