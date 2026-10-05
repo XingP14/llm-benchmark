@@ -8,6 +8,7 @@
 // 设计: 由于 helpers 是 module-level non-exported, 且 test 模式下 shouldLog=false
 // 永远不会走到递归分支, 必须 spawn 子进程 + 走 dist + unset env vars 才能稳定复现/保护.
 import { execFileSync } from 'child_process';
+import * as fs from 'fs';
 import * as path from 'path';
 import { Evaluator } from '../src/core/evaluator';
 import { LLMAdapter } from '../src/adapters/adapter';
@@ -38,6 +39,23 @@ describe('evaluator log helpers (no infinite recursion)', () => {
     const results: EvaluationResult[] = await ev.run();
     expect(Array.isArray(results)).toBe(true);
     expect(results).toHaveLength(0);
+  });
+
+  it('the dist the recursion guard above depends on is not older than its source', () => {
+    // The case above spawns node against dist/core/evaluator.js, so it can only
+    // detect a self-recursive log() if dist actually contains the current src.
+    // dist/ is gitignored and never rebuilt by `npm test`, so a stale dist turns
+    // that case into a false green: observed 2026-10-05 with a self-recursive
+    // log() in src and a pre-mutation dist, where it passed in 77ms because the
+    // artifact it read still held console.log. CI only catches this by accident,
+    // via the `npm run build` step that happens to precede `npm test` there.
+    // Fail on the staleness itself, so the guard cannot pass vacuously.
+    const srcFile = path.resolve(__dirname, '../src/core/evaluator.ts');
+    const distFile = path.resolve(__dirname, '../dist/core/evaluator.js');
+    expect(fs.existsSync(distFile)).toBe(true);
+    const srcMtime = fs.statSync(srcFile).mtimeMs;
+    const distMtime = fs.statSync(distFile).mtimeMs;
+    expect({ distIsStale: distMtime < srcMtime }).toEqual({ distIsStale: false });
   });
 
   it('production mode: log() does NOT recurse infinitely (subprocess + dist smoke)', () => {
