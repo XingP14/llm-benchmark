@@ -14,6 +14,22 @@ import { Evaluator } from '../src/core/evaluator';
 import { LLMAdapter } from '../src/adapters/adapter';
 import { BenchmarkConfig, EvaluationResult } from '../src/types';
 
+// BUDGET (2026-10-06): the child does ~60ms of real work and node's own startup
+// on an idle box is ~30-90ms, so the original 8s was ~47x the standalone cost.
+// That headroom is not real headroom on a loaded host: measured on this machine
+// under sustained load, the SAME probe exceeded 8s wall clock and came back as
+// `spawnSync node ETIMEDOUT` even though the child had no reason to take that
+// long. A wall-clock budget sized for a quiet machine makes this case a load
+// flake that reports as a failure of the recursion guard it is proving.
+//
+// Module scope, not the it() body: the jest-level timeout is the third argument
+// of `it(name, fn, timeout)`, which is a SIBLING of the callback, not inside it.
+// A const declared inside the callback is not in scope there -- the suite then
+// fails to compile with TS2304 and reports 0 tests, which reads like a red
+// recursion guard but is not one.
+const SUBPROCESS_BUDGET_MS = 30000;
+const JEST_TIMEOUT_MS = SUBPROCESS_BUDGET_MS + 15000;
+
 class StubAdapter implements LLMAdapter {
   async chat(): Promise<string> { return 'ok'; }
   async ping(): Promise<boolean> { return true; }
@@ -61,6 +77,7 @@ describe('evaluator log helpers (no infinite recursion)', () => {
   it('production mode: log() does NOT recurse infinitely (subprocess + dist smoke)', () => {
     // 子进程脚本: 在 production mode (NODE_ENV/JEST_WORKER_ID 强制 unset) 下
     // 加载编译后的 dist/core/evaluator.js 并跑 empty-models run(). 修复前会爆 RangeError.
+    // Budget rationale lives with SUBPROCESS_BUDGET_MS at module scope.
     const projectRoot = path.resolve(__dirname, '..');
     const probe = [
       "delete process.env.NODE_ENV;",
@@ -82,16 +99,25 @@ describe('evaluator log helpers (no infinite recursion)', () => {
         cwd: path.join(projectRoot, 'dist'),
         env: { ...process.env, NODE_ENV: '', JEST_WORKER_ID: '' },
         encoding: 'utf8',
-        timeout: 8000,
+        timeout: SUBPROCESS_BUDGET_MS,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
     } catch (e: any) {
-      err = (e.stderr || e.stdout || String(e)).toString();
-      code = e.status ?? 1;
+      // A timeout hands back status=null, so `e.status ?? 1` silently folds a
+      // KILLED-BY-BUDGET run into a clean exit-1. Surface the distinction so
+      // a future overrun says "the budget was too small", not "the recursion
+      // guard failed".
+      const killedByBudget = e.killed === true || e.signal === 'SIGTERM';
+      err = killedByBudget
+        ? `[subprocess budget of ${SUBPROCESS_BUDGET_MS}ms exceeded] ${e.message || ''}`
+        : (e.stderr || e.stdout || String(e)).toString();
+      code = e.status ?? (killedByBudget ? null : 1);
     }
     expect({ code, out: out.slice(0, 200), err: err.slice(0, 200) }).toEqual(
       expect.objectContaining({ code: 0, out: expect.stringContaining('OK len=0') })
     );
     expect(err).not.toMatch(/Maximum call stack size exceeded/);
-  }, 15000);
+    // The jest-level timeout must stay ABOVE the subprocess budget, or jest
+    // kills the test itself and the diagnostic above is never reached.
+  }, JEST_TIMEOUT_MS);
 });
