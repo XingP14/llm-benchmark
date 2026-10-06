@@ -94,6 +94,23 @@ export class PythonSandbox implements SandboxExecutor {
           });
         }, this.timeout);
 
+        // spawn() does NOT throw when the binary is missing -- it emits an
+        // 'error' event on the next tick. Without this listener Node re-throws
+        // it as an uncaught exception and takes down the caller (the CLI or the
+        // web server) instead of surfacing a failure verdict. A missing optional
+        // interpreter is a user-facing error message, not a crash.
+        proc.on('error', (err: unknown) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutHandle);
+          resolve({
+            success: false,
+            output: stdout.trim(),
+            error: errorMessage(err),
+            duration: Date.now() - start,
+          });
+        });
+
         proc.stdout.on('data', (data) => {
           stdout += data.toString();
         });
