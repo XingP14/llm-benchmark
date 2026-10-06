@@ -121,4 +121,45 @@ describe('stale .bak cleanup + index.ts catch errorMessage 漏更', () => {
     const successor = path.join(repoRoot, 'tests', 'evaluator-dispatch-external-call-helper.test.ts');
     expect(fs.existsSync(successor)).toBe(true);
   });
+
+  // -- 2026-10-07 06:03 cron: the *.bak guard was never the only residue pattern.
+  //    A live src/index.ts.runbench.orig (the pre-image `patch` writes on a
+  //    fuzzy-context mismatch) sat untracked INSIDE src/ and passed every existing
+  //    assertion in this file, because every residue rule here only knew *.bak.
+  //    These pin the missing extensions so the guard actually closes.
+  test('11) .gitignore 覆盖 *.orig + *.rej (patch 残留, 不只是 *.bak)', () => {
+    const content = fs.readFileSync(path.join(repoRoot, '.gitignore'), 'utf-8');
+    expect(content).toMatch(/^\*\.orig$/m);
+    expect(content).toMatch(/^\*\.rej$/m);
+  });
+
+  test('12) git check-ignore 对 .orig/.rej 退出码 0 (src/ 内的 patch 残留被忽略)', () => {
+    const probes = ['src/index.ts.runbench.orig', 'src/core/evaluator.ts.orig', 'src/foo.rej'];
+    for (const probe of probes) {
+      let exitCode = -1;
+      try {
+        execFileSync('git', ['check-ignore', '-v', probe], { cwd: repoRoot, encoding: 'utf-8' });
+        exitCode = 0;
+      } catch (err: unknown) {
+        exitCode = (err as { status?: number }).status ?? -1;
+      }
+      expect({ probe, exitCode }).toEqual({ probe, exitCode: 0 });
+    }
+  });
+
+  test('13) src/ 与 tests/ 无 .orig/.rej 残留文件 (成功 pin, 否则 sweep 假阳性)', () => {
+    // 正向对照: 若前两条规则失效, 这条会报出具体路径而不是空数组, 与 case 9 的 .bak sweep 同一形状.
+    const residue: string[] = [];
+    for (const dir of ['src', 'tests']) {
+      const walk = (current: string) => {
+        for (const e of fs.readdirSync(current, { withFileTypes: true })) {
+          const full = path.join(current, e.name);
+          if (e.isDirectory()) walk(full);
+          else if (/\.(orig|rej)$/.test(e.name)) residue.push(path.relative(repoRoot, full));
+        }
+      };
+      walk(path.join(repoRoot, dir));
+    }
+    expect(residue).toEqual([]);
+  });
 });

@@ -43,3 +43,8 @@ memory/
 # Backup files (editor autosave, refactor .bak artifacts)
 *.bak
 *.bak.ts
+# Patch/merge residue: `patch` writes .orig on a fuzzy-context mismatch, which
+# lands the rejected pre-image INSIDE src/ and pollutes git status. Observed live:
+# src/index.ts.runbench.orig survived every existing .bak guard.
+*.orig
+*.rej
