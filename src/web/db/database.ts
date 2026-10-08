@@ -166,14 +166,45 @@ function initializeSchema(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_configs_user ON configs(user_id);
   `);
 
-  // 兼容已有库：补加 include_long_context 列
+  // 兼容已有库：补加后加的 include_* 维度列。
+  //
+  // 这里为什么要显式列出升级臂：`c71c2f2`
+  // (2026-06-02, Function Calling 维度) 只改了 CREATE TABLE 和
+  // routes/evaluations.ts 的 INSERT，没有在下面补对应的 ALTER，于是任何
+  // 2026-06-02 之前建的库升级后仍然缺 include_function_calling，而产品自己的
+  // INSERT 显式写死了这一列 —— 老用户 POST /api/evaluations 直接 400
+  // "table evaluations has no column named include_function_calling"。
+  //
+  // 下面的循环取代了逐列手写 if：升级臂集中在 EVALUATION_MIGRATION_COLUMNS 一处，
+  // 不用改控制流。
+  //
+  // 但它**不是** schema 声明驱动的，也不保证「加了新维度就自动升级」。实测：
+  // 往 CREATE TABLE 里加一个 include_reasoning 而不动下面的列表，老库依然不会
+  // 被补上该列（probe: _tmp/probe-comment-claim.mjs，2026-10-09）。EVALUATION_MIGRATION_COLUMNS
+  // 仍然是手工维护的列表，加维度时必须同步加一条 —— 这正是本 bug 的藏身处，
+  // 所以它的回归由 tests/web/db-migration-missing-function-calling.test.ts
+  // 的 case (3) 守住：该用例从 CREATE TABLE 推导「基线之后新增的列」并与本列表
+  // 求差集，列表漏一条就红。保证来自测试，不来自这条注释。
   if (db) {
     const evalCols = db.prepare("PRAGMA table_info(evaluations)").all() as PragmaColumn[];
-    if (!evalCols.some(c => c.name === 'include_long_context')) {
-      db.exec("ALTER TABLE evaluations ADD COLUMN include_long_context INTEGER DEFAULT 0");
-    }
-    if (!evalCols.some(c => c.name === 'include_multi_turn')) {
-      db.exec("ALTER TABLE evaluations ADD COLUMN include_multi_turn INTEGER DEFAULT 0");
+    const existing = new Set(evalCols.map((c) => c.name));
+    for (const column of EVALUATION_MIGRATION_COLUMNS) {
+      if (!existing.has(column)) {
+        db.exec(`ALTER TABLE evaluations ADD COLUMN ${column} INTEGER DEFAULT 0`);
+      }
     }
   }
 }
+
+/**
+ * evaluations 表在基线 schema 之后新增的维度列，各自需要一条 ALTER 升级臂。
+ *
+ * 与 initializeSchema 的 CREATE TABLE 一一对应，是升级路径的唯一事实来源。
+ * 仅包含基线之后新增的列：include_dialogue / include_coding 自 evaluations 表
+ * 诞生起就存在，老库必然已有，不需要（也不应该）ALTER。
+ */
+export const EVALUATION_MIGRATION_COLUMNS = [
+  'include_function_calling',
+  'include_long_context',
+  'include_multi_turn',
+] as const;
