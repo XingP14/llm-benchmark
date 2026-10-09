@@ -48,3 +48,12 @@ memory/
 # src/index.ts.runbench.orig survived every existing .bak guard.
 *.orig
 *.rej
+
+# Agent probe residue. Both repos park mutation backups, commit-message drafts
+# and coverage probes here; this one accumulated 301 untracked entries and
+# `git add -A` staged 359 paths, because the guard was written for woclaw only.
+# `files` in package.json already excludes _tmp/, so npm publish is unaffected —
+# the exposure was to `git add -A` and to `git status` noise. Sibling fix and
+# guard: woclaw hub/test/gitignore_residue_guard.test.ts (2026-10-07).
+_tmp/
+**/_tmp/
