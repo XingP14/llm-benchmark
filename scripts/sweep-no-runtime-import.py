@@ -22,21 +22,44 @@ import shape has to be recognized here, and tests/sweep-no-runtime-import.test.t
 pins them.
 
 STILL NOT RECOGNIZED (know these before trusting a report)
-Two shapes remain invisible to this sweep, and both produce FALSE POSITIVES.
-They are left reported rather than silenced, because a visible false positive
+One shape remains invisible to this sweep, and it produces FALSE POSITIVES.
+It is left reported rather than silenced, because a visible false positive
 can be dismissed with evidence and a silently-dropped one cannot:
 
-  1. TRANSITIVE drive. src/web/routes/auth.ts does
-     `import { authMiddleware } from '../middleware/auth'` and registers it on
-     a route. A test that imports the ROUTE drives the middleware for real,
-     but the middleware's name appears in no test import clause.
-  2. INTRA-FILE drive. `codeBenchmarks` is exported by coding.ts and read by
-     getTestCases() in the same file. Driving getTestCases() executes
-     codeBenchmarks, but the name appears in no test import clause.
+  1. TRANSITIVE drive. src/web/middleware/auth.ts exports authMiddleware,
+     which is imported and registered by three ROUTE modules
+     (routes/auth.ts, routes/configs.ts, routes/evaluations.ts). A test
+     that imports any of those routes drives the middleware for real, but
+     the middleware's name appears in no test import clause, and loading a
+     module does not CALL what it exports -- so the load rule below cannot
+     credit it either. This is the sweep's only remaining report and it is
+     a REAL dependency with a tested behaviour; closing it needs a
+     src-side reachability graph (import x -> calls y) that a test-side
+     regex text cannot build. Anything else reported here should be checked
+     against the module's own callers before it is treated as a gap.
 
-  Both need the src-side reachability graph that a test-side regex text cannot
-  build. Anything reported here must be checked against the module's own
-  callers before it is treated as a coverage gap.
+MODULE-SCOPE VALUES ARE DRIVEN BY THE LOAD (added R449)
+`export const` is only legal at module top level, so its initializer runs
+the moment the module is evaluated -- there is no call site to reach it
+and no test can drive it more "really" than loading its module. So when a
+test imports ANY export of a module, every module-scope value export of
+that module has been executed, and reporting it re-derives work already
+done. Five of the six original reports were exactly this:
+codeBenchmarks, dialogueBenchmarks, functionCallingBenchmarks,
+longContextBenchmarks and multiTurnBenchmarks are module-scope const
+arrays in files the suite loads at runtime.
+
+This rule is scoped NARROWLY on purpose. It credits a value only when:
+  - the module is actually resolved to a real file (so `../helpers` in the
+    fixtures, which sits outside src/, still blocks), and
+  - that file declares the export at module top level with `const`/`let`/
+    `var` -- a `function`, `class` or `interface` needs a CALL, which a
+    load does not perform, and
+  - the test really loaded the module (an import clause of any of its
+    exports counts), following `export ... from` chains to the defining
+    file.
+Arms (19), (20) and (21) are the falsifiers: they keep this from
+degenerating into "credit every export of every module a test touches".
 
 USAGE
   python3 scripts/sweep-no-runtime-import.py            # from the repo root
@@ -89,6 +112,96 @@ def exports_of(spec, test_abs, _cache={}):
     result = _resolve_exports(spec, test_abs)
     _cache[(spec, test_abs)] = result
     return result
+
+
+def module_scope_values(src_dir):
+    """Map absolute module path -> names it exports as module-scope VALUES.
+
+    Only `export const|let|var NAME` at module top level qualifies. An
+    `export function`/`export class` is a BINDING whose body does not run at
+    load, so a load cannot be evidence that it was driven -- crediting those
+    would silence every callable gap in the repo (authMiddleware included).
+
+    The anchor is the `export` keyword at column 0, not an optional indent:
+    `export` is only legal at module top level in TypeScript, so an indented
+    match would be a string or a nested artefact rather than a declaration.
+    """
+    values = {}
+    decl = re.compile(
+        r"^export\s+(?:declare\s+)?(const|let|var)\s+([A-Za-z_$][\w$]*)",
+        re.M)
+    for dp, _dn, fns in os.walk(src_dir):
+        for fn in fns:
+            if not fn.endswith(".ts"):
+                continue
+            p = os.path.normpath(os.path.join(dp, fn))
+            src = open(p, encoding="utf-8").read()
+            names = {m.group(2) for m in decl.finditer(src)}
+            if names:
+                values.setdefault(p, set()).update(names)
+    return values
+
+
+def defining_file(spec, test_abs):
+    """Absolute path the specifier `spec` resolves to, or None.
+
+    Follows `export ... from` chains to the DEFINING file, because a value
+    declared in a.ts and re-exported by index.ts still executes when
+    index.ts is loaded.
+
+    The chain is followed THROUGH a non-src barrel, not stopped at it. A
+    module that is imported is EVALUATED, and evaluating a barrel that
+    imports src/a.ts evaluates a.ts -- so the answer to "what did this
+    specifier load?" is still a.ts. Stopping at the first non-src segment
+    (an earlier `if "src" not in cur_spec: return p`) reported the barrel
+    itself and dropped the whole subtree behind it, which is the same
+    transitive blindness the sweep's docstring already admits for CALLS;
+    here it silently miscounts a LOAD. The cycle guard is what actually
+    prevents a non-terminating walk.
+    """
+    cur_spec, cur_dir = spec, os.path.dirname(test_abs)
+    seen = set()
+    while cur_spec and cur_spec not in seen:
+        seen.add(cur_spec)
+        p = _resolve_path(cur_spec, cur_dir)
+        if p is None:
+            return None
+        nxt = _reexport_target(p)
+        if not nxt:
+            # This IS the defining file: no chain to follow, so this is the
+            # module a load evaluates. Falling out of the loop here instead
+            # returned None for every ordinary module.
+            return p
+        cur_dir, cur_spec = os.path.dirname(p), nxt
+    return None
+
+
+def _resolve_path(spec, base):
+    for cand in (spec, spec + ".ts", os.path.join(spec, "index.ts")):
+        p = os.path.normpath(os.path.join(base, cand))
+        if os.path.isfile(p):
+            return p
+    return None
+
+
+def _reexport_target(path):
+    """The specifier `path` forwards its exports from, or None.
+
+    Both forwarding forms count, and they are NOT interchangeable:
+      export * from './x'            -- forwards everything
+      export { A, B } from './x'     -- forwards a named subset
+    Only handling the first left `export { VIA_BARREL } from './a'` resolving
+    to index.ts, whose own text has no `export const`, so the value in the
+    defining file was never credited. A barrel that re-exports a subset is
+    how the real repo reaches several benchmark arrays.
+    """
+    src = open(path, encoding="utf-8").read()
+    for pat in (r"export\s+\*\s+from\s+'([^']*)'",
+                r"export\s*\{[^}]*\}\s*from\s+'([^']*)'"):
+        m = re.search(pat, src)
+        if m:
+            return m.group(1)
+    return None
 
 
 def _resolve_exports(spec, test_abs):
@@ -195,19 +308,40 @@ def _starts_binding(prefix):
             r"(?:^|[;\n{,]|\b(?:const|let|var)\b\s*)$", prefix))
 
 
-def collect_imports(tests_dir):
-    """Map imported symbol name -> set of test files that import it."""
-    importer = {}
+def collect_imports(tests_dir, loaded_modules=None):
+    """Map imported symbol name -> set of test files that import it.
 
-    def note(clause, spec, test_rel):
-        # Only src/ imports count. A symbol pulled from ../types or a test
-        # helper is not evidence that its src definition is driven.
+    `loaded_modules` is an optional set of absolute module paths; every
+    module-scope VALUE export of those modules is credited to the module
+    itself, because loading a module evaluates its top-level initializers.
+    The set is accumulated here (every specifier a test loads, from any
+    clause shape) rather than trusted from a caller, so an import shape the
+    note() rules miss still counts as a load.
+    """
+    importer = {}
+    if loaded_modules is None:
+        loaded_modules = set()
+
+    def note(clause, spec, test_rel, test_abs):
+        # Record the LOAD before the containment gate below. The load rule asks
+        # "did evaluating this specifier run a module-scope initializer?", and
+        # a NON-src barrel that forwards into src answers YES: importing
+        # '../support' evaluates support/index.ts, which imports src/a.ts, so
+        # a.ts is loaded too. Deferring this call to after the gate discarded
+        # the walk's result and left the guard in defining_file() deciding
+        # nothing -- R449 mutation M3 survived the suite for that reason.
+        f = defining_file(spec, test_abs)
+        if f:
+            loaded_modules.add(f)
+        # Only src/ imports count as evidence for the NAME. A symbol pulled
+        # from ../types or a test helper is not evidence that its src
+        # definition is driven.
         if "src" not in spec:
             return
         for n in re.finditer(r"[A-Za-z_$][\w$]*", clause):
             importer.setdefault(n.group(0), set()).add(test_rel)
 
-    def note_binding(stmt, spec, test_rel):
+    def note_binding(stmt, spec, test_rel, test_abs):
         """Credit only the names the BINDING PATTERN of `stmt` introduces.
 
         The text to the left of a require's `=` is not always the binding: a
@@ -251,7 +385,7 @@ def collect_imports(tests_dir):
         # required module and the sweep silently loses those gaps. Validating
         # the binding and then crediting the raw clause is the same defect one
         # layer up: the check passes and the overreach ships anyway.
-        note(bind.group(1), spec, test_rel)
+        note(bind.group(1), spec, test_rel, test_abs)
 
     def note_members(target, spec, test_rel, rest, test_abs):
         """Record `m.a` / `m['a']` reads off a module object bound to `target`.
@@ -273,6 +407,12 @@ def collect_imports(tests_dir):
         # still marks it pinned -- a false NEGATIVE that hides the very gap
         # the sweep exists to report.
         own = exports_of(spec, test_abs)
+        f = defining_file(spec, test_abs)
+        if f:
+            # A member read means the module was loaded whatever the binding
+            # rules decided, so the load rule applies even for the bare
+            # `m = require(...)` shape whose binding arm bails out.
+            loaded_modules.add(f)
         for chunk in chunks:
             for prop in re.finditer(rf"\b{re.escape(target)}\.(\w+)", chunk):
                 if own is None or prop.group(1) in own:
@@ -304,7 +444,7 @@ def collect_imports(tests_dir):
 
             # ES import, possibly spread over several lines.
             for m in re.finditer(r"import\s+([\s\S]*?)\s+from\s+'([^']*)'", parse):
-                note(m.group(1), m.group(2), test_rel)
+                note(m.group(1), m.group(2), test_rel, p)
 
             # CommonJS destructure ABOVE the call. The binding list can span
             # lines, so read the statement to the left of the paren -- reading
@@ -320,12 +460,12 @@ def collect_imports(tests_dir):
             for m in re.finditer(r"require\(\s*'([^']*)'\s*\)", parse):
                 head = parse[max(0, m.start() - 400):m.start()]
                 stmt = head.rsplit(";", 1)[-1]
-                note_binding(stmt, m.group(1), test_rel)
+                note_binding(stmt, m.group(1), test_rel, p)
                 # CommonJS cast AFTER the call, on the same line.
                 tail = parse[m.end():m.end() + 400].split("\n")[0]
                 as_m = re.match(r"\s*as\s*\{([^}]*)\}", tail)
                 if as_m:
-                    note(as_m.group(1), m.group(1), test_rel)
+                    note(as_m.group(1), m.group(1), test_rel, p)
 
                 # MEMBER ACCESS on the bound module object. `const m =
                 # require('../src/db/database'); m.EVALUATION_MIGRATION_COLUMNS`
@@ -373,7 +513,16 @@ def member_window(text, start, target, bindings):
 def sweep(src_dir, tests_dir):
     """Return (missing_sorted, exported, importer) for the given dirs."""
     exported = collect_exports(src_dir)
-    importer = collect_imports(tests_dir)
+    loaded = set()
+    importer = collect_imports(tests_dir, loaded)
+    # THE LOAD RULE. A module-scope value runs when its module is evaluated,
+    # so a test that loaded the module has executed it. Applied AFTER the
+    # import scan so it cannot mask an import-shape regression, and keyed on
+    # resolved paths so a module nothing loads credits nothing.
+    for path, names in module_scope_values(src_dir).items():
+        if path in loaded:
+            for n in names:
+                importer.setdefault(n, set()).add(os.path.relpath(path, REPO))
     missing = sorted(set(exported) - set(importer))
     return missing, exported, importer
 

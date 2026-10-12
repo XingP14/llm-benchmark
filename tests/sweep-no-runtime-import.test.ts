@@ -59,7 +59,19 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
       fs.writeFileSync(p, body);
     }
     for (const [rel, body] of Object.entries(tests)) {
-      fs.writeFileSync(path.join(testsDir, rel), body);
+      // Fixtures occasionally need a file BESIDE testsDir rather than inside
+      // it -- a non-src barrel at '../support' only resolves if it is written
+      // at <base>/support. path.join COLLAPSES a leading '..' TEXTUALLY, so
+      // join(base, '../support/index.ts') landed OUTSIDE the fixture root
+      // entirely (in /tmp, shared by every fixture) instead of beside src/.
+      // Split the '..' off and step up from base, so the walk starts inside
+      // the fixture and cannot leak between fixtures.
+      const up = rel.startsWith('../');
+      const p = up
+        ? path.join(base, ...rel.split('/').slice(1))
+        : path.join(testsDir, rel);
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, body);
     }
     return { srcDir, testsDir };
   }
@@ -222,12 +234,12 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     ).join('\n');
     const { srcDir, testsDir } = fixture(
       'deferred-member',
-      { 'z.ts': 'export const iota2: number = 9;\nexport const kappa2: number = 10;\n' },
+      { 'z.ts': 'export function iota2(): number { return 9; }\nexport function kappa2(): number { return 10; }\n' },
       {
         'z.test.ts':
           "const m = require('../src/z');\n" +
           filler + "\n" +
-          "function readIota(): number { return m.iota2; }\n" +
+          "function readIota(): number { return m.iota2(); }\n" +
           "describe('z', () => { it('z', () => expect(readIota()).toBe(9)); });\n",
       }
     );
@@ -246,14 +258,14 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     // here instead of 2 and hid a real coverage hole.
     const { srcDir, testsDir } = fixture(
       'rebound-target',
-      { 'a.ts': 'export const ALPHA2: string[] = ["a"];\nexport const SECRET_ALPHA2: string[] = ["h"];\n',
-        'b.ts': 'export const BETA2: string[] = ["b"];\n' },
+      { 'a.ts': 'export function ALPHA2(): void {}\nexport function SECRET_ALPHA2(): void {}\n',
+        'b.ts': 'export function BETA2(): void {}\n' },
       {
         'r.test.ts':
           "let m = require('../src/a');\n" +
-          'm.ALPHA2;\n' +
+          'm.ALPHA2();\n' +
           "m = require('../src/b');\n" +
-          'm.SECRET_ALPHA2;\n',
+          'm.SECRET_ALPHA2();\n',
       }
     );
     const names = reportedNames(runSweep(srcDir, testsDir));
@@ -271,14 +283,14 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     // reached by a different route, so both routes are pinned.
     const { srcDir, testsDir } = fixture(
       'import-clause-overreach',
-      { 'a.ts': 'export const ALPHA_B2: string[] = ["a"];\nexport const SECRET_B2: string[] = ["h"];\n',
-        'b.ts': 'export const BETA_B2: string[] = ["b"];\n' },
+      { 'a.ts': 'export function ALPHA_B2(): void {}\nexport function SECRET_B2(): void {}\n',
+        'b.ts': 'export function BETA_B2(): void {}\n' },
       {
         'g.test.ts':
           "let m = require('../src/a');\n" +
-          'm.ALPHA_B2\n' +
+          'm.ALPHA_B2()\n' +
           "m = require('../src/b');\n" +
-          'm.BETA_B2;\n',
+          'm.BETA_B2();\n',
       }
     );
     const names = reportedNames(runSweep(srcDir, testsDir));
@@ -318,12 +330,12 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     const { srcDir, testsDir } = fixture(
       'clause-overreach',
       { 'a.ts':
-          'export const T1: string[] = ["1"];\n' +
-          'export const T2: string[] = ["2"];\n' +
-          'export const alpha: string[] = ["a"];\n' +
-          'export const beta: string[] = ["b"];\n' +
-          'export const unrelated: string[] = ["u"];\n' +
-          'export const someCall: string[] = ["s"];\n' },
+          'export function T1(): void {}\n' +
+          'export function T2(): void {}\n' +
+          'export function alpha(): void {}\n' +
+          'export function beta(): void {}\n' +
+          'export function unrelated(): void {}\n' +
+          'export function someCall(): void {}\n' },
       {
         't.test.ts':
           'const unrelated = someCall(alpha, beta)\n' +
@@ -390,8 +402,8 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     const { srcDir, testsDir } = fixture(
       'nonbinding-tail',
       { 'a.ts':
-          'export const THING: string[] = ["t"];\n' +
-          'export const OTHER: string[] = ["o"];\n' },
+          'export function THING(): void {}\n' +
+          'export function OTHER(): void {}\n' },
       {
         't.test.ts':
           "exports.THING = require('../src/a');\n",
@@ -426,9 +438,9 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     const { srcDir, testsDir } = fixture(
       'comment-and-block-brace',
       { 'a.ts':
-          'export const REAL_DESTRUCTURE: string[] = ["d"];\n' +
-          'export const COMMENT_ONLY: string[] = ["c"];\n' +
-          'export const NEVER_MENTIONED: string[] = ["n"];\n' },
+          'export function REAL_DESTRUCTURE(): void {}\n' +
+          'export function COMMENT_ONLY(): void {}\n' +
+          'export function NEVER_MENTIONED(): void {}\n' },
       {
         't.test.ts':
           "describe('REAL_DESTRUCTURE (shared helper)', () => {\n" +
@@ -446,5 +458,152 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     expect(names.has('COMMENT_ONLY')).toBe(true);
     // ...and the untouched one is still reported.
     expect(names.has('NEVER_MENTIONED')).toBe(true);
+  });
+
+  it('(18) a module-scope VALUE is driven by the module being loaded at all', () => {
+    // R449. `export const` is only legal at module top level, so its
+    // initializer runs when the module is LOADED -- no call site can be
+    // required to reach it. A test that imports a DIFFERENT export from the
+    // same module has therefore executed PAYLOAD3 for real, and reporting it
+    // re-derives work that is already done.
+    //
+    // Every one of the repo's other reported gaps was this: codeBenchmarks,
+    // dialogueBenchmarks, functionCallingBenchmarks, longContextBenchmarks,
+    // multiTurnBenchmarks are all module-scope const arrays in files the
+    // suite loads at runtime (tests/benchmarks.test.ts,
+    // tests/benchmark-id-uniqueness.test.ts, tests/benchmarks-by-category.test.ts).
+    const { srcDir, testsDir } = fixture(
+      'value-driven-by-load',
+      { 'a.ts':
+          'export const PAYLOAD3: string[] = ["p"];\n' +
+          'export function other3(): number { return 3; }\n' },
+      {
+        't.test.ts':
+          "import { other3 } from '../src/a';\n" +
+          'it(\'x\', () => expect(other3()).toBe(3));\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('PAYLOAD3')).toBe(false);
+  });
+
+  it('(19) ...but only when the module is ACTUALLY loaded by a test', () => {
+    // THE FALSE NEGATIVE THIS MUST NOT INTRODUCE. Nothing here loads a.ts,
+    // so its initializer never runs and the value really is unbacked.
+    // Without this arm a rule of "credit every export of a loaded module"
+    // would be indistinguishable from the value rule above and the sweep
+    // would be toothless on the whole directory.
+    const { srcDir, testsDir } = fixture(
+      'value-never-loaded',
+      { 'a.ts':
+          'export const PAYLOAD4: string[] = ["p"];\n' +
+          'export function other4(): number { return 4; }\n' },
+      { 't.test.ts': "it('nothing', () => expect(1).toBe(1));\n" }
+    );
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('PAYLOAD4')).toBe(true);
+  });
+
+  it('(20) a FUNCTION in a loaded module still needs a call site', () => {
+    // The other half, and the falsifier for a whole-module blanket rule.
+    // authMiddleware lives in src/web/middleware/auth.ts, which IS loaded --
+    // and it is reported because being loaded does not CALL it. Crediting it
+    // for a load would silence the one genuine transitive-drive gap left in
+    // the repo (tests drive it only by importing routes/auth).
+    // a.ts IS loaded (other6 is imported from it), but loading a module does
+    // not CALL called6 -- so called6 is still a genuine gap.
+    const { srcDir, testsDir } = fixture(
+      'callable-not-driven-by-load',
+      { 'a.ts':
+          'export function called6(): number { return 6; }\n' +
+          'export function other6(): number { return 66; }\n' },
+      {
+        't.test.ts':
+          "import { other6 } from '../src/a';\n" +
+          'it(\'x\', () => expect(other6()).toBe(66));\n',
+      }
+    );
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('called6')).toBe(true);
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('other6')).toBe(false);
+  });
+
+  it('(21) a value reached through a RE-EXPORT barrel is credited to its module', () => {
+    // The real repo reaches the benchmark arrays through several
+    // specifiers, and a barrel is one of them. Resolution must follow the
+    // barrel to the defining file, not stop at the barrel's own text.
+    // As first written this arm imported VIA_BARREL DIRECTLY, so `note()`
+    // credited the name off the import clause and it passed against the
+    // unfixed sweep -- non-discriminating, the R447 trap. The name now
+    // appears in NO import clause: only a sibling export is imported, and
+    // VIA_BARREL is reachable only if the load rule follows the re-export
+    // chain from index.ts to the defining a.ts.
+    const { srcDir, testsDir } = fixture(
+      'barrel-value',
+      { 'a.ts':
+          'export const VIA_BARREL: string[] = ["v"];\n' +
+          'export function sibling9(): number { return 9; }\n',
+        'index.ts':
+          "export { VIA_BARREL, sibling9 } from './a';\n" },
+      { 't.test.ts': "import { sibling9 } from '../src/index';\n" }
+    );
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('VIA_BARREL')).toBe(false);
+  });
+
+  it('(22) a NON-src barrel that forwards into src DOES credit through it', () => {
+    // R449 mutation M3 SURVIVED the first matrix: the `if "src" not in
+    // cur_spec` guard in defining_file() looked load-bearing but decided
+    // nothing, because note() called defining_file() only AFTER its own
+    // `"src" not in spec` early return. So the walk's answer was computed
+    // and then discarded for every non-src specifier, and no fixture could
+    // see a difference.
+    //
+    // Which is wrong about the SEMANTICS, not just the coverage. Importing
+    // '../support' evaluates support/index.ts, which imports src/a.ts, so
+    // a.ts's module-scope initializer really does run. A non-src barrel that
+    // forwards into src loads src. The fix is to record the load BEFORE the
+    // containment gate: the gate governs whether a NAME is credited, and the
+    // load rule asks a different question.
+    //
+    // With the recording after the gate (M3's version) this arm goes RED:
+    // nothing under src/ is marked loaded, so the value is reported.
+    const { srcDir, testsDir } = fixture(
+      'nonsrc-barrel-forwarding',
+      { 'a.ts': 'export const VIA_NONSRC: string[] = ["v"];\n' },
+      {
+        // '../support' from tests/ resolves to <base>/support, NOT
+        // tests/support. The fixture helper only writes flat into testsDir,
+        // so the first attempt put the barrel at tests/support and the
+        // specifier resolved to a path that does not exist -- `note()` then
+        // saw a non-src specifier, and the arm passed for the wrong reason.
+        // It has to sit one level UP from testsDir, beside src.
+        '../support/index.ts': "export { VIA_NONSRC } from '../src/a';\n",
+        't.test.ts': "import { VIA_NONSRC } from '../support';\n",
+      }
+    );
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('VIA_NONSRC')).toBe(false);
+  });
+
+  it('(23) a re-export CYCLE terminates instead of walking forever', () => {
+    // R449 mutation M7 SURVIVED: the cycle guard in defining_file()
+    // (`cur_spec not in seen`) is load-bearing for termination and nothing
+    // exercised it. Every other fixture is a straight line, so deleting the
+    // guard left all 23 arms green -- while a barrel that re-exports itself
+    // would hang the sweep forever. The sweep is run from a reporting tool
+    // in a cron tick, so a hang here is a wedged job, not a wrong number.
+    //
+    // The cycle still has to answer correctly, not merely stop: neither
+    // a.ts nor index.ts's own payload is reached by a direct load of the
+    // cycle, so CYCLIC stays a genuine gap.
+    const { srcDir, testsDir } = fixture(
+      'reexport-cycle',
+      { 'a.ts':
+          'export const CYCLIC: string[] = ["c"];\\n' +
+          "export { VIA_LOOP } from './index';\\n",
+        'index.ts':
+          "export { CYCLIC } from './a';\\n" +
+          "export { VIA_LOOP } from './a';\\n" },
+      { 't.test.ts': "import { VIA_LOOP } from '../src/index';\\n" }
+    );
+    // Must return at all -- a hang is the failure this arm exists to catch.
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('CYCLIC')).toBe(true);
   });
 });
