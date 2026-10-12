@@ -9,16 +9,34 @@ exported symbols are backed ONLY by source-text assertions, or by nothing?
 
 WHAT WENT WRONG IN THE FIRST VERSION (keep this in mind before editing)
 The original sweep matched only ES `import ... from '...src/...'`. The runtime
-suites added later load the real module through CommonJS, in two shapes:
+suites added later load the real module through CommonJS, in three shapes:
 
     const { a } = require('../src/x')          # name ABOVE the paren
     const m  = require('../src/index') as { a }  # name AFTER it
+    const m  = require('../src/x'); m.a         # name ACCESSED off the binding
 
-Handling neither reported 4 shipped runtime suites as unpinned, and handling
-only one still misreports the other. A sweep that over-reports is worse than
+Handling none reported shipped runtime suites as unpinned, and handling only
+one or two still misreports the rest. A sweep that over-reports is worse than
 no sweep: it points the next tick at work that is already done. So every
 import shape has to be recognized here, and tests/sweep-no-runtime-import.test.ts
 pins them.
+
+STILL NOT RECOGNIZED (know these before trusting a report)
+Two shapes remain invisible to this sweep, and both produce FALSE POSITIVES.
+They are left reported rather than silenced, because a visible false positive
+can be dismissed with evidence and a silently-dropped one cannot:
+
+  1. TRANSITIVE drive. src/web/routes/auth.ts does
+     `import { authMiddleware } from '../middleware/auth'` and registers it on
+     a route. A test that imports the ROUTE drives the middleware for real,
+     but the middleware's name appears in no test import clause.
+  2. INTRA-FILE drive. `codeBenchmarks` is exported by coding.ts and read by
+     getTestCases() in the same file. Driving getTestCases() executes
+     codeBenchmarks, but the name appears in no test import clause.
+
+  Both need the src-side reachability graph that a test-side regex text cannot
+  build. Anything reported here must be checked against the module's own
+  callers before it is treated as a coverage gap.
 
 USAGE
   python3 scripts/sweep-no-runtime-import.py            # from the repo root
@@ -65,6 +83,24 @@ def collect_imports(tests_dir):
         for n in re.finditer(r"[A-Za-z_$][\w$]*", clause):
             importer.setdefault(n.group(0), set()).add(test_rel)
 
+    def note_members(target, spec, test_rel, rest):
+        """Record `m.a` / `m['a']` reads off a module object bound to `target`.
+
+        A member read is a real runtime touch of a real export: the module was
+        loaded and the property fetched. The name appears in no import clause,
+        which is why this shape was invisible before.
+
+        The containment test is `"src" in spec`, the same one `note()` uses.
+        A relative specifier is `'../../src/x'`, not `'src/x'`, so an
+        anchored test silently skipped every member read in the repo.
+        """
+        if "src" not in spec:
+            return
+        for prop in re.finditer(rf"\b{re.escape(target)}\.(\w+)", rest):
+            importer.setdefault(prop.group(1), set()).add(test_rel)
+        for prop in re.finditer(rf"\b{re.escape(target)}\['(\w+)'\]", rest):
+            importer.setdefault(prop.group(1), set()).add(test_rel)
+
     for dp, _dn, fns in os.walk(tests_dir):
         for fn in fns:
             if not fn.endswith(".ts"):
@@ -88,6 +124,27 @@ def collect_imports(tests_dir):
                 as_m = re.match(r"\s*as\s*\{([^}]*)\}", tail)
                 if as_m:
                     note(as_m.group(1), m.group(1), test_rel)
+
+                # MEMBER ACCESS on the bound module object. `const m =
+                # require('../src/db/database'); m.EVALUATION_MIGRATION_COLUMNS`
+                # is a real runtime read of a real export, but the name never
+                # appears in an import clause, so it was reported as unpinned --
+                # and tests/web/db-migration-missing-function-calling.test.ts
+                # drives that module for real. Two spellings matter: the inline
+                # `const m = require(...)`, and the BARE assignment `m =
+                # require(...)` to a `let m!: Mod` declared earlier -- the shape
+                # a jest.isolateModules() caller must use, because the binding
+                # has to outlive the callback.
+                stmt = head.rsplit(";", 1)[-1]
+                for bind_m in re.finditer(
+                        r"(?:(?:const|let|var)\s+)?"
+                        r"(\{[^}]*\}|[A-Za-z_$][\w$]*)\s*(?::[^=]*)?=\s*$",
+                        stmt):
+                    target = bind_m.group(1)
+                    if target.startswith("{"):
+                        # `const { a, b } = require(...)` -- names already noted.
+                        continue
+                    note_members(target, m.group(1), test_rel, text[m.end():])
     return importer
 
 

@@ -159,4 +159,82 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     expect(stdout).toContain('no-runtime-import=');
     expect(names.size).toBeGreaterThan(0);
   });
+
+  it('(8) a member read off a module bound to a BARE assignment is seen', () => {
+    // `mod = require('../src/x')` inside jest.isolateModules(), with the
+    // `let mod!: Mod` declared ABOVE the callback. The binding has to outlive
+    // the closure, so it cannot be a `const` in the statement -- and the
+    // eslint-disable comment that usually sits there must not hide it. No `as`
+    // cast: arm (3) already covers the cast shape, and with a cast this arm
+    // would pass against the unfixed script and prove nothing. Here the ONLY
+    // thing standing between the test and a green report is the bare
+    // assignment plus the member read.
+    // tests/web/db-migration-missing-function-calling.test.ts is this shape,
+    // and EVALUATION_MIGRATION_COLUMNS was reported unpinned because of it.
+    const { srcDir, testsDir } = fixture(
+      'bare-assign-member',
+      { 'x.ts': 'export const eta2: string[] = ["c1"];\nexport function close2(): void {}\n' },
+      {
+        // The eslint-disable comment is LOAD-BEARING for this arm. Without it
+        // the binding sits on the line directly above the require() and any
+        // `head` window finds it; with it, the anchor has to survive comment
+        // text. Deleting the comment-stripping pass makes this arm red.
+        'x.test.ts':
+          "let mod: { eta2: string[]; close2: () => void };\n" +
+          "jest.isolateModules(() => {\n" +
+          "  // eslint-disable-next-line @typescript-eslint/no-require-imports\n" +
+          "  // the module must be loaded inside the isolate callback\n" +
+          "  mod = require('../src/x');\n" +
+          "});\n" +
+          "it('x', () => expect(mod.eta2).toEqual(['c1']));\n",
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('eta2')).toBe(false);
+  });
+
+  it('(9) a relative specifier resolves member reads (the `src` in spec trap)', () => {
+    // The containment test must be `"src" in spec`, never spec.startswith.
+    // Every specifier in this repo is relative ('../src/x'), so an anchored
+    // test skips EVERY member read and the shape stays invisible no matter
+    // how it is spelled.
+    const { srcDir, testsDir } = fixture(
+      'relative-spec',
+      { 'y.ts': 'export const theta2: string[] = ["c2"];\n' },
+      {
+        'y.test.ts':
+          "const m = require('../src/y');\n" +
+          "it('y', () => expect(m.theta2).toEqual(['c2']));\n",
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('theta2')).toBe(false);
+  });
+
+  it('(10) a member read a variable LATER in the file still counts', () => {
+    // The binding is read after the require(), far past the 400-character
+    // forward window a line-scanning sweep would use. The filler is REAL CODE,
+    // not comments: a comment-only gap would still be inside the same textual
+    // neighbourhood and would not separate the binding from its read.
+    const filler = Array.from(
+      { length: 30 },
+      (_, i) => `const pad${i} = ${i};`
+    ).join('\n');
+    const { srcDir, testsDir } = fixture(
+      'deferred-member',
+      { 'z.ts': 'export const iota2: number = 9;\nexport const kappa2: number = 10;\n' },
+      {
+        'z.test.ts':
+          "const m = require('../src/z');\n" +
+          filler + "\n" +
+          "function readIota(): number { return m.iota2; }\n" +
+          "describe('z', () => { it('z', () => expect(readIota()).toBe(9)); });\n",
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('iota2')).toBe(false);
+    // And the sweep has NOT been made toothless in the other direction: the
+    // sibling export this file never reads is still reported.
+    expect(names.has('kappa2')).toBe(true);
+  });
 });
