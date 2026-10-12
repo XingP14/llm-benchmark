@@ -237,4 +237,214 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     // sibling export this file never reads is still reported.
     expect(names.has('kappa2')).toBe(true);
   });
+
+  it('(11) a member read is credited to the binding LIVE at its offset', () => {
+    // THE FALSE NEGATIVE THIS EXISTS FOR. `m` is bound to './a', read, then
+    // REBOUND to './b'. A sweep that forward-scans from each require credits
+    // `m.SECRET_ALPHA` to './a' -- but at that offset `m` is './b', which does
+    // not export SECRET_ALPHA at all. The old sweep therefore reported 1 gap
+    // here instead of 2 and hid a real coverage hole.
+    const { srcDir, testsDir } = fixture(
+      'rebound-target',
+      { 'a.ts': 'export const ALPHA2: string[] = ["a"];\nexport const SECRET_ALPHA2: string[] = ["h"];\n',
+        'b.ts': 'export const BETA2: string[] = ["b"];\n' },
+      {
+        'r.test.ts':
+          "let m = require('../src/a');\n" +
+          'm.ALPHA2;\n' +
+          "m = require('../src/b');\n" +
+          'm.SECRET_ALPHA2;\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('SECRET_ALPHA2')).toBe(true);
+    expect(names.has('ALPHA2')).toBe(false);
+    expect(names.has('BETA2')).toBe(true);
+  });
+
+  it('(12) a member read above a rebinding require is not mistaken for an import', () => {
+    // The `note()` clause used to be the raw text LEFT of `=`, which swept in
+    // every identifier sitting in the statement before it. Here the read
+    // carries NO trailing semicolon, so it shares a statement with the
+    // rebinding require -- the old sweep read `m.SECRET_B2` as an imported
+    // NAME of '../src/b' and reported 0 gaps. Same hidden hole as (11),
+    // reached by a different route, so both routes are pinned.
+    const { srcDir, testsDir } = fixture(
+      'import-clause-overreach',
+      { 'a.ts': 'export const ALPHA_B2: string[] = ["a"];\nexport const SECRET_B2: string[] = ["h"];\n',
+        'b.ts': 'export const BETA_B2: string[] = ["b"];\n' },
+      {
+        'g.test.ts':
+          "let m = require('../src/a');\n" +
+          'm.ALPHA_B2\n' +
+          "m = require('../src/b');\n" +
+          'm.BETA_B2;\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('SECRET_B2')).toBe(true);
+    expect(names.has('ALPHA_B2')).toBe(false);
+    expect(names.has('BETA_B2')).toBe(false);
+  });
+
+  it('(13) a star-re-export barrel keeps the name-only fallback', () => {
+    // exports_of() returns None for a barrel that `export *`-re-exports,
+    // because its own name set is incomplete. The member read must then still
+    // count: dropping it would make the sweep toothless on every barrel in
+    // the repo, reporting gaps that are actually driven.
+    const { srcDir, testsDir } = fixture(
+      'star-barrel',
+      { 'a.ts': 'export const OPAQUE_A: string[] = ["o"];\n',
+        'index.ts': "export * from './a';\n" },
+      { 'o.test.ts': "const m = require('../src/index');\nm.OPAQUE_A;\n" }
+    );
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('OPAQUE_A')).toBe(false);
+  });
+
+  it('(14) a binding clause carrying UNRELATED identifiers does not credit them', () => {
+    // The clause is the text left of `=` for a require that follows an
+    // unterminated statement. Handing the raw text to note() sweeps in every
+    // identifier in it, so `someCall(alpha, beta)` marks BOTH alpha and beta
+    // as imported names of '../src/a' and the sweep silently loses the gap.
+    //
+    // R447: this arm as inherited was NOT discriminating. It exported only T1
+    // and T2, so crediting the overreach names changed nothing observable —
+    // `alpha`, `beta` and `unrelated` are not exports of `a.ts`, so marking
+    // them "pinned" has no effect on what is REPORTED. The mutation
+    // `note(stmt)` in place of `note(bind.group(1))` left the suite 15/15
+    // green: M3 survived, and the arm that exists to defend that exact line
+    // was the reason. The overreach identifiers must themselves be exports,
+    // or crediting them costs nothing and the arm cannot fail.
+    const { srcDir, testsDir } = fixture(
+      'clause-overreach',
+      { 'a.ts':
+          'export const T1: string[] = ["1"];\n' +
+          'export const T2: string[] = ["2"];\n' +
+          'export const alpha: string[] = ["a"];\n' +
+          'export const beta: string[] = ["b"];\n' +
+          'export const unrelated: string[] = ["u"];\n' +
+          'export const someCall: string[] = ["s"];\n' },
+      {
+        't.test.ts':
+          'const unrelated = someCall(alpha, beta)\n' +
+          "const { T1 } = require('../src/a');\n",
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    // T1 IS genuinely destructured, so it is pinned...
+    expect(names.has('T1')).toBe(false);
+    // ...but nothing drives T2, and the overreach must not claim otherwise.
+    expect(names.has('T2')).toBe(true);
+    // R447: and the overreach identifiers must be REPORTED as gaps. Without
+    // this, a sweep that credits the whole clause is indistinguishable from
+    // one that reads only the binding.
+    expect(names.has('alpha')).toBe(true);
+    expect(names.has('beta')).toBe(true);
+    expect(names.has('unrelated')).toBe(true);
+  });
+
+  it('(15) the src containment guard decides a REPORTED name, not a bystander', () => {
+    // R448, mutation M5 SURVIVED: deleting the `if "src" not in spec: return`
+    // from note_members() left all 15 arms green. The reason is a fixture
+    // bug, not a dead guard -- the earlier arms use a NON-src require whose
+    // read property collides with a src export by NAME, and note() filters
+    // that name out anyway. So the guard's decision was unobservable.
+    //
+    // The discriminating shape: the non-src module is the ONLY importer of the
+    // name, and the name IS a src export. `h.NS_COLLIDE` where h is bound to
+    // '../helpers' must NOT pin NS_COLLIDE, which a.ts really exports. Without
+    // the guard, no-runtime-import drops 1 -> 0 and the sweep hides a gap that
+    // no test drives.
+    const { srcDir, testsDir } = fixture(
+      'nonsrc-member-collide',
+      { 'a.ts': 'export const NS_COLLIDE: string[] = ["a"];\n' },
+      {
+        't.test.ts':
+          "const h = require('../helpers');\n" +
+          'h.NS_COLLIDE;\n',
+      }
+    );
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('NS_COLLIDE')).toBe(true);
+  });
+
+  it('(16) a non-binding trailing pattern is not credited even when it IS an export', () => {
+    // R448, mutation M6 SURVIVED twice. First because the guard decided a
+    // bystander name no fixture exported. Second because my rewritten fixture
+    // was still not discriminating for a subtler reason: with a
+    // `const { KEPT } =` declaration in the same statement, the
+    // end-anchored pattern matches `{ KEPT }` WITH OR WITHOUT the guard, so
+    // the guard was never the deciding step. An arm can be non-discriminating
+    // while looking like it exercises the guard, because the pattern finds a
+    // VALID binding on its own.
+    //
+    // The shape where the guard alone decides: the `=` belongs to a MEMBER
+    // ASSIGNMENT, so the last identifier before it is the property being
+    // assigned -- a real and common re-export idiom:
+    //
+    //     exports.THING = require('../src/a')
+    //
+    // With the guard, `THING` is not a binding and is not credited. Without
+    // it, `note('exports.THING')` credits THING and the sweep silently loses
+    // the gap. THING is a genuine export of a.ts, so the difference is
+    // observable.
+    const { srcDir, testsDir } = fixture(
+      'nonbinding-tail',
+      { 'a.ts':
+          'export const THING: string[] = ["t"];\n' +
+          'export const OTHER: string[] = ["o"];\n' },
+      {
+        't.test.ts':
+          "exports.THING = require('../src/a');\n",
+      }
+    );
+    // Nothing drives OTHER either, and THING is driven only by being ASSIGNED
+    // to a property -- neither is a runtime import of the export.
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('THING')).toBe(true);
+    expect(names.has('OTHER')).toBe(true);
+  });
+
+  it('(17) a destructure inside a comment, and a describe-block brace, are not bindings', () => {
+    // R448: the precision fix above introduced a FALSE POSITIVE on the real
+    // repo -- it lost `defaultPing` (12 -> 13 gaps once combined with the
+    // other loss), a symbol tests/adapter.test.ts DOES destructure and drive on
+    // line 646. Two independent causes, both silent, and neither caught by the
+    // mutation matrix because no fixture had the shape:
+    //
+    //   (a) COMMENTS ARE CODE TO THIS SWEEP. The describe block above line 646
+    //       carries `const { defaultPing } =` in a `//` comment, so the
+    //       end-anchored match stopped on the comment, not on the real
+    //       declaration.
+    //   (b) `\{[^}]*\}` NESTED ACROSS BLOCKS. With the comment text gone, the
+    //       match still started at the `{` of `describe(..., () => {` and ran
+    //       to the `}` of `{ defaultPing }`, because a binding list cannot
+    //       contain a nested brace and the permissive pattern did not care.
+    //
+    // So the name ends up pinned by neither the destructuring nor by any
+    // require of its own module -- the sweep reports work that is done, which
+    // is the failure mode its own docstring calls worse than no sweep.
+    const { srcDir, testsDir } = fixture(
+      'comment-and-block-brace',
+      { 'a.ts':
+          'export const REAL_DESTRUCTURE: string[] = ["d"];\n' +
+          'export const COMMENT_ONLY: string[] = ["c"];\n' +
+          'export const NEVER_MENTIONED: string[] = ["n"];\n' },
+      {
+        't.test.ts':
+          "describe('REAL_DESTRUCTURE (shared helper)', () => {\n" +
+          "  // const { COMMENT_ONLY } = require('../src/a');\n" +
+          "  /* the payload is { role: 'user' } */\n" +
+          "  const { REAL_DESTRUCTURE } = require('../src/a');\n" +
+          '  REAL_DESTRUCTURE;\n' +
+          '});\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    // The real destructure is pinned...
+    expect(names.has('REAL_DESTRUCTURE')).toBe(false);
+    // ...the commented-out one never happened...
+    expect(names.has('COMMENT_ONLY')).toBe(true);
+    // ...and the untouched one is still reported.
+    expect(names.has('NEVER_MENTIONED')).toBe(true);
+  });
 });
