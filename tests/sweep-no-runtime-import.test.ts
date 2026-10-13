@@ -606,4 +606,123 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     // Must return at all -- a hang is the failure this arm exists to catch.
     expect(reportedNames(runSweep(srcDir, testsDir)).has('CYCLIC')).toBe(true);
   });
+
+  it('(24) a module-scope VALUE reached ONLY by an `import type` clause is still reported', () => {
+    // TypeScript ERASES `import type`: it emits no require and no load, so
+    // the module is never evaluated and its module-scope initializer never
+    // runs. The sweep's ES arm matches
+    //     import\\s+([\\s\\S]*?)\\s+from\\s+'([^']*)'
+    // which swallows `import type { T } from '...'` whole, and note() records
+    // the LOAD before it gates on names -- so the erased import is recorded
+    // as a load and the load rule credits every module-scope value the
+    // module declares.
+    //
+    // In the real repo that silently credits DEFAULT_API_TIMEOUT_MS and three
+    // benchmark arrays behind type-only clauses. Those are masked today only
+    // because other suites happen to import the same modules for real; the
+    // instrument's answer is right by luck, not by rule.
+    //
+    // As first written this arm also imported a sibling for real, so the
+    // module WAS loaded and the value correctly credited -- the arm passed
+    // against the unfixed sweep, the R447 trap. Nothing here loads a.ts.
+    const { srcDir, testsDir } = fixture(
+      'type-only-import-is-not-a-load',
+      { 'a.ts':
+          'export interface T24 { id: string }\n' +
+          'export const TYPE_ONLY_PAYLOAD: string[] = ["p"];\n' },
+      {
+        't.test.ts':
+          "import type { T24 } from '../src/a';\n" +
+          'const v: T24 = { id: "x" };\n' +
+          'it(\'x\', () => expect(v.id).toBe("x"));\n',
+      }
+    );
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('TYPE_ONLY_PAYLOAD')).toBe(true);
+  });
+
+  it('(25) a REAL import in the same file still credits its value after (24)', () => {
+    // The control arm for (24), and the falsifier for over-correcting it.
+    // Blanket-blocking every clause in a file that also contains a type-only
+    // import would make (24) pass for the wrong reason -- and would hide real
+    // gaps, which is the direction that costs the next tick a rebuild.
+    const { srcDir, testsDir } = fixture(
+      'real-import-alongside-type-only',
+      { 'a.ts':
+          'export interface T25 { id: string }\n' +
+          'export const REALLY_LOADED: string[] = ["p"];\n' +
+          'export function sibling25(): number { return 25; }\n' },
+      {
+        't.test.ts':
+          "import type { T25 } from '../src/a';\n" +
+          "import { sibling25 } from '../src/a';\n" +
+          'const v: T25 = { id: "x" };\n' +
+          'it(\'x\', () => expect(sibling25() + v.id.length).toBe(27));\n',
+      }
+    );
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('REALLY_LOADED')).toBe(false);
+  });
+
+  it('(26) an INLINE `type` specifier is erased but its siblings still load the module', () => {
+    // M2 SURVIVED the first matrix: widening the guard from "clause starts
+    // with `type`" to "clause contains ANY type specifier" left all 26 arms
+    // green, because every fixture so far separates the two spellings into
+    // different clauses. `import { type A, B } from './m'` is ONE clause: B is
+    // a real runtime import and its module-scope values really do run, so
+    // blanket-skipping the clause hides a value that is genuinely covered --
+    // the dangerous direction, which sends the next tick to rebuild work that
+    // is already done.
+    //
+    // The erased name is checked too. `type A` must not be credited as a NAME
+    // either: an interface is not a value, so crediting it would make
+    // collect_exports' own blind spot invisible.
+    const { srcDir, testsDir } = fixture(
+      'inline-type-specifier',
+      { 'a.ts':
+          'export interface T26 { id: string }\n' +
+          'export const SIBLING_LOADED: string[] = ["p"];\n' +
+          'export function real26(): number { return 26; }\n' },
+      {
+        't.test.ts':
+          "import { type T26, real26 } from '../src/a';\n" +
+          'const v: T26 = { id: "x" };\n' +
+          'it(\'x\', () => expect(real26() + v.id.length).toBe(27));\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('SIBLING_LOADED')).toBe(false);
+    // T26 is an `export interface`, which collect_exports never collected, so
+    // it is not a reportable name -- asserted here to pin WHY it is absent.
+    expect(names.has('T26')).toBe(false);
+  });
+
+  it('(27) the type-specifier strip works on a MULTI-LINE clause', () => {
+    // M3's mirror. The inline specifier can sit on its own line inside a brace
+    // list, and a strip anchored to a single line lets the name through. Here
+    // `type T27` opens the clause and `real27` closes it, so both the guard and
+    // the strip have to survive a newline between `type` and its name.
+    //
+    // NOTE on what this arm does NOT pin. Replacing the blanking with deletion
+    // (M3) still leaves all 28 arms green, and that is correct rather than a
+    // gap: `note()` only ever scans the clause for identifiers, never slices it,
+    // so an offset shift changes nothing. Length preservation here is
+    // belt-and-braces, NOT load-bearing. A comment claiming this arm kills M3
+    // would be an inventory of an intention the suite does not have (R450) --
+    // see _without_type_specifiers, whose docstring states the same fact.
+    // M3 therefore counts as a SURVIVING mutation explained by artefact, not
+    // as a suite gap to close.
+    const { srcDir, testsDir } = fixture(
+      'multiline-type-specifier',
+      { 'a.ts':
+          'export interface T27 { id: string }\n' +
+          'export const MULTILINE_LOADED: string[] = ["p"];\n' +
+          'export function real27(): number { return 27; }\n' },
+      {
+        't.test.ts':
+          "import {\n  type T27,\n  real27,\n} from '../src/a';\n" +
+          'const v: T27 = { id: "x" };\n' +
+          'it(\'x\', () => expect(real27() + v.id.length).toBe(28));\n',
+      }
+    );
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('MULTILINE_LOADED')).toBe(false);
+  });
 });

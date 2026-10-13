@@ -290,6 +290,40 @@ def strip_comments(text):
     return "".join(out)
 
 
+# Only a clause that is ENTIRELY type-only is erased. The brace-list
+# alternative is deliberately absent: `import { type A, B }` is ONE clause whose
+# B is a real runtime import, so skipping the whole clause would hide a value
+# that is genuinely covered -- the direction that sends the next tick to rebuild
+# work that is already done (arms 26/27).
+_TYPE_ONLY_CLAUSE = re.compile(r"^\s*(?:type\b|typeof\b)")
+_INLINE_TYPE_SPEC = re.compile(r"\btype\s+[A-Za-z_$][\w$]*\s*(?:,|as\s|\}|\Z)")
+
+
+def _without_type_specifiers(clause):
+    """Blank `type` specifiers out of an import clause.
+
+    `import { type A, B } from './m'` is legal TypeScript and A is erased while
+    B is a real runtime import. Dropping the whole clause would over-correct
+    (arm 26) and crediting A would over-report coverage of a type. So the
+    erased specifier is REPLACED BY SPACES, which leaves the name invisible to
+    the identifier scan note() runs over the clause.
+
+    Arm 27 is the falsifier for a stronger claim this note does not make. It is
+    MEASURED, not assumed: replacing the blanking with deletion (M3) leaves all
+    28 arms green, because the clause is only ever scanned for identifiers and
+    never sliced, so an offset shift here changes nothing. The length-preserving
+    form is belt-and-braces and NOT load-bearing; M3 is a surviving mutation
+    explained by artefact (R194), not a suite gap.
+    """
+    out, last = [], 0
+    for m in _INLINE_TYPE_SPEC.finditer(clause):
+        out.append(clause[last:m.start()])
+        out.append(" " * (m.end() - m.start()))
+        last = m.end()
+    out.append(clause[last:])
+    return "".join(out)
+
+
 def _starts_binding(prefix):
     """True when text immediately before a candidate can be a binding start.
 
@@ -444,7 +478,15 @@ def collect_imports(tests_dir, loaded_modules=None):
 
             # ES import, possibly spread over several lines.
             for m in re.finditer(r"import\s+([\s\S]*?)\s+from\s+'([^']*)'", parse):
-                note(m.group(1), m.group(2), test_rel, p)
+                clause = m.group(1)
+                # `import type` IS ERASED. TypeScript emits no require and no
+                # load for it, so the module is never evaluated and its
+                # module-scope initializer never runs. Crediting the LOAD here
+                # would let an erased clause satisfy the load rule and silence
+                # every value export of a module that only type-tests reach.
+                if _TYPE_ONLY_CLAUSE.match(clause):
+                    continue
+                note(_without_type_specifiers(clause), m.group(2), test_rel, p)
 
             # CommonJS destructure ABOVE the call. The binding list can span
             # lines, so read the statement to the left of the paren -- reading
