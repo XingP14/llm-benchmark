@@ -297,6 +297,21 @@ def strip_comments(text):
 # work that is already done (arms 26/27).
 _TYPE_ONLY_CLAUSE = re.compile(r"^\s*(?:type\b|typeof\b)")
 _INLINE_TYPE_SPEC = re.compile(r"\btype\s+[A-Za-z_$][\w$]*\s*(?:,|as\s|\}|\Z)")
+# The EXPRESSION twin of _TYPE_ONLY_CLAUSE. `typeof import('..')` is a type
+# position: it names a module for its shape and never evaluates it, so it
+# emits no require and may not be credited as a load. Kept SEPARATE from the
+# clause pattern on purpose -- the clause pattern anchors at the START of a
+# statement and would match every `typeof` expression in a test body if reused
+# here.
+#
+# The `type` alternative that stood here was DEAD and is removed: measured
+# over the whole corpus (46 dynamic-import sites) there is not one where a
+# `type` token prefixes the call, and `type import('..')` is a syntax error in
+# expression position (TS1361 admits it only inside a type position). It also
+# could not be pinned -- deleting it moved no arm, because the regex's own
+# `(?<!typeof\s)` lookahead already excludes the site. A guard that no input
+# reaches and no test can fail is not coverage; it is a second opinion.
+_TYPE_ONLY_DYNAMIC = re.compile(r"(?:^|[^\w$])typeof\s+$")
 
 
 def _without_type_specifiers(clause):
@@ -487,6 +502,91 @@ def collect_imports(tests_dir, loaded_modules=None):
                 if _TYPE_ONLY_CLAUSE.match(clause):
                     continue
                 note(_without_type_specifiers(clause), m.group(2), test_rel, p)
+
+            # DYNAMIC `import('...')`. An import EXPRESSION emits a real
+            # require and evaluates the module, exactly as a static clause
+            # does, so it is a genuine LOAD -- and where the result is bound
+            # (`const mod = await import(...)`) its member reads are real
+            # reads of real exports, the same shape the static
+            # `m = require(...)` member arm handles.
+            #
+            # Two positions are EXCLUDED and neither is a special case of the
+            # other. `import type {..} from '..'` and an inline `type` specifier
+            # are ERASED by TypeScript: no require, no evaluation. A sweep that
+            # keyed on the `import` KEYWORD credited every module-scope value
+            # behind a type-only clause and silenced gaps that are real (R451
+            # shipped that fix for the static clause; this is its expression
+            # twin). And `typeof import('..')` is a TYPE position -- it names a
+            # module for its shape and never evaluates it, which is the same
+            # erasure with different syntax. Crediting it would drop the whole
+            # class of modules a test only type-references. The negative
+            # lookahead is what separates the two: a value `typeof`ed is never
+            # loaded, while `await import(...)` sits where `typeof` does not.
+            for m in re.finditer(r"(?<!typeof\s)\bimport\s*\(\s*'([^']*)'\s*\)", parse):
+                spec = m.group(1)
+                # A `typeof` in a type position (`type M = typeof import('..')`)
+                # is legal TS, so it must not be credited. The regex's own
+                # `(?<!typeof\s)` lookahead already excludes that shape, which
+                # is why removing this gate moved no arm (measured, not
+                # assumed): the gate is defence in depth for a site that
+                # survives some future change to that lookahead, not a second
+                # opinion on today's input. The window is 24 chars because a
+                # `typeof import(...)` can carry a qualifier between the two
+                # tokens (`typeof Awaited<import(...)>`).
+                if _TYPE_ONLY_DYNAMIC.match(parse[max(0, m.start() - 24):m.start()]):
+                    continue
+                # The LOAD is unconditional on binding shape: evaluating the
+                # specifier runs the module-scope initializers whoever does
+                # the evaluating.
+                f = defining_file(spec, p)
+                if f:
+                    loaded_modules.add(f)
+                # MEMBER READS off the result object, keyed on the binding that
+                # sits immediately LEFT of the call. `const mod = await
+                # import('..')` binds `mod`; `const { fn } = await import('..')`
+                # binds a brace list. Recorded before the containment gate for
+                # the same reason note() does: the load rule asks what was
+                # EVALUATED, and a barrel that forwards into src answers yes.
+                left = parse[max(0, m.start() - 200):m.start()]
+                # Two views of the same left-hand side, because ONE split
+                # cannot serve both binding shapes. `stmt` sheds the trailing
+                # `{` so an arrow-function body (`async () => {`) does not
+                # masquerade as the binding; `stmt_full` keeps it, because a
+                # DESTRUCTURING brace IS the binding. Testing the brace on
+                # the stripped view finds nothing -- the strip removed it --
+                # so `const { fn } = await import('..')` fell through to the
+                # member-read path and recorded `fn` as a member read of a
+                # binding, which it is not. Measured: arm 32 was RED at
+                # baseline for exactly this reason.
+                stmt_full = left.rsplit(";", 1)[-1]
+                stmt = stmt_full.rsplit("{", 1)[-1]
+                # The binding is what sits LEFT OF THE `=`. Taking the last
+                # identifier of the statement instead captured `await` in
+                # `const mod = await import('..')`, because the operator
+                # between the binding and the call is the very token the
+                # expression ends on. Same reason note_binding() reads
+                # backwards from `=`.
+                head = stmt_full.rsplit("=", 1)[0] if "=" in stmt_full else ""
+                # `const { fn, g } = await import('..')` -- a brace list, read
+                # off the UNSTRIPPED view and required to run to the end of the
+                # head so a call site further left cannot be mistaken for one.
+                # The arrow body of an enclosing `=> {` cannot satisfy this:
+                # the head ends in `const mod`, not in a closing brace.
+                brace = re.findall(r"\{([^{}]*)\}\s*$", head)
+                if brace:
+                    # A call is not interchangeable with a load, so the
+                    # destructured names get the same treatment
+                    # note_binding() gives them: read, not member-read.
+                    note(brace[-1], spec, test_rel, p)
+                else:
+                    head = stmt.rsplit("=", 1)[0] if "=" in stmt else ""
+                    binds = list(re.finditer(
+                        r"(?:const|let|var)?\s*([A-Za-z_$][\w$]*)\s*$", head))
+                    if binds:
+                        note_members(binds[-1].group(1), spec, test_rel,
+                                     member_window(parse, m.end(),
+                                                  binds[-1].group(1), []),
+                                     p)
 
             # CommonJS destructure ABOVE the call. The binding list can span
             # lines, so read the statement to the left of the paren -- reading

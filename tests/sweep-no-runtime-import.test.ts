@@ -725,4 +725,189 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     );
     expect(reportedNames(runSweep(srcDir, testsDir)).has('MULTILINE_LOADED')).toBe(false);
   });
+
+  it('(29) `await import(...)` is a runtime LOAD, so the module-scope value is driven', () => {
+    // The third erased-vs-runtime boundary, after `import type` and the type
+    // SPECIFIER. A dynamic `import('...')` inside an expression EMITS a real
+    // require and evaluates the module, exactly as a static clause does -- so
+    // crediting it is correct. Before this arm the sweep's clause scanner
+    // matched only `import ... from '...'` and `require('...')`, so both names
+    // below were reported: the module-scope value and the function the test
+    // genuinely drives. That is the expensive direction -- the next tick
+    // rebuilds work that already exists.
+    const { srcDir, testsDir } = fixture(
+      'dynamic-import-loads',
+      { 'a.ts':
+          'export const DYN_LOADED: string[] = ["p"];\n' +
+          'export function dyn29(): number { return 29; }\n' },
+      {
+        't.test.ts':
+          "it('x', async () => {\n" +
+          "  const mod = await import('../src/a');\n" +
+          '  expect(mod.dyn29()).toBe(29);\n' +
+          '});\n',
+      }
+    );
+    // The LOAD rule: evaluating a.ts ran the initializer of DYN_LOADED.
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('DYN_LOADED')).toBe(false);
+    // The member read: `mod.dyn29()` is a real read of a real export, the same
+    // shape the static `m = require(...)` arm already handles.
+    expect(reportedNames(runSweep(srcDir, testsDir)).has('dyn29')).toBe(false);
+  });
+
+  it('(31) a BARE `await import(...)` still loads the module, with no binding to credit', () => {
+    // Arm 29 alone could not fail this half of the rule. Its fixture reads a
+    // member off the result, and the member arm credits the name through a
+    // DIFFERENT path, so deleting `loaded_modules.add(f)` from the
+    // dynamic-import arm left arm 29 green -- measured, M3 SURVIVED. The
+    // load is a separate claim from the member read, and it needs its own
+    // fixture where the binding is ABSENT, leaving nothing else to credit the
+    // module-scope value. Without this arm the sweep could drop every
+    // dynamic-import load and only a test that never binds would notice.
+    const { srcDir, testsDir } = fixture(
+      'dynamic-import-bare-load',
+      { 'a.ts':
+          'export const DYN_LOADED: string[] = ["p"];\n' +
+          'export function dyn29(): number { return 29; }\n' },
+      {
+        't.test.ts':
+          "it('x', async () => {\n" +
+          "  await import('../src/a');\n" +
+          '});\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    // The module-scope initializer ran when the specifier was evaluated.
+    expect(names.has('DYN_LOADED')).toBe(false);
+    // The FUNCTION is not called and not imported off a binding -- a bare
+    // load drives module-scope VALUES only, which is exactly the distinction
+    // arm 20 draws for the static clause.
+    expect(names.has('dyn29')).toBe(true);
+  });
+
+  it('(32) a DESTRUCTURED dynamic import credits the destructured names', () => {
+    // `const { dyn29 } = await import('..')` binds a brace list, not an
+    // identifier, and a call is not interchangeable with a load. The
+    // identifier path (`const mod = await import('..')`) is covered by arm 29;
+    // nothing pinned the brace path, and the binding is read backwards from
+    // `=` for the same reason note_binding() does it.
+    const { srcDir, testsDir } = fixture(
+      'dynamic-import-destructure',
+      { 'a.ts':
+          'export const DYN_LOADED: string[] = ["p"];\n' +
+          'export function dyn29(): number { return 29; }\n' },
+      {
+        't.test.ts':
+          "it('x', async () => {\n" +
+          "  const { dyn29 } = await import('../src/a');\n" +
+          '  expect(dyn29()).toBe(29);\n' +
+          '});\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    // The module was loaded, so its module-scope value ran.
+    expect(names.has('DYN_LOADED')).toBe(false);
+    // And the destructured name is a real binding, so calling it is a call.
+    expect(names.has('dyn29')).toBe(false);
+  });
+
+  it('(33) the `type` alternative of the dynamic-import type gate has no input to reach it', () => {
+    // The gate _TYPE_ONLY_DYNAMIC once carried `(?:type|typeof)`, and deleting
+    // the `type` alternative moved no arm (measured, M2 SURVIVED) -- a guard
+    // nothing can reach and nothing can fail. Two independent reasons it is
+    // unreachable, and this arm pins BOTH so the alternative cannot come back
+    // as an untested second opinion.
+    //
+    // (1) `type import('..')` is a SYNTAX ERROR in expression position: TS
+    //     admits `type` in an import only inside a type position (TS1361). So
+    //     no compiling test can present it to the scanner.
+    // (2) The scanner's own `(?<!typeof\s)` lookahead removes `typeof` sites
+    //     BEFORE the gate is consulted, so even the legal `typeof` shape
+    //     reaches the gate only if that lookahead is changed. The gate is
+    //     defence in depth, not a second opinion on today's input.
+    //
+    // The census that motivated this: 46 dynamic-import sites across
+    // tests/ and src/, ZERO of them prefixed by a `type` token.
+    const { srcDir, testsDir } = fixture(
+      'dynamic-import-type-alt-unreachable',
+      { 'a.ts':
+          'export const TYPEONLY_NOT_LOADED: string[] = ["p"];\n' +
+          'export function untouched33(): number { return 33; }\n' },
+      {
+        't.test.ts':
+          // The only legal type-position dynamic import. Single quotes: the
+          // scanner matches '...' only, and a double-quoted specifier would
+          // make this arm pass for the wrong reason -- see arm 34.
+          "type Mod33 = typeof import('../src/a');\n" +
+          'it("x", () => expect(untouched33()).toBe(33));\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('TYPEONLY_NOT_LOADED')).toBe(true);
+    expect(names.has('untouched33')).toBe(true);
+  });
+
+  it('(34) a DOUBLE-QUOTED specifier is a site the scanner cannot see', () => {
+    // A defect found while pinning arm 30, recorded here rather than fixed in
+    // the scanner because the scanner's quoting convention is a deliberate
+    // narrowing: every other clause regex in this file matches '...' only.
+    // That is consistent, but it makes a fixture written with "..." silently
+    // UNREACHABLE -- arm 30 shipped that way and was green for a reason that
+    // had nothing to do with the type-position rule it claims to test.
+    //
+    // The measurable statement: with a double-quoted `typeof import("..")`,
+    // the scanner's single-quoted regex cannot match it, so the module is not
+    // credited -- which is the CORRECT outcome here. The arm below therefore
+    // passes under the current implementation AND under an implementation
+    // that also handled double quotes, so it cannot pin the difference.
+    // What it DOES pin is that the gap is invisible rather than asserted: if
+    // a future change starts crediting double-quoted imports, this arm goes
+    // red and says so.
+    const { srcDir, testsDir } = fixture(
+      'double-quoted-specifier',
+      { 'a.ts':
+          'export const DQUOTE_NOT_LOADED: string[] = ["p"];\n' +
+          'export function dq34(): number { return 34; }\n' },
+      {
+        't.test.ts':
+          'type Mod34 = typeof import("../src/a");\n' +
+          'it("x", () => expect(dq34()).toBe(34));\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('DQUOTE_NOT_LOADED')).toBe(true);
+    expect(names.has('dq34')).toBe(true);
+  });
+
+  it('(30) `typeof import(...)` is a TYPE position, so it loads nothing', () => {
+    // The falsifier for arm 29. A sweep that credits every `import(` substring
+    // passes (29) and silently drops a whole class of gaps: `typeof import(...)`
+    // is erased by TypeScript exactly like `import type` is, and names a module
+    // the test NEVER evaluates. If the dynamic-import arm had no type-position
+    // counterpart, this suite could not tell credit from over-credit -- the
+    // same gap R447 found in the exported-state arm.
+    //
+    // REQUOTED from `import("../src/a")` to `import('../src/a')`. The
+    // double-quoted form is unreachable by the scanner's single-quoted regex,
+    // so the original arm asserted the type-position rule while never reaching
+    // the code that implements it -- measured: deleting the entire
+    // dynamic-import arm left arm 30 green. With single quotes the arm is
+    // load-bearing: removing the `(?<!typeof\s)` lookahead makes it RED.
+    const { srcDir, testsDir } = fixture(
+      'typeof-import-is-type-only',
+      { 'a.ts':
+          'export const TYPEONLY_NOT_LOADED: string[] = ["p"];\n' +
+          'export function untouched30(): number { return 30; }\n' },
+      {
+        't.test.ts':
+          "type Mod30 = typeof import('../src/a');\n" +
+          'it("x", () => expect(untouched30()).toBe(30));\n',
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    // Nothing loaded a.ts, so its module-scope value is a genuine gap.
+    expect(names.has('TYPEONLY_NOT_LOADED')).toBe(true);
+    // The function is neither called nor imported -> also a gap.
+    expect(names.has('untouched30')).toBe(true);
+  });
 });
