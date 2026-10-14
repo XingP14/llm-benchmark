@@ -38,6 +38,22 @@ can be dismissed with evidence and a silently-dropped one cannot:
      regex text cannot build. Anything else reported here should be checked
      against the module's own callers before it is treated as a gap.
 
+DEFAULT EXPORTS ARE SUBJECTS, JUDGED PER FILE (added R456)
+`export default IDENT;` publishes the value under the name `default`, so the
+subject is the name `default` keyed to the DEFINING FILE -- never IDENT, which
+is local to the module and collides freely (four route modules here all bind
+`router`). The subject is rendered `path::default`, because the bare name is
+shared and a reader who cannot tell the lines apart cannot act on them.
+Credited when a test consumes that module's default through a
+default-POSITION clause (`import x from './m'`) or a `.default` read off a
+load; both forms resolve through defining_file(), so a barrel outside src
+forwarding the default counts as a consumer.
+
+An ANONYMOUS default (`export default function f()`, `export default {...}`)
+is deliberately NOT a subject: it is a declaration whose body the load rule
+does not run, so crediting it would assert something unmeasured. This corpus
+has 0 anonymous sites (measured), so nothing on today's input turns on it.
+
 MODULE-SCOPE VALUES ARE DRIVEN BY THE LOAD (added R449)
 `export const` is only legal at module top level, so its initializer runs
 the moment the module is evaluated -- there is no call site to reach it
@@ -75,8 +91,14 @@ REPO = os.path.dirname(HERE)
 
 
 def collect_exports(src_dir):
-    """Map exported symbol name -> source file relative to REPO."""
+    """Map exported symbol name -> source file relative to REPO.
+
+    Returns `(exported, default_exports)`. The second value is the list of
+    absolute paths declaring a `default` export; those are judged PATH-SCOPED
+    because `default` is not a unique name (see the note at the call site).
+    """
     exported = {}
+    default_exports = []
     for dp, _dn, fns in os.walk(src_dir):
         for fn in fns:
             if not fn.endswith(".ts"):
@@ -91,7 +113,69 @@ def collect_exports(src_dir):
                     part = part.strip().split(" as ")[-1].strip()
                     if re.fullmatch(r"[A-Za-z_$][\w$]*", part or ""):
                         exported.setdefault(part, os.path.relpath(p, REPO))
-    return exported
+            if _default_export_names(src):
+                # `default` is NOT a globally unique name: five modules here
+                # export one, and every default-importing consumer says only
+                # "the default". Keying the subject on the name alone would let
+                # ONE driven module silence the other four, so defaults are
+                # tracked PATH-SCOPED and judged per defining file.
+                default_exports.append(os.path.normpath(p))
+    return exported, default_exports
+
+
+# `export default IDENT;` publishes the value under the name `default`, and a
+# consumer reaches it as a bare default import (`import x from './m'`) or as
+# `.default` off a load -- NOT under the local binding name IDENT. So the
+# subject is the name `default`, keyed to the DEFINING file, never IDENT: four
+# route modules here all bind the name `router`, and crediting `router` would
+# collide with every other `router` in the repo while saying nothing about
+# which module's default anyone actually imported.
+_DEFAULT_DECL = re.compile(r"^export\s+default\s+([A-Za-z_$][\w$]*)\s*;", re.M)
+
+
+def _default_export_names(src):
+    """Export names an `export default IDENT;` declaration contributes.
+
+    One name: `default`, and only for a named binding at module top level. An
+    anonymous default (`export default function f()`, `export default { ... }`)
+    is a function or an object literal -- neither is proven driven by the load
+    rule the way a module-scope VALUE is -- and this corpus has no instance of
+    either form (measured: 0 anonymous sites), so neither is credited here.
+    Crediting them would rest on a separate claim about what evaluating a
+    default declaration executes, and that claim is deliberately not made.
+
+    The anchor is column 0, because `export` is only legal at module top level
+    in TypeScript: an indented match would be a string or a nested artefact
+    rather than a declaration.
+    """
+    return {"default"} if _DEFAULT_DECL.search(src) else set()
+
+
+# A test CONSUMES a module's default through a DEFAULT-POSITION clause
+# (`import x from './m'`), a `.default` read off a load (`(await
+# import('./m')).default`), or `require('./m').default`. All three name the
+# module, which is what identifies the subject -- never the local binding,
+# which is caller-chosen and would not identify anything.
+#
+# No lookahead excludes brace or star clauses: `[\w$]+` between `import` and
+# `from` cannot match `{` or `*`, so those never enter here on their own. An
+# earlier version added `(?![^\n]*[{*]\s*from)` and it was wrong twice -- it
+# measured the WHOLE remaining file rather than the clause, so the first named
+# default import in a file was discarded whenever any LATER `x } from` existed,
+# and the route modules below were all reported despite four committed suites
+# importing them. A guard that is longer than the thing it guards is not a
+# guard; the shape of the binding is the discriminator, so name the shape.
+_DEFAULT_CLAUSE = re.compile(r"^\s*import\s+([\w$]+)\s+from\s+'([^']*)'", re.M)
+# The call's OWN paren, plus at most one more. `(await import('./m'))
+# .default` closes the call AND the `await` grouping, so a pattern allowing
+# exactly one `)` after the specifier missed every parenthesised dynamic import
+# -- which is the shape three of the four real route consumers use. Arm 40 is
+# what found it: the arm asserted the credit exists and the regex did not
+# deliver it. Bounded at two, because past two there is no longer a read of a
+# load -- it is a call whose result is something else, and an unbounded `\)*`
+# would credit a `.default` reached through an unrelated argument list.
+_DEFAULT_MEMBER = re.compile(
+    r"(?:^|[^\w$])(?:import|require)\s*\(\s*'([^']*)'\s*\){0,2}\s*\.\s*default\b")
 
 
 def exports_of(spec, test_abs, _cache={}):
@@ -729,8 +813,14 @@ def member_window(text, start, target, bindings):
 
 
 def sweep(src_dir, tests_dir):
-    """Return (missing_sorted, exported, importer) for the given dirs."""
-    exported = collect_exports(src_dir)
+    """Return (missing, exported, importer) for the given dirs.
+
+    `missing` is a list of `name` or `path::default` strings. A `default`
+    subject is rendered PATH-QUALIFIED because the bare name is shared by every
+    default-exporting module; printing `default` five times would give a reader
+    no way to act on any of the lines.
+    """
+    exported, default_exports = collect_exports(src_dir)
     loaded = set()
     importer = collect_imports(tests_dir, loaded)
     # THE LOAD RULE. A module-scope value runs when its module is evaluated,
@@ -742,7 +832,73 @@ def sweep(src_dir, tests_dir):
             for n in names:
                 importer.setdefault(n, set()).add(os.path.relpath(path, REPO))
     missing = sorted(set(exported) - set(importer))
+    # THE DEFAULT RULE, judged PER DEFINING FILE. A default import consumes
+    # one specific module's default, so the credit is a relation between a
+    # module path and the set of tests that named it -- never a single global
+    # `default` key. A module nothing default-imports stays in `missing`
+    # regardless of how many of its siblings are driven, which is the property
+    # a name-keyed design cannot have.
+    for path in default_exports:
+        # `path` is absolute here (collect_exports normalises it) and the
+        # consumer map is keyed the same way. Comparing a RELATIVE relpath
+        # against those absolute keys matches nothing, which reads exactly like
+        # "no test consumes any default" -- a false positive on every module,
+        # and the most expensive kind to notice, because the tool still looks
+        # like it is working. Both sides are normalised for the same reason
+        # _substituted_paths() normalises: one namespace, or no comparisons.
+        if os.path.normpath(path) not in _default_consumers(tests_dir):
+            missing.append(f"{os.path.relpath(path, REPO)}::default")
     return missing, exported, importer
+
+
+def _default_consumers(tests_dir, _cache={}):
+    """Map absolute defining path -> test files that consume its default."""
+    if tests_dir in _cache:
+        return _cache[tests_dir]
+    consumers = {}
+    for dp, _dn, fns in os.walk(tests_dir):
+        for fn in sorted(fns):
+            if not fn.endswith(".ts"):
+                continue
+            p = os.path.join(dp, fn)
+            parse = strip_comments(open(p, encoding="utf-8").read())
+            test_rel = os.path.relpath(p, REPO)
+            # Resolved through defining_file(), so a `export { x } from` barrel
+            # in the middle of the chain does not hide the consumer from the
+            # module that actually declares the default.
+            for f in _default_targets(parse, p):
+                consumers.setdefault(f, set()).add(test_rel)
+    _cache[tests_dir] = consumers
+    return consumers
+
+
+def _default_targets(parse, test_abs):
+    """Absolute module paths whose default this test consumes.
+
+    NO src filter here, deliberately. An earlier version gated on the SPELLING
+    (`"src" in spec`) and a later one on the resolved path; mutation M7 showed
+    the resolved gate is UNFALSIFIABLE, because a non-src module's default can
+    never be one of the subjects -- the subject list is built by walking src,
+    so a key outside src is never queried and filtering it changes no output.
+    A guard no input can exercise is not a guard, so it is gone rather than
+    commented as defence in depth. The spelling filter, by contrast, was not
+    merely dead but WRONG: it discarded a barrel outside src forwarding a src
+    default (`export { default } from '../src/r'`), contradicting the load
+    rule defining_file() implements -- arm 42 pins the forwarded case.
+    """
+    out = set()
+    for spec in _default_specifier_spellings(parse):
+        f = defining_file(spec, test_abs)
+        if f:
+            out.add(os.path.normpath(f))
+    return out
+
+
+def _default_specifier_spellings(parse):
+    """Every module specifier this test consumes in the DEFAULT position."""
+    specs = [m.group(2) for m in _DEFAULT_CLAUSE.finditer(parse)]
+    specs += [m.group(1) for m in _DEFAULT_MEMBER.finditer(parse)]
+    return specs
 
 
 def main(argv):
@@ -750,7 +906,11 @@ def main(argv):
     tests_dir = argv[1] if len(argv) > 1 else os.path.join(REPO, "tests")
     missing, exported, importer = sweep(src_dir, tests_dir)
     for name in missing:
-        print(f"NO-RUNTIME-IMPORT  {name:45s}  {exported[name]}")
+        # A `path::default` key carries its own file in the key, so it is not
+        # looked up in `exported` -- doing that would KeyError on the first
+        # default gap the tool ever finds, i.e. exactly when it is working.
+        where = name.split("::", 1)[0] if name.endswith("::default") else exported[name]
+        print(f"NO-RUNTIME-IMPORT  {name:45s}  {where}")
     print(f"\ntotal exported={len(exported)}  no-runtime-import={len(missing)}")
     return 0
 

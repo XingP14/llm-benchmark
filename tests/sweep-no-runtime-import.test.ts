@@ -1002,4 +1002,204 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     const names = reportedNames(runSweep(srcDir, testsDir));
     expect(names.has('reallyLoaded')).toBe(false);
   });
+
+  it('(38) a `default` export is a SUBJECT, so an undriven one is reported', () => {
+    // Before this, `export default router;` contributed NO name at all: the
+    // subject set was built from named forms only, so the whole default-export
+    // class was invisible -- and invisible in the direction that costs work,
+    // because nothing in the output could ever have suggested the gap.
+    const { srcDir, testsDir } = fixture(
+      'default-is-a-subject',
+      { 'r.ts': 'const router = 1;\nexport default router;\n' },
+      { 'x.test.ts': "it('nothing', () => expect(1).toBe(1));\n" }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect([...names].some((n) => n.endsWith('::default'))).toBe(true);
+    // PATH-QUALIFIED, because `default` is not a unique name: five modules in
+    // the real repo export one, and a reader who cannot tell the five lines
+    // apart cannot act on any of them.
+    expect([...names].find((n) => n.endsWith('::default'))).toMatch(/r\.ts::default$/);
+  });
+
+  it('(39) a default-POSITION import credits the default', () => {
+    // `import router from '../src/r'` and `import * as m` are different
+    // statements; only the first consumes the default. Asserting the RELATION
+    // -- driven here, not driven there -- rather than a count, because a count
+    // would also pass if the credit were attributed to the wrong module.
+    const { srcDir, testsDir } = fixture(
+      'default-position-credit',
+      {
+        'r.ts': 'const router = 1;\nexport default router;\n',
+        's.ts': 'const other = 2;\nexport default other;\n',
+      },
+      { 'x.test.ts': "import router from '../src/r';\nit('x', () => expect(router).toBe(1));\n" }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect([...names].some((n) => n.endsWith('/r.ts::default'))).toBe(false);
+    expect([...names].some((n) => n.endsWith('/s.ts::default'))).toBe(true);
+  });
+
+  it('(40) a `.default` member read credits the default', () => {
+    // The other consumption shape. Both are needed: the static clause arm and
+    // the member arm are separate code paths, and crediting only the static
+    // one would leave every `(await import('./m')).default` site invisible --
+    // which is the form tests/reporter-scorer-nullish-fallback-branches.test.ts
+    // actually uses for three of the four route modules.
+    const { srcDir, testsDir } = fixture(
+      'default-member-credit',
+      { 'r.ts': 'const router = 1;\nexport default router;\n' },
+      { 'x.test.ts': "const r = (await import('../src/r')).default;\nit('x', () => expect(r).toBe(1));\n" }
+    );
+    expect([...reportedNames(runSweep(srcDir, testsDir))].some((n) => n.endsWith('/r.ts::default'))).toBe(false);
+  });
+
+  it('(41) one module\'s default does NOT silence its siblings', () => {
+    // THE collision arm, and the falsifier for the obvious fix. Keying the
+    // subject on the bare name `default` credits every module the moment any
+    // one is driven -- here all four route modules bind the local name
+    // `router`, so a name-keyed design both collides on that shared name AND
+    // silences three genuinely undriven modules. The assertion is per PATH, so
+    // a global credit cannot satisfy it.
+    const { srcDir, testsDir } = fixture(
+      'default-does-not-leak',
+      {
+        'driven.ts': 'const router = 1;\nexport default router;\n',
+        'orphan-a.ts': 'const router = 2;\nexport default router;\n',
+        'orphan-b.ts': 'const router = 3;\nexport default router;\n',
+      },
+      { 'x.test.ts': "import router from '../src/driven';\nit('x', () => expect(router).toBe(1));\n" }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect([...names].some((n) => n.endsWith('/driven.ts::default'))).toBe(false);
+    expect([...names].some((n) => n.endsWith('/orphan-a.ts::default'))).toBe(true);
+    expect([...names].some((n) => n.endsWith('/orphan-b.ts::default'))).toBe(true);
+    // And the local binding name is NOT a subject: crediting `router` would
+    // report one gap for three modules that are all accounted for by path.
+    expect(names.has('router')).toBe(false);
+  });
+
+  it('(38b) an ANONYMOUS default is not a subject at all', () => {
+    // The over-claim this rule is scoped against. `export default function f()`
+    // is a function DECLARATION: evaluating the module does not CALL it, so
+    // the load rule cannot credit it the way it credits a module-scope VALUE,
+    // and crediting it would assert something the sweep has not measured. The
+    // corpus has 0 anonymous sites, so nothing on today's input depends on it.
+    //
+    // The FIRST version of this arm paired the anonymous default with a test
+    // that IMPORTED it, and asserted only that it was not reported. Mutation
+    // M6 -- widening the subject to every `export default` -- left the arm
+    // GREEN: a widened subject still credits the same driven module, so
+    // "not reported" cannot tell a narrow subject from a wide one. The claim
+    // needs an UNDRIVEN anonymous default: if it is not a subject at all, it
+    // stays absent whether or not a test imports it. The second assertion is
+    // the falsifier; the first is kept because it is the real-world case.
+    const { srcDir, testsDir } = fixture(
+      'anonymous-default-not-credited',
+      { 'r.ts': 'export default function makeRouter(): number { return 1; }\n' },
+      { 'x.test.ts': "import makeRouter from '../src/r';\nit('x', () => expect(makeRouter()).toBe(1));\n" }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect([...names].some((n) => n.endsWith('::default'))).toBe(false);
+
+    const undriven = fixture(
+      'anonymous-default-undriven',
+      { 'r.ts': 'export default function makeRouter(): number { return 1; }\n' },
+      { 'x.test.ts': "it('nothing', () => expect(1).toBe(1));\n" }
+    );
+    // Zero subjects, so nothing at all is reported -- which is exactly what a
+    // NAMED default in the same fixture WOULD be, and is asserted below.
+    expect([...reportedNames(runSweep(undriven.srcDir, undriven.testsDir))].some((n) => n.endsWith('::default'))).toBe(false);
+
+    const control = fixture(
+      'named-default-control',
+      { 'r.ts': 'const router = 1;\nexport default router;\n' },
+      { 'x.test.ts': "it('nothing', () => expect(1).toBe(1));\n" }
+    );
+    expect([...reportedNames(runSweep(control.srcDir, control.testsDir))].some((n) => n.endsWith('::default'))).toBe(true);
+  });
+
+  it('(42) a default reached THROUGH a non-src barrel still credits', () => {
+    // The falsifier for the containment gate, which mutation M7 showed was
+    // unfalsifiable until this arm existed: the original `if "src" in spec`
+    // filter left every arm GREEN, because nothing in the corpus default-
+    // imports a non-src module.
+    //
+    // And the gate turns out not merely unfalsifiable but WRONG. A barrel
+    // outside src that forwards a default (`export { default } from '../src/r'`)
+    // is a real consumer of that default, and `defining_file` already follows
+    // barrels through non-src segments precisely so a LOAD is not miscounted.
+    // Spelling-gating it out contradicted the instrument's own load rule in one
+    // place to satisfy none in another. The gate is therefore on the RESOLVED
+    // path, and this arm -- plus the negative half below -- pins both
+    // directions: forwarded defaults credit, unresolvable ones do not.
+    const { srcDir, testsDir } = fixture(
+      'default-through-non-src-barrel',
+      { 'w/r.ts': 'const router = 1;\nexport default router;\n' },
+      {
+        '../support/barrel.ts': "export { default } from '../src/w/r';\n",
+        'x.test.ts': "import router from '../support/barrel';\nit('x', () => expect(router).toBe(1));\n",
+      }
+    );
+    expect([...reportedNames(runSweep(srcDir, testsDir))].some((n) => n.endsWith('/w/r.ts::default'))).toBe(false);
+
+    // The second half pins that the barrel case is NOT bought by crediting
+    // every default a test mentions. Two src modules, one consumed directly
+    // and one reached through the barrel; the direct one must be credited and
+    // the barrel-reached one too, while a THIRD src module neither mentions
+    // stays reported. That is the relation -- credit is per resolved path --
+    // and a global `default` key cannot satisfy it.
+    const selective = fixture(
+      'default-credit-is-per-path',
+      {
+        'direct.ts': 'const router = 1;\nexport default router;\n',
+        'forwarded.ts': 'const router = 2;\nexport default router;\n',
+        'orphan.ts': 'const router = 3;\nexport default router;\n',
+      },
+      {
+        '../support/barrel.ts': "export { default } from '../src/forwarded';\n",
+        'x.test.ts':
+          "import direct from '../src/direct';\n" +
+          "import forwarded from '../support/barrel';\n" +
+          "it('x', () => expect(direct).toBe(1));\n",
+      }
+    );
+    const names = reportedNames(runSweep(selective.srcDir, selective.testsDir));
+    expect([...names].some((n) => n.endsWith('/direct.ts::default'))).toBe(false);
+    expect([...names].some((n) => n.endsWith('/forwarded.ts::default'))).toBe(false);
+    expect([...names].some((n) => n.endsWith('/orphan.ts::default'))).toBe(true);
+  });
+
+  it('(43) an INDENTED `export default` is not a declaration', () => {
+    // The falsifier for the column-0 anchor, which mutation M8 showed was
+    // unpinned: removing `^` left every arm green. `export` is only legal at
+    // module top level in TypeScript, so an indented match is a string, a
+    // comment or dead text -- and crediting it would invent a subject for a
+    // module that declares nothing. Four shapes distinguish anchored from
+    // unanchored (measured), and this arm pins the two that a real file
+    // plausibly contains; the template literal is the one that would survive a
+    // comment stripper, since the stripper preserves string bodies verbatim.
+    const literal = fixture(
+      'indented-default-in-template',
+      { 'r.ts': 'const real = 1;\nconst doc = `\n  export default fake;\n`;\nexport default real;\n' },
+      { 'x.test.ts': "it('nothing', () => expect(1).toBe(1));\n" }
+    );
+    const litNames = reportedNames(runSweep(literal.srcDir, literal.testsDir));
+    // The REAL declaration is a subject, and it is reported exactly once --
+    // an unanchored match adds `fake` as a second, fabricated subject. The
+    // path is matched by SUFFIX, not equality: fixtures live in a tmpdir, so
+    // `relpath` against REPO yields a path that begins with `../../` and an
+    // equality assertion on the bare filename fails for a reason that has
+    // nothing to do with the anchor under test.
+    const litDefaults = [...litNames].filter((n) => n.endsWith('::default'));
+    expect(litDefaults).toHaveLength(1);
+    expect(litDefaults[0].endsWith('src/r.ts::default')).toBe(true);
+    expect(litNames.has('fake')).toBe(false);
+
+    const commented = fixture(
+      'indented-default-in-comment',
+      { 'r.ts': 'export const real = 1;\n/*\n  export default commented;\n*/\n' },
+      { 'x.test.ts': "it('nothing', () => expect(1).toBe(1));\n" }
+    );
+    expect([...reportedNames(runSweep(commented.srcDir, commented.testsDir))].filter((n) => n.endsWith('::default'))).toEqual([]);
+  });
 });
