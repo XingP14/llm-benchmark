@@ -314,6 +314,49 @@ _INLINE_TYPE_SPEC = re.compile(r"\btype\s+[A-Za-z_$][\w$]*\s*(?:,|as\s|\}|\Z)")
 _TYPE_ONLY_DYNAMIC = re.compile(r"(?:^|[^\w$])typeof\s+$")
 
 
+# A SUBSTITUTED module is not a loaded one. `jest.mock('../src/a', factory)`
+# replaces the module REGISTRY ENTRY before anything requires it, so the
+# importer receives the FACTORY's object and the real module-scope initializer
+# never runs -- the same erasure as `import type`, expressed by a registry write
+# instead of by syntax. Every load rule in this file (note(), note_members(),
+# the dynamic-import arm, the require arm) funnels through
+# _substituted_paths(), so one gate covers all four.
+#
+# `jest.requireActual('..')` is the documented ESCAPE: it is a real load of the
+# real module even where `jest.mock` also names it (tests/web/
+# evaluations-catch-log.test.ts does exactly that), so a module that appears in
+# both sets is REAL. Keyed on the resolved path, not on the spelling, so a
+# double-quoted specifier or a `./` prefix cannot slip past.
+_SUBSTITUTION = re.compile(r"jest\.(?:mock|doMock)\s*\(\s*(['\"])([^'\"]+)\1")
+_REQUIRE_ACTUAL = re.compile(r"jest\.requireActual\s*\(\s*(['\"])([^'\"]+)\1")
+
+
+def _substituted_paths(parse, test_abs):
+    """Resolved module paths this test SUBSTITUTES rather than loads.
+
+    `jest.unmock` is deliberately not consulted: it restores the real module,
+    which makes the load MORE real, never less, so honouring it can only add
+    credit and cannot manufacture a false negative. `jest.mock` with a
+    `virtual:` third-party prefix never resolves to a src file, so
+    defining_file() drops it naturally.
+    """
+    mocked = {_resolve_spec(m.group(2), test_abs) for m in _SUBSTITUTION.finditer(parse)}
+    actual = {_resolve_spec(m.group(2), test_abs) for m in _REQUIRE_ACTUAL.finditer(parse)}
+    mocked -= actual
+    return {f for f in mocked if f}
+
+
+def _resolve_spec(spec, test_abs):
+    """The absolute path `spec` names from `test_abs`, or None if it is not src.
+
+    Routed through the SAME resolver the import arms use, so a substituted path
+    and a loaded path are compared in one namespace. A key that skipped
+    normalisation would match `./a` against `a` and never fire.
+    """
+    f = defining_file(spec, test_abs)
+    return os.path.normpath(f) if f else None
+
+
 def _without_type_specifiers(clause):
     """Blank `type` specifiers out of an import clause.
 
@@ -370,8 +413,20 @@ def collect_imports(tests_dir, loaded_modules=None):
     importer = {}
     if loaded_modules is None:
         loaded_modules = set()
+    # SUBSTITUTION GATE. Empty on the first file, then the set of paths this
+    # test replaces via jest.mock(). Every load arm below consults it, so one
+    # collection per FILE covers the static clause, the dynamic import, the
+    # require clause and both member-read arms without a fourth copy of the
+    # rule. Mutable and rebound per file, never carried across files.
+    substituted = set()
 
+    # `substituted` is REBOUND per file by the walk below, so an arm that
+    # reads it must declare `nonlocal`. Without the declaration the arm
+    # resolves the name in its own scope, finds the empty initialiser, and the
+    # gate never fires -- a rule present, indented into the closure, and dead.
+    # Arms 35-37 are what make this binding load-bearing rather than decorative.
     def note(clause, spec, test_rel, test_abs):
+        nonlocal substituted
         # Record the LOAD before the containment gate below. The load rule asks
         # "did evaluating this specifier run a module-scope initializer?", and
         # a NON-src barrel that forwards into src answers YES: importing
@@ -380,12 +435,19 @@ def collect_imports(tests_dir, loaded_modules=None):
         # the walk's result and left the guard in defining_file() deciding
         # nothing -- R449 mutation M3 survived the suite for that reason.
         f = defining_file(spec, test_abs)
-        if f:
+        if f and f not in substituted:
             loaded_modules.add(f)
         # Only src/ imports count as evidence for the NAME. A symbol pulled
         # from ../types or a test helper is not evidence that its src
         # definition is driven.
         if "src" not in spec:
+            return
+        # A SUBSTITUTED module also cannot vouch for a NAME. The clause above
+        # names the real module, but jest hands the importer the factory
+        # object, so `getAll` here is the fixture's stub and not this module's
+        # export. Both gates live in note() on purpose: the load rule and the
+        # name rule are separate claims, and a substituted module fails both.
+        if f and f in substituted:
             return
         for n in re.finditer(r"[A-Za-z_$][\w$]*", clause):
             importer.setdefault(n.group(0), set()).add(test_rel)
@@ -437,6 +499,7 @@ def collect_imports(tests_dir, loaded_modules=None):
         note(bind.group(1), spec, test_rel, test_abs)
 
     def note_members(target, spec, test_rel, rest, test_abs):
+        nonlocal substituted
         """Record `m.a` / `m['a']` reads off a module object bound to `target`.
 
         A member read is a real runtime touch of a real export: the module was
@@ -457,11 +520,17 @@ def collect_imports(tests_dir, loaded_modules=None):
         # the sweep exists to report.
         own = exports_of(spec, test_abs)
         f = defining_file(spec, test_abs)
-        if f:
+        if f and f not in substituted:
             # A member read means the module was loaded whatever the binding
             # rules decided, so the load rule applies even for the bare
             # `m = require(...)` shape whose binding arm bails out.
             loaded_modules.add(f)
+        # Same substitution gate as note(), for the same reason: the read is
+        # off the factory's object, so the property it yields is the
+        # fixture's, not this module's. Reaching the member arm at all is not
+        # evidence that the real module was ever evaluated.
+        if f and f in substituted:
+            return
         for chunk in chunks:
             for prop in re.finditer(rf"\b{re.escape(target)}\.(\w+)", chunk):
                 if own is None or prop.group(1) in own:
@@ -481,6 +550,13 @@ def collect_imports(tests_dir, loaded_modules=None):
             # patterns must read while `text` stays the addressable original.
             parse = strip_comments(text)
             test_rel = os.path.relpath(p, REPO)
+            # Collect this file's substitutions BEFORE any arm runs, so the gate
+            # is populated whichever arm reaches it first. The closure below
+            # reads `substituted`, and note()/note_members() mutate it, so it is
+            # rebound (not updated) per file -- a `update` would leak one test's
+            # mocks into the next test's credit and suppress that file's real
+            # gaps. `nonlocal` is required because the arms assign to it.
+            substituted = _substituted_paths(parse, p)
 
             # PRE-PASS: every `X = require('spec')` in this file, with the
             # offset of the require() itself. Needed before any member read is
@@ -539,7 +615,7 @@ def collect_imports(tests_dir, loaded_modules=None):
                 # specifier runs the module-scope initializers whoever does
                 # the evaluating.
                 f = defining_file(spec, p)
-                if f:
+                if f and f not in substituted:
                     loaded_modules.add(f)
                 # MEMBER READS off the result object, keyed on the binding that
                 # sits immediately LEFT of the call. `const mod = await

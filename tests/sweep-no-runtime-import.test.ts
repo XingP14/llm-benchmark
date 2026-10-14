@@ -910,4 +910,96 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     // The function is neither called nor imported -> also a gap.
     expect(names.has('untouched30')).toBe(true);
   });
+
+  // R455: a SUBSTITUTED module is not a LOADED module.
+  //
+  // `jest.mock('../src/a', factory)` writes the module REGISTRY before any
+  // import resolves, so the importer receives the factory object and the real
+  // module-scope initializer NEVER RUNS. That is the same erasure `import type`
+  // performs (arm 30's class), expressed by a registry write instead of by
+  // syntax -- and the sweep had no rule for it: measured over the corpus,
+  // `jest.mock` appears 50 times across 13 test files and `grep -c mock` in
+  // scripts/sweep-no-runtime-import.py was ZERO.
+  //
+  // The import clause is what makes this sharp. A test that BOTH imports and
+  // mocks the same module is the ordinary jest idiom, and the clause is real
+  // source text; a sweep that reads text credits it. Pre-fix this fixture
+  // reported `no-runtime-import=0` -- both exports declared pinned while
+  // neither real one was ever evaluated. The zero was the defect.
+  it('(35) a module the test jest.mock()s is SUBSTITUTED, so it loads nothing', () => {
+    const { srcDir, testsDir } = fixture(
+      'jest-mock-is-substitution',
+      {
+        'a.ts':
+          'export const SUBSTITUTED_VALUE = ["real-initializer"];\n' +
+          'export function getAll(): string[] { return SUBSTITUTED_VALUE; }\n',
+      },
+      {
+        'a.test.ts':
+          "import { getAll } from '../src/a';\n" +
+          "jest.mock('../src/a', () => ({ getAll: () => ['fixture'] }));\n" +
+          "it('x', () => expect(getAll()).toEqual(['fixture']));\n",
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    // The module-scope value is the load-rule subject: the substitution means
+    // the initializer never ran, so it is a genuine gap.
+    expect(names.has('SUBSTITUTED_VALUE')).toBe(true);
+    // And the NAME: the clause names the real module, but `getAll` as the
+    // importer sees it is the factory's stub. A gate on the load rule alone
+    // would still report this name as pinned.
+    expect(names.has('getAll')).toBe(true);
+  });
+
+  it('(36) jest.requireActual() is a REAL load and keeps the credit', () => {
+    // The falsifier for arm 35, and the reason the gate cannot be a blanket
+    // "a jest.mock in this file suppresses this module". `requireActual`
+    // bypasses the registry and evaluates the real module, so a file that
+    // mocks AND requireActuals the same specifier genuinely loads it.
+    // tests/web/evaluations-catch-log.test.ts is exactly this shape in the repo
+    // -- without the escape hatch the fix would have reported a shipped
+    // suite's coverage as a gap, which is the over-report direction that
+    // sends the next tick to rebuild suites that already exist.
+    const { srcDir, testsDir } = fixture(
+      'jest-require-actual-is-real',
+      {
+        'a.ts':
+          'export const ACTUAL_VALUE = ["real-initializer"];\n' +
+          'export function getAll(): string[] { return ACTUAL_VALUE; }\n',
+      },
+      {
+        'a.test.ts':
+          "import { getAll } from '../src/a';\n" +
+          "jest.mock('../src/a', () => {\n" +
+          "  const actual = jest.requireActual('../src/a');\n" +
+          "  return { getAll: () => actual.getAll() };\n" +
+          '});\n' +
+          "it('x', () => expect(getAll()).toEqual(['real-initializer']));\n",
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('ACTUAL_VALUE')).toBe(false);
+    expect(names.has('getAll')).toBe(false);
+  });
+
+  it('(37) the gate is per FILE, so one file\'s jest.mock cannot silence another', () => {
+    // The leak the rebinding guards. `substituted` is rebound once per test
+    // file inside the walk; if it were accumulated (`update`) or kept in the
+    // enclosing scope, a file that mocks a module would suppress that module's
+    // credit for EVERY LATER FILE in the walk -- and os.walk order is not
+    // alphabetical-stable enough to rely on, so the result would change with
+    // the filesystem. Two files, one mocking and one really importing.
+    const { srcDir, testsDir } = fixture(
+      'substitution-does-not-leak',
+      { 'a.ts': 'export function reallyLoaded(): number { return 37; }\n' },
+      {
+        // MOCKED-ONE, by name and by sort order first, so an accumulating gate
+        // is guaranteed to be populated before the file that needs it.
+        'mocked.ts': "jest.mock('../src/a', () => ({ reallyLoaded: () => 0 }));\n",
+        'zz-real.ts': "import { reallyLoaded } from '../src/a';\nit('x', () => expect(reallyLoaded()).toBe(37));\n",
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('reallyLoaded')).toBe(false);
+  });
 });
