@@ -353,7 +353,54 @@ def strip_comments(text):
                 i += 2
             else:                           # unterminated: consume the rest
                 out.append("  ")
-        elif c in "'\"`":
+        elif c in "'\"":
+            # A SINGLE/DOUBLE-quoted string cannot contain a raw newline, so its
+            # scan is bounded to the line it opens on. It has to be: the only
+            # way to open one of these without closing it on the same line is a
+            # character that is not a string at all -- a REGEX literal holding
+            # a quote (`/x'/`) -- and an unbounded scan then swallows the rest
+            # of the file looking for a closer. Every `//` comment below that
+            # point survives stripping verbatim, so a commented-out binding
+            # (`// const { GHOST } = require(...)`) is read as a REAL import and
+            # the symbol it names is marked pinned -- the false-negative
+            # direction, which hides the very gap this sweep exists to report.
+            # Measured: 251 regex literals in tests/ hold a quote character, so
+            # the shape is common; whether it hides anything on TODAY's corpus
+            # is a separate question from whether it is reachable at all.
+            #
+            # The BACKTICK branch below is deliberately NOT bounded the same
+            # way: a template literal may legally span lines, so bounding it
+            # would break real code to fix a case it cannot have.
+            q = c
+            out.append(c)
+            i += 1
+            closed = False
+            while i < n:
+                if text[i] == "\\":
+                    out.append(text[i:i + 2])
+                    i += 2
+                    continue
+                if text[i] == q:
+                    out.append(q)
+                    i += 1
+                    closed = True
+                    break
+                # A single/double-quoted string cannot contain a raw newline,
+                # so a newline here means this was never a string opener.
+                if text[i] == "\n":
+                    break
+                out.append(text[i])
+                i += 1
+            if not closed:
+                # Unterminated before the line ended: the quote was never a
+                # string, so it stays ordinary text and the scan resumes from
+                # the next character. Dropping it entirely would delete a byte
+                # and shift every offset the member windows are computed on.
+                out[-1] = c
+        elif c == "`":
+            # TEMPLATE literals may legally span lines, so this scan is NOT
+            # bounded to one line -- bounding it would break real code to fix
+            # a case it cannot have.
             q = c
             out.append(c)
             i += 1

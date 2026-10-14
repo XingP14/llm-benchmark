@@ -1202,4 +1202,64 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     );
     expect([...reportedNames(runSweep(commented.srcDir, commented.testsDir))].filter((n) => n.endsWith('::default'))).toEqual([]);
   });
+
+  it('(44) a regex literal holding a quote does NOT reopen a string that swallows every comment below it', () => {
+    // A `'` or `"` inside a REGEX LITERAL is not a string opener, but the
+    // stripper scanned for a closer without bounding the search to the line,
+    // so `/a'b/` opened a "string" that ran to the next `'` anywhere in the
+    // file. Every `//` comment inside that span survived stripping VERBATIM --
+    // so a commented-out binding below it read as a REAL import.
+    //
+    // The direction matters. Arm 17 already pins that a comment destructure is
+    // not a binding, but its fixture puts the comment FIRST, where nothing has
+    // swallowed it. This arm orders the file the other way: the regex opens
+    // the hole, the comment sits inside it. GHOST is a real src export that
+    // NO test drives; if it is reported missing, the hole is closed, and if it
+    // is credited, the sweep is calling a comment an import -- the
+    // false-negative direction, which hides the gap the tool exists to report.
+    //
+    // 251 regex literals in this repo's tests/ hold a quote character, so the
+    // shape is not exotic; whether it hides anything on TODAY's corpus is
+    // recorded separately as a measurement rather than assumed either way.
+    const ghost = fixture(
+      'regex-quote-swallows-comments',
+      { 'a.ts': 'export function doThing() { return 1; }\n', 'b.ts': 'export const GHOST = 3;\n' },
+      {
+        'x.test.ts': [
+          "const stripper = /a'b/;",
+          "// const { GHOST } = require('../src/b');",
+          "import { doThing } from '../src/a';",
+          "it('drives the real one', () => { doThing(); });",
+          ''
+        ].join('\n')
+      }
+    );
+    const names = reportedNames(runSweep(ghost.srcDir, ghost.testsDir));
+    // The comment never happened, so GHOST is a REAL gap ...
+    expect(names.has('GHOST')).toBe(true);
+    // ... and the genuine import on the line BELOW the hole is still credited.
+    expect(names.has('doThing')).toBe(false);
+
+    // The control: same file WITHOUT the regex. It must report identically, so
+    // the assertion above cannot pass merely because the fixture is broken --
+    // if the regex were the only thing driving GHOST into the report, deleting
+    // it would change the result.
+    const control = fixture(
+      'regex-quote-control',
+      { 'a.ts': 'export function doThing() { return 1; }\n', 'b.ts': 'export const GHOST = 3;\n' },
+      {
+        'x.test.ts': [
+          "const stripper = /ab/;",
+          "// const { GHOST } = require('../src/b');",
+          "import { doThing } from '../src/a';",
+          "it('drives the real one', () => { doThing(); });",
+          ''
+        ].join('\n')
+      }
+    );
+    const controlNames = reportedNames(runSweep(control.srcDir, control.testsDir));
+    expect(controlNames.has('GHOST')).toBe(true);
+    expect(controlNames.has('doThing')).toBe(false);
+    expect([...names].sort()).toEqual([...controlNames].sort());
+  });
 });
