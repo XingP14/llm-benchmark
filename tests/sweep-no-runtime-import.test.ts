@@ -1262,4 +1262,167 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     expect(controlNames.has('doThing')).toBe(false);
     expect([...names].sort()).toEqual([...controlNames].sort());
   });
+
+  // --- R464 ---------------------------------------------------------------
+  // Arm 44 closed ONE of the three regex shapes. The same lexer rule has two
+  // more, and both erase CODE rather than only failing to strip it, so they
+  // are a different failure with a different direction:
+  //
+  //   arm 44's shape  regex HOLDS A QUOTE   -> unterminated string -> comments
+  //                                          SURVIVE stripping -> a comment is
+  //                                          read as an import -> FALSE
+  //                                          NEGATIVE (hides a real gap).
+  //   R464's shapes   regex HOLDS // or /* -> the comment branch fires
+  //                                          INSIDE the literal -> real code is
+  //                                          BLANKED -> FALSE POSITIVE (the
+  //                                          sweep reports a gap that does not
+  //                                          exist, sending the next tick to
+  //                                          rebuild suites already written).
+  //
+  // The direction flip is why these arms assert the OPPOSITE of arm 44's:
+  // here the erased symbol must APPEAR in the report, and the genuinely
+  // imported one must stay out of it.
+
+  it('(45) a regex literal holding an UNCLOSED /* is CODE, not a block comment', () => {
+    // `/[/*]/g` is the standard strip-comments idiom, and it is in this repo's
+    // OWN tests (8 files carry the multi-line variant). The shipped stripper
+    // sees the `/*` inside the character class and opens a block comment
+    // there. This fixture's literal has NO `*/` -- so the block comment never
+    // closes and **the rest of the file is blanked**, including every import
+    // and require below it. The whole file's coverage claim evaporates and
+    // the sweep reports every export as having no runtime import.
+    //
+    // This is the shape that matters. My first version of this arm used the
+    // CLOSED variant (`/[/*][\s\S]*?\*/g`), which erases only the tail of the
+    // literal's own line, passed against the UNFIXED script, and was a false
+    // green: the damage is confined to a line that holds no binding. The
+    // severity of a lexer bug lives in how far the erasure REACHES, not in
+    // whether an erasure happens at all -- so the arm has to place the symbol
+    // at the far end of the file and prove it survives.
+    const f = fixture(
+      'regex-block-comment-swallow',
+      { 'a.ts': 'export function real() { return 1; }\n', 'b.ts': 'export const GONE = 2;\n' },
+      {
+        'x.test.ts': [
+          "const strip = /[/*]/g;",
+          "it('drives them', () => { real(); GONE; });",
+          '',
+          '// a real comment, well below the literal',
+          '',
+          "import { real } from '../src/a';",
+          "const { GONE } = require('../src/b');",
+          ''
+        ].join('\n')
+      }
+    );
+    const names = reportedNames(runSweep(f.srcDir, f.testsDir));
+    // Both are imported for real. If the literal swallowed the file, the sweep
+    // reports gaps that do not exist.
+    expect(names.has('GONE')).toBe(false);
+    expect(names.has('real')).toBe(false);
+
+    // The control: the same file with a literal that cannot hold a comment.
+    // Reported identically, so the assertions above are not vacuous.
+    const control = fixture(
+      'regex-block-comment-control',
+      { 'a.ts': 'export function real() { return 1; }\n', 'b.ts': 'export const GONE = 2;\n' },
+      {
+        'x.test.ts': [
+          "const strip = /[ab]/g;",
+          "it('drives them', () => { real(); GONE; });",
+          '',
+          '// a real comment, well below the literal',
+          '',
+          "import { real } from '../src/a';",
+          "const { GONE } = require('../src/b');",
+          ''
+        ].join('\n')
+      }
+    );
+    const controlNames = reportedNames(runSweep(control.srcDir, control.testsDir));
+    expect([...names].sort()).toEqual([...controlNames].sort());
+  });
+
+  it('(46) a regex character CLASS holding // is CODE, not a line comment', () => {
+    // `/[//]/` matches a slash or two slashes. The shipped stripper opens a
+    // line comment at the first `/` inside the class, so the literal's own
+    // closing delimiter and everything after it on the line is blanked. A
+    // require that follows ON THE SAME LINE -- the shape a minifier or a
+    // one-liner fixture produces -- disappears with it.
+    const f = fixture(
+      'regex-line-comment-class',
+      { 'a.ts': 'export function real() { return 1; }\n', 'b.ts': 'export const GONE = 2;\n' },
+      {
+        'x.test.ts': [
+          "const slashes = /[//]/; const { GONE } = require('../src/b');",
+          "import { real } from '../src/a';",
+          "it('drives them', () => { real(); GONE; });",
+          ''
+        ].join('\n')
+      }
+    );
+    const names = reportedNames(runSweep(f.srcDir, f.testsDir));
+    expect(names.has('GONE')).toBe(false);
+    expect(names.has('real')).toBe(false);
+  });
+
+  it('(47) a `/` in DIVISION position is not a regex, so the fix cannot eat a real comment', () => {
+    // The negative control for the whole R464 family, and the one that fails if
+    // the fix is written as "any `/` starts a regex" rather than "a `/` in a
+    // VALUE position starts one". `a / b / c` must keep dividing: if the first
+    // `/` were read as a literal opener the scan would run to the NEXT `/` and
+    // copy `b ` through as literal content, and the `// comment` on the next
+    // line would survive stripping -- where the arm 44 machinery would then
+    // read a commented-out binding as a real import.
+    const f = fixture(
+      'division-not-regex',
+      { 'a.ts': 'export function real() { return 1; }\n', 'b.ts': 'export const GHOST = 2;\n' },
+      {
+        'x.test.ts': [
+          'const q = a / b / c;',
+          '// const { GHOST } = require(\'../src/b\');',
+          "import { real } from '../src/a';",
+          "it('drives the real one', () => { real(); });",
+          ''
+        ].join('\n')
+      }
+    );
+    const names = reportedNames(runSweep(f.srcDir, f.testsDir));
+    // The comment never happened, so GHOST is a REAL gap and must be reported;
+    // if the comment survived stripping it would be credited instead.
+    expect(names.has('GHOST')).toBe(true);
+    expect(names.has('real')).toBe(false);
+  });
+
+  it('(48) a `/` after a semicolon that is a DIVISION still strips the rest of the line', () => {
+    // Arm 47 pins division on its OWN line. It does NOT pin the case where a
+    // real comment shares the line with a division, which is where dropping
+    // the value-position gate becomes visible: `a / b; // ...` has a `/` after
+    // `b` -- an identifier, correctly NOT a value position -- and then a `//`
+    // that a literal-blind scanner reaches by way of the FIRST slash.
+    //
+    // Mutation M4 (drop the gate, treat every `/` as a literal) survives all 47
+    // earlier arms, because in each of them the division is followed by a
+    // newline and so has no second `/` to pair with. Adding one puts a real
+    // comment INSIDE what M4 reads as a literal, and it survives stripping
+    // verbatim -- arm 44's false-negative direction, resurrected through the
+    // new branch.
+    const f = fixture(
+      'division-before-same-line-comment',
+      { 'a.ts': 'export function real() { return 1; }\n', 'b.ts': 'export const GHOST = 2;\n' },
+      {
+        'x.test.ts': [
+          "const q = a / b; // const { GHOST } = require('../src/b');",
+          "import { real } from '../src/a';",
+          "it('drives the real one', () => { real(); });",
+          ''
+        ].join('\n')
+      }
+    );
+    const names = reportedNames(runSweep(f.srcDir, f.testsDir));
+    // GHOST never happened, so it is a REAL gap and must be reported. If the
+    // comment survived stripping it would be credited and vanish from here.
+    expect(names.has('GHOST')).toBe(true);
+    expect(names.has('real')).toBe(false);
+  });
 });

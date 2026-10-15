@@ -312,6 +312,48 @@ def _resolve_exports(spec, test_abs):
     return None
 
 
+# The characters after which a `/` opens a REGEX LITERAL rather than a
+# division. The previous significant character is the only signal available
+# without a real parser, and it is enough for every shape this repo writes:
+# `= /x/`, `(/x/`, `, /x/`, `return /x/`, `&& /x/`. A `/` after an IDENTIFIER
+# or a closing bracket is division, which is what arm 47 pins.
+_VALUE_POSITION = set("(=,:[!&|?{};+-*%~^<>")
+# Keywords that can END an expression, so the `/` after them is a value.
+_EXPRESSION_KEYWORD = {"return", "yield", "typeof", "instanceof", "in",
+                       "of", "new", "delete", "void", "case", "do", "else"}
+
+
+def _regex_literal_end(text, i, n):
+    """Index just past a regex literal opening at `i`, or None if it is a division.
+
+    A `/` that is not a division is only a literal if this LINE contains a
+    second unescaped `/` to close it. Bounding to the line is deliberate: a
+    regex literal cannot span a raw newline (only a character class can, via
+    `\\n`, which is an escape and not a raw byte), so a `/` with no closer on
+    its line is division even when it is in a value position -- and treating
+    it as a literal would let the rest of the file be copied through
+    unstripped, which is the mirror image of the bug this branch exists to
+    close.
+    """
+    j, in_class = i + 1, False
+    while j < n and text[j] != "\n":
+        c = text[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "[":
+            in_class = True
+        elif c == "]":
+            in_class = False
+        elif c == "/" and not in_class:
+            k = j + 1
+            while k < n and text[k] in "gimsuyd":
+                k += 1
+            return k
+        j += 1
+    return None
+
+
 def strip_comments(text):
     """Blank out `//` and block comments, preserving every offset and newline.
 
@@ -333,11 +375,46 @@ def strip_comments(text):
     comment, and a template literal is treated as a plain string: a `//` inside
     one belongs to the string for this sweep's purposes, and a real comment
     after its close is still stripped.
+
+    A REGEX LITERAL is tracked too, and it is the only branch whose absence
+    erases CODE rather than merely failing to strip it. A `/` opens a literal
+    only in a VALUE position -- the previous significant character is an
+    operator, an opener, a separator, or a keyword that ends an expression.
+    Inside a literal, `//` and `/*` are pattern text, not comments, and a quote
+    is a pattern text too.
+
+    The two directions are both live and they are OPPOSITE:
+
+      a quote inside a literal (arm 44) opened an unterminated string, so
+      every `//` comment BELOW survived stripping verbatim and a commented-out
+      binding read as a REAL import -- a FALSE NEGATIVE, hiding a real gap.
+
+      `/*` inside a literal opens a block comment that may never close, so the
+      REST OF THE FILE is blanked -- every import and require below it
+      disappears, and the sweep reports gaps for code the tests genuinely
+      drive. That is a FALSE POSITIVE, the direction that sends the next tick
+      to rebuild suites that already exist (arms 45/46).
+
+    A closing delimiter is NOT a `*/`: `/[/*]/` has `*` then `]` then `/`, so
+    the `*` is followed by a character class and the block comment never
+    closes. That is why the real corpus is not already catastrophic -- most
+    literals that contain `/*` also contain `*/` nearby -- and it is why the
+    fixture for arm 45 has to use a literal with NO `*/` at all.
     """
     out = []
     i, n = 0, len(text)
+    last_sig = ""
     while i < n:
         c = text[i]
+        # ORDER IS LOAD-BEARING: the two comment branches are tested BEFORE
+        # the regex-literal branch. `//` and `/*` cannot BEGIN a regex literal
+        # in JavaScript -- a literal needs a non-`/` first character, so `//`
+        # is always a comment at this position -- while a regex literal CAN
+        # contain them. Testing regex first made every `//` comment that
+        # follows a `;`, `,` or `}` (all value positions) parse as a literal,
+        # which silently un-did arm 44's fix: a `// const { GHOST } =
+        # require(..)` line survived stripping verbatim and the commented-out
+        # binding read as a real import again.
         if c == "/" and i + 1 < n and text[i + 1] == "/":
             while i < n and text[i] != "\n":
                 out.append(" ")
@@ -397,6 +474,7 @@ def strip_comments(text):
                 # the next character. Dropping it entirely would delete a byte
                 # and shift every offset the member windows are computed on.
                 out[-1] = c
+            last_sig = q
         elif c == "`":
             # TEMPLATE literals may legally span lines, so this scan is NOT
             # bounded to one line -- bounding it would break real code to fix
@@ -410,14 +488,46 @@ def strip_comments(text):
                     i += 2
                     continue
                 if text[i] == q:
-                    out.append(q)
+                    out.append("`")
                     i += 1
                     break
                 out.append("\n" if text[i] == "\n" else text[i])
                 i += 1
+            # A template closes on its backtick, so a `/` right after it is a
+            # division, not the start of a literal.
+            last_sig = "`"
+        elif c == "/" and (last_sig == "" or last_sig in _VALUE_POSITION
+                           or last_sig in _EXPRESSION_KEYWORD):
+            # A regex LITERAL is code: `//` and `/*` inside it are pattern
+            # text, and so is a quote. Copied through byte for byte, which is
+            # what keeps the offset-preserving contract.
+            end = _regex_literal_end(text, i, n)
+            if end is not None:
+                out.append(text[i:end])
+                i = end
+                last_sig = "x"
+            else:
+                out.append(c)
+                i += 1
+                last_sig = c
         else:
+            # CATCH-ALL, and it is load-bearing rather than defensive: a `/`
+            # that is neither a comment nor a literal (a DIVISION, or the
+            # second slash of one already consumed) matches NONE of the branches
+            # above, and an `elif` chain with no `else` then consumes NOTHING
+            # and never advances `i` -- an infinite loop, not a wrong answer.
+            # A hang is worse than a false verdict here: the sweep drives every
+            # tick's candidate choice, so it would stall the whole chain with
+            # no output to diagnose. My own first draft of this fix had exactly
+            # that bug and the suite hung on the FIRST case.
             out.append(c)
             i += 1
+            # `last_sig` tracks the previous SIGNIFICANT character so the next
+            # `/` can tell a literal from a division. Only the default branch
+            # advances it: the comment branches consume their own span, and the
+            # string/template branches already set it to the closing delimiter.
+            if not c.isspace():
+                last_sig = c
     return "".join(out)
 
 
