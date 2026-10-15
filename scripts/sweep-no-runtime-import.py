@@ -334,6 +334,18 @@ def _regex_literal_end(text, i, n):
     it as a literal would let the rest of the file be copied through
     unstripped, which is the mirror image of the bug this branch exists to
     close.
+
+    THE `not in_class` GUARD IS NOT OBSERVABLE FROM THE OUTPUT, and that is a
+    MEASURED result rather than an assumed one. Dropping it (M6) moves the
+    scan point -- on `const s = /[/]/;` the returned index goes 15 -> 13, so
+    the literal is scanned differently -- yet the stripper's output is
+    byte-identical in every probe, because the bytes between the two ends are
+    copied through either way: `]` and the class's own `/` are pattern text
+    under both readings. So M6 is an EQUIVALENT mutation on this contract, and
+    it stays a survivor for the same reason arm 27's M3 does -- the thing it
+    changes is not the thing any consumer reads. Arms 49/50/51 assert the
+    length and verbatim-copy contract that DOES bind; they cannot and should
+    not try to make an unobservable guard observable.
     """
     j, in_class = i + 1, False
     while j < n and text[j] != "\n":

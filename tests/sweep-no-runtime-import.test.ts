@@ -24,6 +24,49 @@ function runSweep(srcDir: string, testsDir: string): string {
   });
 }
 
+// Drives strip_comments() DIRECTLY, one layer below the verdict the rest of
+// this file asserts on.
+//
+// WHY IT EXISTS. Arms 45/46/47/48 all assert the VERDICT, which is the right
+// level for "does the sweep report a gap that does not exist". But three
+// mutants (M2/M6/M7) survived all of them while still corrupting the parse
+// text: the stripper copies a regex literal byte for byte, and no verdict can
+// see a byte that only matters to code no pattern reads. So the copy itself
+// needed an observable, and the only place it is observable is the string the
+// stripper returns.
+//
+// It is a SUBPROCESS, like runSweep, rather than a read of the source: reading
+// the script's text would only pin the spelling, not the behaviour.
+//
+// THE TRANSPORT TOOK TWO FAILURES to get right, and both were transport bugs
+// rather than stripper bugs:
+//   1. re.escape over-escapes -- it escapes SPACES and every non-word char,
+//      so `out.length === src.length` compared two ESCAPED forms and the
+//      length assertion passed by coincidence. Length is the whole contract
+//      here, so this silently gutted it.
+//   2. JSON looks sufficient and is not, for the same reason: its length is
+//      the length of a PAYLOAD, not of the bytes.
+//
+// So the value travels as base64 of the UTF-8 bytes -- a transport that cannot
+// alter the byte count or mangle a backslash, an escape, or a newline.
+function stripComments(input: string): string {
+  const out = execFileSync(
+    'python3',
+    [
+      '-c',
+      [
+        'import base64, importlib.util, sys',
+        `spec = importlib.util.spec_from_file_location("sw", ${JSON.stringify(SCRIPT)})`,
+        'mod = importlib.util.module_from_spec(spec)',
+        'spec.loader.exec_module(mod)',
+        'sys.stdout.write(base64.b64encode(mod.strip_comments(sys.stdin.read()).encode()).decode())'
+      ].join('\n')
+    ],
+    { input, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
+  );
+  return Buffer.from(out, 'base64').toString('utf8');
+}
+
 function reportedNames(stdout: string): Set<string> {
   const names = new Set<string>();
   for (const line of stdout.split('\n')) {
@@ -1424,5 +1467,137 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     // comment survived stripping it would be credited and vanish from here.
     expect(names.has('GHOST')).toBe(true);
     expect(names.has('real')).toBe(false);
+  });
+
+  // --- R465 ---------------------------------------------------------------
+  // The 23:03 tick reported three surviving mutants (M2/M6/M7) and diagnosed
+  // them as ONE missing assertion. That diagnosis was right about the CAUSE
+  // and wrong about the KIND, and the difference changes what should be done.
+  //
+  // M2 blanks a literal's interior, M6 drops the character-class guard so the
+  // first `/` inside a class ends the literal early and its TAIL is rescanned
+  // as ordinary code, M7 resumes one byte inside so the closing `/` is
+  // rescanned. All three corrupt the parse text, and all three were invisible
+  // to arms 45/46/47/48. Re-measured here over 33 fixtures, all three leave
+  // the NO-RUNTIME-IMPORT verdict IDENTICAL in every case -- so a
+  // verdict-level arm cannot kill them, not because the arm is weak but
+  // because there is nothing for a verdict to see.
+  //
+  // The reason is a property of the SWEEP, not of the stripper: every
+  // consumer -- note(), note_members(), member_window(), _substituted_paths()
+  // -- reads the STRIPPED copy, and none of them slices the original. The
+  // docstring's offset-preservation contract is therefore real but currently
+  // UNOBSERVABLE. These three arms make it observable, by asserting on the
+  // string strip_comments() returns rather than on a verdict derived from it.
+  //
+  // So the survivors split into TWO kinds, and the split is the finding:
+  //
+  //   M2, M7  killable, and killed by arms 49/50 below (verified: 2 red each).
+  //           They corrupt bytes no consumer reads, so the fix is to give the
+  //           COPY an observable rather than to hope a verdict notices.
+  //   M6      EQUIVALENT. Dropping `not in_class` moves the scan point (the
+  //           index for `const s = /[/]/;` goes 15 -> 13) and changes nothing
+  //           observable, because the bytes between the two ends are pattern
+  //           text under either reading. No arm can kill it without asserting
+  //           an internal call boundary, which is a different claim.
+  //
+  // Both are ARTEFACTS in the R194 sense -- a mutation that survives because
+  // nothing reads what it corrupts -- and the honest response differs by
+  // kind: pin the invariant where one exists, record the equivalence where it
+  // does not.
+
+  it('(49) a regex literal is copied BYTE FOR BYTE, and the result has the SAME LENGTH as its input', () => {
+    // The contract, stated as one assertion because it is one contract. Two
+    // mutants die here and they die for OPPOSITE reasons:
+    //
+    //   M2 (`out.append(" " * (end - i))`) blanks the literal. Same LENGTH, so
+    //   the length assertion alone passes -- only the verbatim one kills it.
+    //   M7 (`i = end - 1`) resumes one byte inside, so the closing `/` is
+    //   rescanned. The length assertion is satisfied by luck; what breaks is
+    //   that the literal's bytes no longer appear in order.
+    //
+    // Assertions are on the RETURNED STRING, not on a verdict, because that is
+    // the only level at which "the stripper copied this" is even a question.
+    const src = [
+      "const block = /[/*]/g;",
+      "const quote = /a'b/;",
+      "const klass = /[/][/]/;",
+      "const plain = /abc/;",
+      '// a comment below every literal',
+      'import { real } from \'../src/a\';',
+      ''
+    ].join('\n');
+    const out = stripComments(src);
+
+    // LENGTH: the whole offset-preservation contract. A consumer that
+    // computed an offset on the input and sliced the output would land in the
+    // wrong place. Nothing does that TODAY (measured, not assumed -- see the
+    // class comment), which is exactly why only a direct assertion can hold
+    // this line.
+    expect(out.length).toBe(src.length);
+
+    // VERBATIM: each literal's bytes survive, in order, unblanked. The
+    // fixtures deliberately include the three shapes the mutants attack --
+    // an unclosed `/*` inside a class, a quote, and a class holding `/` --
+    // because a verbatim check against only `/abc/` would pass under all
+    // three and prove nothing.
+    for (const literal of ['/[/*]/g', "/a'b/", '[/][/]/']) {
+      expect(out).toContain(literal);
+    }
+
+    // And the comment BELOW them is still blanked, so the arms above cannot be
+    // satisfied by a stripper that stopped stripping at all -- that failure
+    // would keep the literals and pass both assertions.
+    expect(out).not.toContain('a comment below every literal');
+    // ... while the real import survives, so the stripper is not simply
+    // copying everything through.
+    expect(out).toContain("import { real } from '../src/a'");
+  });
+
+  it('(50) the text after a literal is still ADDRESSABLE when the literal holds comment-shaped text', () => {
+    // Arm 49 pins the return string. This one pins the property that makes
+    // the offset contract meaningful rather than decorative: the bytes that
+    // follow a literal land where the input says they land, so a pattern
+    // reading the output sees the same characters at the same offsets the
+    // input had.
+    //
+    // This is the arm that would have killed M6 had a consumer read the
+    // original -- and it is deliberately NOT phrased as a verdict assertion,
+    // because a verdict cannot express "same offset". The fixture puts a
+    // require-shaped binding AFTER the literal, so a rescanned literal TAIL
+    // (M6) would have to land inside it for any difference to appear.
+    const src = [
+      "const klass = /[/][/]/;",
+      "const { GHOST } = require('../src/b');",
+      'import { real } from \'../src/a\';',
+      ''
+    ].join('\n');
+    const out = stripComments(src);
+
+    expect(out.length).toBe(src.length);
+    // Offset-for-offset: the binding below the literal is where the input
+    // says it is, byte for byte.
+    expect(out.slice(src.indexOf("require"))).toBe(
+      src.slice(src.indexOf('require'))
+    );
+    // The literal itself came through whole, so the two assertions above are
+    // not trivially satisfiable by a stripper that emitted nothing.
+    expect(out.slice(0, src.indexOf("require"))).toContain('[/][/]/');
+  });
+
+  it('(51) a division between two literals is not a LITERAL, and copying it changes nothing', () => {
+    // The negative control for the whole R465 family, and the reason M2/M6/M7
+    // are artefacts rather than defects.
+    //
+    // A stripper that copied every `/`-delimited span would corrupt a
+    // division's operands only if it treated the span as pattern text. This
+    // arm pins that `a / b` still divides -- the value-position gate -- AND
+    // that the result is byte-identical to the input, because a division has
+    // no comment or literal semantics at all. If a future change makes the
+    // literal branch fire on a division, this goes red at the string level
+    // before it can reach the verdict level.
+    const src = ['const q = a / b / c;', 'const w = x / y;', ''].join('\n');
+    const out = stripComments(src);
+    expect(out).toBe(src);
   });
 });
