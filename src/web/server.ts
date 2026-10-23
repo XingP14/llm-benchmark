@@ -32,6 +32,8 @@ const webServerLog = (...args: unknown[]): void => {
 
 const PORT = process.env.PORT || 3033;
 const PUBLIC_DIR = path.join(__dirname, '../../public');
+// R497: 归一化后的 public 根目录, 用于把请求路径限制在这个目录之内。
+const PUBLIC_ROOT = path.resolve(PUBLIC_DIR);
 
 // 创建 Express 应用
 const app = express();
@@ -62,13 +64,41 @@ app.use((req, res, _next) => {
     return;
   }
   // 如果是文件请求且存在，直接返回
-  const filePath = path.join(PUBLIC_DIR, req.path);
-  if (existsSync(filePath) && statSync(filePath).isFile()) {
-    res.sendFile(filePath);
+  //
+  // R497 安全修复: path.join 会把 `..` 归一化掉, 所以拼接结果可能已经离开
+  // PUBLIC_DIR。旧写法 path.join(PUBLIC_DIR, req.path) 把一个越界的绝对路径
+  // 交给 res.sendFile —— send 自带的 `..` 守卫此时已经失效(段已被折叠),
+  // 于是任何匿名请求都能读到 PUBLIC_DIR 之外的任意文件(如 /etc/shadow)。
+  // 修复方式是先解码, 再用 path.resolve 归一化, 最后显式断言结果仍在
+  // PUBLIC_ROOT 之内; 越界一律 403, 不再落到 SPA 分支。
+  let decodedPath: string;
+  try {
+    decodedPath = decodeURIComponent(req.path);
+  } catch {
+    res.status(400).json({ error: 'Bad request' });
+    return;
+  }
+  const relativePath = decodedPath.replace(/^\/+/, '');
+  const targetPath = path.resolve(PUBLIC_ROOT, relativePath);
+  const isInsidePublicDir =
+    targetPath === PUBLIC_ROOT || targetPath.startsWith(PUBLIC_ROOT + path.sep);
+  if (!isInsidePublicDir) {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+  if (relativePath !== '' && existsSync(targetPath) && statSync(targetPath).isFile()) {
+    // 用 root 相对路径发送: send 的 dotfile 守卫此时只看相对路径的段,
+    // 而不是整条绝对路径(部署目录里带 `.` 段会让所有文件 404)。
+    //
+    // `path.relative` 给出的是**已归一化**的相对路径: 即使请求路径里带有
+    // `a/../b` 这种文本上的 `..`, 发给 send 的串里也不再有 `..` 段,
+    // 于是 send 自己的 UP_PATH_REGEXP 守卫不会被一个无害的路径误触发 403。
+    const safeRelative = path.relative(PUBLIC_ROOT, targetPath);
+    res.sendFile(safeRelative, { root: PUBLIC_ROOT });
     return;
   }
   // 否则返回 index.html
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  res.sendFile('index.html', { root: PUBLIC_ROOT });
 });
 
 // 初始化
