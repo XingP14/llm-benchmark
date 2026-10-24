@@ -5,6 +5,7 @@ import express from 'express';
 import { createServer } from 'http';
 import path from 'path';
 import { existsSync, statSync } from 'fs';
+import fs from 'fs';
 import authRoutes, { initAdmin } from './routes/auth';
 import configsRoutes from './routes/configs';
 import evaluationsRoutes from './routes/evaluations';
@@ -31,9 +32,26 @@ const webServerLog = (...args: unknown[]): void => {
 };
 
 const PORT = process.env.PORT || 3033;
-const PUBLIC_DIR = path.join(__dirname, '../../public');
+// PUBLIC_DIR 可用环境变量覆盖(默认是仓库里的 public/)。
+// R498c 的回归测试需要在一个**临时的** public 目录里放一个指向 /etc 的
+// 软链接才能观测到越界; 让被测的真实服务指向那个目录, 比在仓库的 public/
+// 里种一个软链接更干净, 也不会污染工作区。
+const PUBLIC_DIR = process.env.PUBLIC_DIR
+  ? path.resolve(process.env.PUBLIC_DIR)
+  : path.join(__dirname, '../../public');
 // R497: 归一化后的 public 根目录, 用于把请求路径限制在这个目录之内。
 const PUBLIC_ROOT = path.resolve(PUBLIC_DIR);
+// R498c: realpath 之后的真实根目录。`path.resolve` 只归一化 `..`, 不解析
+// 符号链接, 所以 public 目录**内部**的一个软链接仍然能通过"文本包含"检查
+// 却指向目录之外 —— 实测: `public/escape -> /etc` 时 `GET /escape/passwd`
+// 返回 200, 内容是真实的 /etc/shadow(root 密码哈希)。
+// 收边必须建立在**真实路径**上: 根目录与候选路径都过 realpath 再比较。
+let PUBLIC_REAL_ROOT = PUBLIC_ROOT;
+try {
+  PUBLIC_REAL_ROOT = fs.realpathSync(PUBLIC_ROOT);
+} catch {
+  PUBLIC_REAL_ROOT = PUBLIC_ROOT;
+}
 
 // 创建 Express 应用
 const app = express();
@@ -43,6 +61,42 @@ const server = createServer(app);
 app.use(express.json());
 
 // 静态文件服务
+//
+// R498c: express.static (serve-static → send) 用 `fs.stat` 跟随符号链接,
+// 所以 public 目录**内部**的一个软链接可以让它把目录外的文件直接发出去 ——
+// 实测: public/escape -> /etc 时 `GET /escape/passwd` 经由 express.static
+// 就返回了 200, 内容是真实的 /etc/shadow(root 密码哈希)。
+// `send` 没有提供关闭跟随软链接的开关(该版本无 followSymlinks 选项), 所以
+// 收边必须由**它前面**的一道自建守卫完成: 请求路径 realpath 之后必须仍在
+// 真实根目录之内, 否则 403, 一律不放行到 express.static。
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    next();
+    return;
+  }
+  let decodedPath: string;
+  try {
+    decodedPath = decodeURIComponent(req.path);
+  } catch {
+    res.status(400).json({ error: 'Bad request' });
+    return;
+  }
+  const candidate = path.resolve(PUBLIC_ROOT, decodedPath.replace(/^\/+/, ''));
+  let real: string;
+  try {
+    real = fs.realpathSync(candidate);
+  } catch {
+    // 路径不存在(或不可读) -> 不是越界, 交给后面的中间件按正常 miss 处理。
+    next();
+    return;
+  }
+  if (real === PUBLIC_REAL_ROOT || real.startsWith(PUBLIC_REAL_ROOT + path.sep)) {
+    next();
+    return;
+  }
+  // 真实路径落在根目录之外 -> 拒绝。
+  res.status(403).json({ error: 'Forbidden' });
+});
 app.use(express.static(PUBLIC_DIR));
 
 // API 路由
@@ -86,19 +140,47 @@ app.use((req, res, _next) => {
     res.status(403).json({ error: 'Forbidden' });
     return;
   }
-  if (relativePath !== '' && existsSync(targetPath) && statSync(targetPath).isFile()) {
+  // R498c: 上面的"文本包含"检查是必要条件, 但**不充分** —— 它只说明
+  // "路径拼写上以根目录开头"。真正被读出来的是这个路径**指向的文件**, 而
+  // public 目录**内部**的一个软链接可以让它指向目录之外。
+  //
+  // 实测 (R498c, 无任何凭据): public/escape -> /etc 时,
+  //   GET /escape/passwd   -> 200, body = 真实的 /etc/shadow(root 密码哈希)
+  //   GET /escape/hostname -> 200, body = 真实主机名
+  // 也就是 R497 的修复在**软链接**这一形状上仍然是一个匿名任意文件读。
+  //
+  // 收边必须建立在**真实路径**上: 候选路径过 realpath 之后再和 realpath
+  // 之后的根比较。realpath 会把路径上的每一段软链接都解析掉, 所以软链接
+  // 指向的**子目录**同样不能把目标带出去。
+  //
+  // 注意 realpath 也会把 public 目录自身可能经由的软链接(如 /tmp ->
+  // /private/tmp)归一化, 所以根与候选必须在同一个坐标系里比较。
+  let realTargetPath: string | null = null;
+  try {
+    const real = fs.realpathSync(targetPath);
+    if (real === PUBLIC_REAL_ROOT || real.startsWith(PUBLIC_REAL_ROOT + path.sep)) {
+      realTargetPath = real;
+    }
+  } catch {
+    realTargetPath = null; // 不存在(或不可读) -> 落到 SPA 分支
+  }
+  if (relativePath !== '' && realTargetPath !== null && existsSync(realTargetPath) && statSync(realTargetPath).isFile()) {
     // 用 root 相对路径发送: send 的 dotfile 守卫此时只看相对路径的段,
     // 而不是整条绝对路径(部署目录里带 `.` 段会让所有文件 404)。
     //
     // `path.relative` 给出的是**已归一化**的相对路径: 即使请求路径里带有
     // `a/../b` 这种文本上的 `..`, 发给 send 的串里也不再有 `..` 段,
     // 于是 send 自己的 UP_PATH_REGEXP 守卫不会被一个无害的路径误触发 403。
-    const safeRelative = path.relative(PUBLIC_ROOT, targetPath);
-    res.sendFile(safeRelative, { root: PUBLIC_ROOT });
+    //
+    // R498c: 这里传的是**真实路径**的相对形式 —— 相对 PUBLIC_REAL_ROOT,
+    // 而不是相对 PUBLIC_ROOT —— 否则一个软链接目录里的文件在 realpath 之后
+    // 根本不在 PUBLIC_ROOT 之下, path.relative 会算出 `../../etc/passwd`。
+    const safeRelative = path.relative(PUBLIC_REAL_ROOT, realTargetPath);
+    res.sendFile(safeRelative, { root: PUBLIC_REAL_ROOT });
     return;
   }
   // 否则返回 index.html
-  res.sendFile('index.html', { root: PUBLIC_ROOT });
+  res.sendFile('index.html', { root: PUBLIC_REAL_ROOT });
 });
 
 // 初始化
