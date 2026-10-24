@@ -51,6 +51,7 @@ breaking-change fixes; maintainer will keep reporter informed.
 - `src/core/scoring/` — 5-dimension Scorer logic (function_calling / long_context / multi_turn / dialogue / coding)
 - `src/web/server.ts` + `src/web/routes/` — Express endpoints, JWT auth, WebSocket upgrade
 - `src/web/db/database.ts` — SQLite schema, prepared statements, migrations
+- `src/sandbox/` — the Python sandbox that executes model-generated code (process isolation, environment and working-directory confinement)
 - `src/adapters/` — 7 LLM provider adapters (API key handling, request signing, response parsing)
 - `src/cli/` — `src/index.ts` switch, config loading, file I/O
 - `package.json` + `package-lock.json` — dependency manifest
