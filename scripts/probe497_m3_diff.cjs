@@ -19,6 +19,20 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+// The system-file marker is DERIVED from the host, never hardcoded: the
+// original probe carried this author's own hostname (`/us-vps4/`), so on
+// any other host it reported `sysfile=no` for a body that WAS a system
+// file -- the probe measured nothing and said so in the wrong direction.
+const HOSTNAME = (() => {
+  try {
+    return fs.readFileSync('/etc/hostname', 'utf8').trim();
+  } catch {
+    return '';
+  }
+})();
+const SYSFILE_MARKERS = ['root:x:0:0', 'root:$1$', HOSTNAME].filter((m) => m.length > 0);
+const isSystemFile = (body) => SYSFILE_MARKERS.some((m) => body.includes(m));
+
 const REPO = '/root/.hermes/workspace/llm-benchmark';
 const variant = process.argv[2] || 'fixed';
 
@@ -97,7 +111,7 @@ function rawGet(port, rawPath) {
       console.log(`  ${JSON.stringify(p).padEnd(48)} -> ERROR ${e.message}`);
       continue;
     }
-    const sysfile = /root:x:0:0/.test(r.body) || /root:\$1\$/.test(r.body) || /us-vps4/.test(r.body);
+    const sysfile = isSystemFile(r.body);
     const ctype = (r.head.match(/content-type:\s*([^\r\n]+)/i) || [, ''])[1];
     console.log(
       `  ${JSON.stringify(p).padEnd(48)} -> ${r.status}  sysfile=${sysfile ? 'YES' : 'no '}  len=${r.body.length}  ctype=${ctype}`,

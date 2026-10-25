@@ -99,6 +99,7 @@ import net from 'net';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { isSystemFile } from '../support/system-file-marker';
 
 const REPO = path.join(__dirname, '../..');
 
@@ -144,6 +145,14 @@ function expectFalse(actual: boolean, why: string): void {
 }
 
 /**
+ * The positive counterpart of `expectFalse`: the assertion MUST hold, and
+ * the message rides inside the compared value for the same reason.
+ */
+function expectTrue(actual: boolean, why: string): void {
+  expect({ ok: actual === true, why }).toEqual({ ok: true, why });
+}
+
+/**
  * A raw socket request. `supertest`/`request(app)` NORMALISES the path before
  * it reaches the app (measured: `request(app).get('/../../../../etc/passwd')`
  * arrives as `req.path === '/etc/passwd'`), so it CANNOT express this defect.
@@ -170,10 +179,17 @@ function rawGet(rawPath: string): Promise<{ status: number; headers: string; bod
   });
 }
 
-/** Does this response body contain a well-known SYSTEM FILE marker? */
-function isSystemFile(body: string): boolean {
-  return /root:x:0:0/.test(body) || /root:\$1\$/.test(body) || /us-vps4/.test(body);
-}
+/**
+ * Does this response body contain a well-known SYSTEM FILE marker?
+ *
+ * The detector is SHARED, and derived from the host at runtime: the
+ * original copy here hardcoded this author's own hostname, so on a CI
+ * runner it could not recognise /etc/hostname.
+ *
+ * ONE rule, one copy: two suites carried two copies of this predicate, and
+ * a third copy in the sibling repository.  A rule that exists in several
+ * places is a rule that will drift.
+ */
 
 describe('R497 — the SPA fallback serves files outside PUBLIC_DIR', () => {
   let child: ChildProcess;
@@ -350,13 +366,39 @@ describe('R497 — the SPA fallback serves files outside PUBLIC_DIR', () => {
   // that is guaranteed to exist and to have no dot-segment.
   it('(7) F7 control: the detector CAN see a system file when one is served', async () => {
     // /etc/hostname exists on every Linux host and has no dot-segment.
+    //
+    // ⭐ TWO FIXES, BOTH MEASURED.
+    //
+    // 1. The `/us-vps4` literal was THIS AUTHOR'S HOSTNAME. On a CI runner
+    //    the hostname is a different random label, so the arm could not
+    //    recognise the real /etc/hostname -- it failed on every push while
+    //    the server was correct. The marker is now derived from
+    //    /etc/hostname at runtime.
+    //
+    // 2. ⭐ THE ARM WAS VACUOUS ON A FIXED SERVER. It asserted
+    //    `served === false` ONLY IF `served` was already true. On a FIXED
+    //    server `served` is false, so the assertion never ran and the arm
+    //    proved nothing -- a tautology wearing a control's name, one level
+    //    up from the control it was checking.
+    //
+    //    The property the arm wants is TWO-SIDED:
+    //      * the detector MUST fire on the real bytes of a system file
+    //        (otherwise every negative arm is vacuous), AND
+    //      * the server MUST NOT serve them (otherwise the server is
+    //        vulnerable).
+    //    So the detector is fed the file DIRECTLY, off the request path,
+    //    and the request is asserted separately.
+    const real = fs.readFileSync('/etc/hostname', 'utf8');
+    expectTrue(
+      isSystemFile(real),
+      'the detector cannot recognise the real /etc/hostname -- every negative arm above is vacuous',
+    );
+
     const res = await rawGet('/../../../../../../etc/hostname');
-    const served = isSystemFile(res.body) || /us-vps4/.test(res.body);
-    if (served) {
-      // The server is still vulnerable -- the negative arms would be
-      // meaningless, so make that loud rather than silent.
-      expectFalse(served, 'THE SERVER IS STILL VULNERABLE');
-    }
+    expectFalse(
+      isSystemFile(res.body),
+      'THE SERVER IS STILL VULNERABLE -- it served a system file',
+    );
     // If the server is fixed, the request must be refused outright.
     expect(res.status).not.toBe(200);
   });

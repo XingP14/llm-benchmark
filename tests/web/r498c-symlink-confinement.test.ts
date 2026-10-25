@@ -97,6 +97,7 @@ import net from 'net';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { isSystemFile } from '../support/system-file-marker';
 
 const REPO = path.join(__dirname, '../..');
 
@@ -148,10 +149,18 @@ function rawRequestOn(
   });
 }
 
-/** Does this response body contain a well-known SYSTEM FILE marker? */
-function isSystemFile(body: string): boolean {
-  return /root:x:0:0/.test(body) || /root:\$1\$/.test(body) || /us-vps4/.test(body);
-}
+/**
+ * Does this response body contain a well-known SYSTEM FILE marker?
+ *
+ * The detector is SHARED, and derived from the host at runtime: the
+ * original copy here hardcoded this author's own hostname, so on a CI
+ * runner it could not recognise /etc/hostname and the control arm below
+ * failed on every push while the server was perfectly correct.
+ *
+ * ONE rule, one copy: two suites carried two copies of this predicate, and
+ * a third copy in the sibling repository.  A rule that exists in several
+ * places is a rule that will drift.
+ */
 
 describe('R498c — a symlink INSIDE PUBLIC_DIR must not escape it', () => {
   let plainChild: ChildProcess;
@@ -344,14 +353,22 @@ describe('R498c — a symlink INSIDE PUBLIC_DIR must not escape it', () => {
   // above is vacuously true.
   it('(5) F5 control: the detector CAN see a system file when one is served', async () => {
     // * The FIRST version of this arm drove the server and asserted
-    // `served === false` -- the OPPOSITE of what its title claims. It can
-    // NEVER observe the detector firing: trivially true on a fixed server,
-    // and on a vulnerable one it fails for a reason that has nothing to do
-    // with the detector. A tautology wearing a control's name.
+    //   `served === false` -- the OPPOSITE of what its title claims. It can
+    //   NEVER observe the detector firing: trivially true on a fixed server,
+    //   and on a vulnerable one it fails for a reason that has nothing to do
+    //   with the detector. A tautology wearing a control's name.
     //
     // A control is only load-bearing if the thing it controls is shown to be
     // ABLE to fail. So: feed the detector the real bytes, off the request
     // path entirely.
+    //
+    // ⭐ AND THE ARM MUST NOT BE VACUOUS ITSELF. Every file below may be
+    // unreadable on some host, and a loop that skips all of them exits green
+    // having checked NOTHING -- the same "control that cannot fail" shape,
+    // one level up. So the arm counts what it actually checked and fails if
+    // it checked nothing: /etc/passwd is world-readable on every Linux, so
+    // at least one file is always available.
+    let checked = 0;
     for (const f of ['/etc/passwd', '/etc/shadow', '/etc/hostname']) {
       let content = '';
       try {
@@ -359,11 +376,17 @@ describe('R498c — a symlink INSIDE PUBLIC_DIR must not escape it', () => {
       } catch {
         continue; // not readable on this host -- skip, do not fail
       }
+      checked += 1;
       if (!isSystemFile(content)) {
         throw new Error(
           `the detector cannot recognise the real ${f} -- every negative arm above is vacuous`,
         );
       }
+    }
+    if (checked === 0) {
+      throw new Error(
+        'no system file was readable, so this control checked nothing -- it cannot fail, and every negative arm above is vacuous',
+      );
     }
   });
 

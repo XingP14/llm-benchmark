@@ -9,10 +9,24 @@
 // This probe measures the real express + the real `send` version in this repo.
 
 import express from 'express';
-import { mkdtempSync, symlinkSync, writeFileSync } from 'fs';
+import { mkdtempSync, symlinkSync, writeFileSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import http from 'http';
+
+// The system-file marker is DERIVED from the host, never hardcoded: the
+// original probe carried this author's own hostname (`/us-vps4/`), so on
+// any other host it reported `sysfile=false` for a body that WAS a system
+// file -- the probe measured nothing and said so in the wrong direction.
+const HOSTNAME = (() => {
+  try {
+    return readFileSync('/etc/hostname', 'utf8').trim();
+  } catch {
+    return '';
+  }
+})();
+const SYSFILE_MARKERS = ['root:x:0:0', 'root:$1$', HOSTNAME].filter((m) => m.length > 0);
+const isSystemFile = (body) => SYSFILE_MARKERS.some((m) => body.includes(m));
 
 const root = mkdtempSync(join(tmpdir(), 'r498c_lb_static_'));
 writeFileSync(join(root, 'index.html'), '<html>index</html>');
@@ -36,7 +50,7 @@ const server = app.listen(0, '127.0.0.1', () => {
       res.on('data', (d) => chunks.push(d));
       res.on('end', () => {
         const body = Buffer.concat(chunks).toString('utf8');
-        const sysfile = /root:x:0:0/.test(body) || /us-vps4/.test(body);
+        const sysfile = isSystemFile(body);
         console.log(`GET ${p.padEnd(20)} -> ${res.statusCode}  sysfile=${sysfile}  body[0..70]=${body.slice(0, 70).replace(/\n/g, '\\n')}`);
         next();
       });
