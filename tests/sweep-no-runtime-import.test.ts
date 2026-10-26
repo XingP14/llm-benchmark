@@ -1600,4 +1600,118 @@ describe('sweep-no-runtime-import.py (instrument)', () => {
     const out = stripComments(src);
     expect(out).toBe(src);
   });
+
+  it('(52) a MALFORMED quote does not swallow the rest of the file, and the line-bound is what stops it', () => {
+    // WHY THIS ARM EXISTS (R507, 2026-10-27 03:03 cron, llm-benchmark).
+    //
+    // The arm was DRAFTED by the 02:03 tick, whose execution was lost
+    // mid-run (the scheduler restarted; whether its side effects ran is
+    // unknown), and it was never committed. This tick re-measured every
+    // claim in it from scratch before shipping it -- the numbers below are
+    // this tick's measurements, not the draft's.
+    //
+    // Arm 44 pins that a quote INSIDE A REGEX LITERAL does not reopen a
+    // string. It uses a fixture whose quote is reached through the
+    // regex-literal branch -- `const stripper = /a'b/;` -- so the `'` is
+    // pattern text and never opens a string at all.
+    //
+    // The matrix driver scripts/r459_matrix.sh claims M1 ("revert the
+    // line-bound on the quote scan") is KILLED by arm 44. MEASURED: it is
+    // NOT. At HEAD, M1 leaves arm 44 at 1 passed / 51 skipped -- GREEN
+    // (51 = the 52 tests of this file, minus arm 44 and minus arm 52, which
+    // did not exist yet when the claim was written).
+    // The reason is that arm 44's fixture never reaches the quote-scan
+    // branch: the regex-literal branch consumes `/a'b/` byte for byte and
+    // the quote inside it is never scanned as a string opener. So the
+    // mutation removes the line-bound from a branch that arm 44's fixture
+    // never enters, and arm 44 cannot see the difference.
+    //
+    // A GUARD THAT CANNOT FAIL IS NOT A GUARD. This is the same shape as the
+    // r498b control that shipped "12 passed" against a detector that could
+    // never fire: the matrix reported a kill that was never earned.
+    //
+    // The fixture here is a MALFORMED quote -- a real `'`/`"` that opens a
+    // string and never closes it on its line. That is the only way to reach
+    // the quote-scan branch, because the regex branch shadows it whenever a
+    // quote appears inside a literal.
+    //
+    // MEASURED, at HEAD vs under M1 (line-bound removed):
+    //
+    //   HEAD: GHOST reported = True   (no-runtime-import=1)
+    //   M1:   GHOST reported = False  (no-runtime-import=0)
+    //
+    // The difference is the WHOLE POINT. Under M1 the unbounded scan runs to
+    // the next `'` anywhere in the file, the `//` comment below survives
+    // stripping verbatim, the commented-out binding reads as a REAL import,
+    // and the symbol it names is marked PINNED -- a false negative, the
+    // direction that hides the very gap this sweep exists to report.
+    //
+    // MEASURED DIRECTLY, outside jest, on the real script (2026-10-27):
+    // the sweep's own stdout was captured for both fixtures.
+    //
+    //   HEAD:  NO-RUNTIME-IMPORT  GHOST   (both fixtures)
+    //   M1:    MALFORMED fixture -> NO GHOST LINE AT ALL
+    //          CLEAN    fixture -> NO-RUNTIME-IMPORT  GHOST
+    //
+    // So under M1 the malformed fixture stops reporting the gap while the
+    // clean fixture keeps reporting it -- and the control arm below is what
+    // makes that asymmetry a FAILURE rather than a curiosity.
+    //
+    // The control (the malformed quote's own line) is asserted too, so the
+    // arm cannot be satisfied by a stripper that simply stopped stripping.
+    const malformed = [
+      'const broken = "abc',
+      "// const { GHOST } = require('../src/b');",
+      "import { doThing } from '../src/a';",
+      ''
+    ].join('\n');
+
+    // LEVEL 1 -- the STRIP. The malformed quote's line keeps its length (the
+    // offset contract), and the comment BELOW it is blanked, so the arm
+    // cannot pass merely because the stripper stopped stripping.
+    const out = stripComments(malformed);
+    expect(out.length).toBe(malformed.length);
+    expect(out).not.toContain('GHOST');
+    // ... while the genuine import survives.
+    expect(out).toContain("import { doThing } from '../src/a'");
+
+    // LEVEL 2 -- the VERDICT. GHOST is a real src export that no test
+    // drives, so the sweep MUST report it. This is the assertion M1 kills.
+    const { srcDir, testsDir } = fixture(
+      'malformed-quote-swallows-comments',
+      { 'a.ts': 'export function doThing() { return 1; }\n', 'b.ts': 'export const GHOST = 3;\n' },
+      {
+        'x.test.ts': [
+          'const broken = "abc',
+          "// const { GHOST } = require('../src/b');",
+          "import { doThing } from '../src/a';",
+          "it('drives the real one', () => { doThing(); });",
+          ''
+        ].join('\n')
+      }
+    );
+    const names = reportedNames(runSweep(srcDir, testsDir));
+    expect(names.has('GHOST')).toBe(true);
+
+    // THE CONTROL. The same fixture WITHOUT the malformed quote must report
+    // IDENTICALLY. If the malformed quote were the only thing driving GHOST
+    // into the report, deleting it would change the result -- and this arm
+    // would be pinning the fixture rather than the behaviour.
+    const clean = fixture(
+      'clean-quote-swallows-comments',
+      { 'a.ts': 'export function doThing() { return 1; }\n', 'b.ts': 'export const GHOST = 3;\n' },
+      {
+        'x.test.ts': [
+          "const broken = 'abc';",
+          "// const { GHOST } = require('../src/b');",
+          "import { doThing } from '../src/a';",
+          "it('drives the real one', () => { doThing(); });",
+          ''
+        ].join('\n')
+      }
+    );
+    const cleanNames = reportedNames(runSweep(clean.srcDir, clean.testsDir));
+    expect(cleanNames.has('GHOST')).toBe(true);
+    expect([...names].sort()).toEqual([...cleanNames].sort());
+  });
 });

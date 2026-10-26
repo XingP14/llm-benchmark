@@ -30,6 +30,11 @@ __pycache__/
 .cache/
 .tmp/
 
+# Mutation-driver snapshots (R507).  A driver that dies between the
+# injection and the restore leaves its snapshot behind; it must never be
+# staged into a commit.
+scripts/.r459_snapshot.py
+
 # Local config files (may contain API keys)
 config.json
 config-*.json
