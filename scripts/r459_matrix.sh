@@ -39,7 +39,16 @@ cleanup() {
 trap cleanup EXIT
 
 run_arm() {  # $1 = mutant label
-  timeout 300 npx jest tests/sweep-no-runtime-import.test.ts --runInBand \
+  # R514 (2026-10-28): the runner is resolved from the TREE this script
+  # stands in, not from `npx`.  MEASURED: `npx jest` in a tree with no
+  # node_modules DOWNLOADS jest 30.5.2 from the registry, while the repo
+  # pins jest ^29 (local resolution 29.7.0) -- so the driver measured its
+  # subject with a different MAJOR of its runner than the repository pins,
+  # and the version was decided by the registry rather than the lockfile.
+  # A driver validated on exactly ONE tree is a driver validated on exactly
+  # ONE tree; here the tree decides the RUNNER, not just the path.
+  JEST="$(bash "$(dirname "${BASH_SOURCE[0]}")/resolve-tool.sh" jest)" || exit 2
+  timeout 300 "$JEST" tests/sweep-no-runtime-import.test.ts --runInBand \
     -t 'a regex literal holding a quote' 2>&1 | grep -E "^Tests:" || echo "TESTS-LINE-ABSENT"
 }
 

@@ -70,6 +70,65 @@ SUITE = "tests/web/r497-spa-fallback-path-traversal.test.ts"
 OWNED = [REPO / "src/web/server.ts"]
 EXPECTED_TESTS = 10
 
+# R514 (2026-10-28): the toolchain is resolved from the TREE this script
+# stands in, not through `npx`.  `npx` resolves a binary against the CWD's
+# package tree, and -- when the network is available -- DOWNLOADS one
+# instead of failing.
+#
+# MEASURED in an ISOLATED WORKTREE of the same commit:
+#
+#     $ npx tsc --version
+#     This is not the tsc command you are looking for   (exit 1)
+#     $ ./node_modules/.bin/tsc --version
+#     Version 5.9.3
+#
+# A worktree has no installed `typescript` of its own, so the driver WORKED
+# in the author's checkout and could not measure ANYTHING in a checkout it
+# was COPIED into -- it exited with "the build failed -- the matrix cannot
+# measure anything", which is a failure whose cause (a missing toolchain)
+# has nothing to do with the driver's subject.
+#
+# The sibling `npx jest` case is WORSE, because `npx` does not fail when the
+# network is available -- it DOWNLOADS: MEASURED, `npx jest --version` in a
+# tree with no node_modules returns 30.5.2 (fetched from the registry) while
+# the repository pins jest ^29 (local resolution 29.7.0).  The driver was
+# measuring its subject with a DIFFERENT MAJOR of its runner, and the
+# version was decided by the registry rather than by the lockfile.
+#
+# So the tool is taken from the tree the driver lives in, and the resolution
+# is ASSERTED: a tree without a toolchain fails LOUDLY with a message naming
+# the missing path, instead of scoring nothing and reporting a verdict.
+#
+# The shared resolver lives in scripts/resolve_tool.py; every driver uses
+# it, so the CLASS is fixed once rather than once per driver.
+def _resolve_tool(name):
+    """Resolve a tool from the TREE this script stands in.
+
+    The import is LAZY, on purpose: a driver is sometimes COPIED into
+    another checkout on its own (R513's arm 3 copies r507_matrix.py
+    into a fake repo and resolves its baseline there).  A module-level
+    `from resolve_tool import resolve_tool` would make that copy fail to
+    import at all -- the driver would break in exactly the situation it
+    exists to be tested in.  So the resolver is loaded when it is first
+    needed, and if it is genuinely absent the failure is LOUD and names
+    the file to copy alongside the driver.
+    """
+    import importlib.util
+
+    here = str(Path(__file__).resolve().parent)
+    resolver = os.path.join(here, 'resolve_tool.py')
+    if not os.path.exists(resolver):
+        raise SystemExit(
+            '%s does not exist -- this driver resolves its toolchain from\n'
+            'the tree it stands in, and the resolver must sit beside it.\n'
+            'Copy scripts/resolve_tool.py next to this driver.' % resolver
+        )
+    spec = importlib.util.spec_from_file_location('_resolve_tool_mod', resolver)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.resolve_tool(name, here)
+
+
 # R511 (2026-10-28): the baseline used to be a TRANSCRIBED hash literal
 # (BASELINE_MD5 = "73a550b313aa9a4e3d9afe27e9b5537f"), pinned when this tick
 # wrote its own fix into the owned file.  Two commits have landed on
@@ -245,7 +304,7 @@ def inject(p: Path, old: str, new: str, expect_count: int = 1):
 
 def run_suite():
     r = subprocess.run(
-        ["npx", "jest", SUITE, "--runInBand", "--coverage=false"],
+        [_resolve_tool("jest"), SUITE, "--runInBand", "--coverage=false"],
         cwd=REPO, capture_output=True, text=True, timeout=600,
     )
     out = r.stdout + r.stderr
@@ -304,7 +363,7 @@ def main():
             restore(snap)
             continue
 
-        tsc = subprocess.run(["npx", "tsc", "--noEmit"], cwd=REPO,
+        tsc = subprocess.run([__resolve_tool("tsc"), "--noEmit"], cwd=REPO,
                              capture_output=True, text=True, timeout=420)
         if tsc.returncode != 0:
             err = (tsc.stdout + tsc.stderr).strip().splitlines()

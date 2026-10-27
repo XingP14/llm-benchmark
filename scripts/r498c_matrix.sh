@@ -19,8 +19,24 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 SRC=src/web/server.ts
 TEST=tests/web/r498c-symlink-confinement.test.ts
-SNAP_SRC=/tmp/r498c_lb_server.snap
-SNAP_TEST=/tmp/r498c_lb_test.snap
+# R514 (2026-10-28): the snapshot lives in a REPO-OWNED path, derived from
+# this tree, not a FIXED path in /tmp.
+#
+# MEASURED 2026-10-28: the snapshot used to be the fixed literal
+# "/tmp/r498c_lb_server.snap", which is a SHARED RESOURCE -- every checkout
+# of this repository on the host writes the same file.  So two drivers
+# running in two trees OVERWRITE each other's snapshot, and the loser
+# restores the other's source.  MEASURED: running this driver in an
+# isolated worktree left THAT worktree's src/web/server.ts mutated (the
+# M2 mutant), because the trap restored a snapshot that a concurrent run had
+# already replaced.
+#
+# The same shape R507 fixed for r459: a path baked into a script is
+# validated on exactly ONE host -- and here on exactly ONE TREE.  The
+# snapshot is created fresh on every run, so pruning cannot touch it, and it
+# lives where this driver can clean it up.
+SNAP_SRC=scripts/.r498c_snapshot_server.ts
+SNAP_TEST=scripts/.r498c_snapshot_test.ts
 BASE_SRC=$(md5sum "$SRC" | cut -d' ' -f1)
 BASE_TEST=$(md5sum "$TEST" | cut -d' ' -f1)
 echo "baseline src  md5 = $BASE_SRC"
@@ -37,10 +53,25 @@ restore() {
     echo "!!! RESTORE FAILED src=$s test=$t"
   fi
 }
-trap 'restore' EXIT
+cleanup() {
+  # Restore FIRST, then remove the snapshots.  Order is load-bearing: a
+  # restore that never ran is the exact failure this change exists to
+  # remove.
+  restore
+  python3 -c "import os,sys; p=sys.argv[1]; os.path.exists(p) and os.remove(p)" "$SNAP_SRC"
+  python3 -c "import os,sys; p=sys.argv[1]; os.path.exists(p) and os.remove(p)" "$SNAP_TEST"
+}
+trap cleanup EXIT
 
 run_suite() {
-  out=$(npx jest "$TEST" --runInBand 2>&1)
+  # R514 (2026-10-28): the runner is resolved from the TREE this script
+  # stands in, not from `npx`.  MEASURED: `npx jest` in a tree with no
+  # node_modules DOWNLOADS jest 30.5.2 from the registry, while the repo
+  # pins jest ^29 (local resolution 29.7.0) -- so the driver measured its
+  # subject with a different MAJOR of its runner than the repository pins,
+  # and the version was decided by the registry rather than the lockfile.
+  JEST="$(bash "$(dirname "${BASH_SOURCE[0]}")/resolve-tool.sh" jest)" || exit 2
+  out=$("$JEST" "$TEST" --runInBand 2>&1)
   echo "$out" | grep -E "^Tests:" | tr -d '\n'
   echo " | $(echo "$out" | grep -E '^(PASS|FAIL)' | head -1)"
 }

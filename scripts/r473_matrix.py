@@ -32,6 +32,41 @@ import re
 import subprocess
 import sys
 
+# R514 (2026-10-28): the runner is resolved from the TREE this script
+# stands in, not from `npx`.  `npx` resolves a binary against the CWD's
+# package tree, and -- when the network is available -- DOWNLOADS one
+# instead of failing: MEASURED, `npx jest --version` in a tree with no
+# node_modules returns 30.5.2 while this repository pins jest ^29
+# (local resolution 29.7.0).  A driver validated on exactly ONE tree is
+# a driver validated on exactly ONE tree; here the tree decides the
+# RUNNER, not just the path.  See scripts/resolve_tool.py.
+def _resolve_tool(name):
+    """Resolve a tool from the TREE this script stands in.
+
+    The import is LAZY, on purpose: a driver is sometimes COPIED into
+    another checkout on its own (R513's arm 3 copies r507_matrix.py
+    into a fake repo and resolves its baseline there).  A module-level
+    `from resolve_tool import resolve_tool` would make that copy fail to
+    import at all -- the driver would break in exactly the situation it
+    exists to be tested in.  So the resolver is loaded when it is first
+    needed, and if it is genuinely absent the failure is LOUD and names
+    the file to copy alongside the driver.
+    """
+    import importlib.util
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    resolver = os.path.join(here, 'resolve_tool.py')
+    if not os.path.exists(resolver):
+        raise SystemExit(
+            '%s does not exist -- this driver resolves its toolchain from\n'
+            'the tree it stands in, and the resolver must sit beside it.\n'
+            'Copy scripts/resolve_tool.py next to this driver.' % resolver
+        )
+    spec = importlib.util.spec_from_file_location('_resolve_tool_mod', resolver)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.resolve_tool(name, here)
+
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SUITE = "tests/web/r473-cancel-two-planes.test.ts"
 TASK = "src/web/engine/task.ts"
@@ -49,7 +84,7 @@ def md5(path):
 def run_suite():
     env = dict(os.environ)
     proc = subprocess.run(
-        ["npx", "jest", SUITE, "--coverageThreshold={}", "--collectCoverage=false"],
+        [_resolve_tool("jest"), SUITE, "--coverageThreshold={}", "--collectCoverage=false"],
         cwd=REPO,
         capture_output=True,
         text=True,
