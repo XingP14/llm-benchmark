@@ -45,10 +45,52 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO = Path("/root/.hermes/workspace/llm-benchmark")
+# R511 (2026-10-28): the tree must be DERIVED from this file, not
+# transcribed from one author's checkout.
+#
+# REPO used to be the literal "/root/.hermes/workspace/llm-benchmark".  A
+# path baked into a script is validated on exactly ONE host: MEASURED, a COPY
+# of this driver placed in a DIFFERENT checkout still resolved REPO to the
+# author's tree, so the copy's driver mutated, measured and restored the
+# AUTHOR'S source files while the copy's own tree was never touched -- and
+# the verdict it printed was about a tree the caller did not ask about.
+#
+# The derivation is ASSERTED against the repository's marker file, so a
+# driver copied away from a checkout fails LOUDLY instead of quietly
+# measuring somebody else's tree.
+REPO = Path(__file__).resolve().parent.parent
+if not (REPO / "jest.config.js").is_file():
+    raise SystemExit(
+        "ABORT: cannot derive a repository root above %s (no jest.config.js) -- "
+        "this driver must live inside a checkout of the repository it measures."
+        % Path(__file__).resolve()
+    )
+
 SUITE = "tests/web/r497-spa-fallback-path-traversal.test.ts"
 OWNED = [REPO / "src/web/server.ts"]
 EXPECTED_TESTS = 10
+
+# R511 (2026-10-28): the baseline used to be a TRANSCRIBED hash literal
+# (BASELINE_MD5 = "73a550b313aa9a4e3d9afe27e9b5537f"), pinned when this tick
+# wrote its own fix into the owned file.  Two commits have landed on
+# src/web/server.ts since -- 78e2466 and 23b1faf, both real fixes to the
+# SPA fallback -- so the pin is now STALE and the driver ABORTS on a
+# perfectly clean tree:
+#
+#     ABORT: owned files are not clean vs HEAD:
+#     server.ts md5 01b80f93 != pinned baseline 73a550b3
+#
+# MEASURED 2026-10-28: `python3 scripts/r497_matrix.py` at HEAD exits 2 with
+# that message.  A pinned hash is the SAME defect class as the hardcoded
+# path -- a constant transcribed at one moment in time, validated on exactly
+# one moment in time.
+#
+# The baseline is now DERIVED from the repository's own HEAD blob, which is
+# the same thing the guard MEANS: "has a sibling edited this file since the
+# last commit?"  A sibling edit makes the working tree differ from HEAD, so
+# the guard still fires; a legitimate new COMMIT changes both, so the guard
+# no longer misfires.  The guard's INTENT is preserved and its constant is
+# gone.
 
 # The owned file carries THIS TICK'S FIX, so it is legitimately dirty vs HEAD.
 # The pre-check therefore compares against a PINNED BASELINE HASH (the fix as
@@ -57,7 +99,20 @@ EXPECTED_TESTS = 10
 #
 # R477 D1 is preserved in substance: an unrecognised owned file is an ABORT,
 # not a silent overwrite.
-BASELINE_MD5 = "73a550b313aa9a4e3d9afe27e9b5537f"
+#
+# R511 (2026-10-28): the pin is DERIVED from the repository's own HEAD blob
+# instead of being a transcribed literal.  See the note above: the literal
+# was stale and aborted the driver on a clean tree.
+def _head_blob_md5(rel: str) -> str:
+    """The md5 of `rel` as the repository's HEAD records it."""
+    out = subprocess.run(
+        ["git", "show", "HEAD:" + rel],
+        cwd=REPO, capture_output=True, check=True,
+    ).stdout
+    return hashlib.md5(out).hexdigest()
+
+
+BASELINE_MD5 = _head_blob_md5("src/web/server.ts")
 
 # ------------------------------------------------------------------ needles
 

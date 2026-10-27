@@ -28,7 +28,27 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO = Path("/root/.hermes/workspace/llm-benchmark")
+# R511 (2026-10-28): the tree must be DERIVED from this file, not
+# transcribed from one author's checkout.
+#
+# REPO used to be the literal "/root/.hermes/workspace/llm-benchmark".  A
+# path baked into a script is validated on exactly ONE host: MEASURED, a COPY
+# of this driver placed in a DIFFERENT checkout still resolved REPO to the
+# author's tree, so the copy's driver mutated, measured and restored the
+# AUTHOR'S source files while the copy's own tree was never touched -- and
+# the verdict it printed was about a tree the caller did not ask about.
+#
+# The derivation is ASSERTED against the repository's marker file, so a
+# driver copied away from a checkout fails LOUDLY instead of quietly
+# measuring somebody else's tree.
+REPO = Path(__file__).resolve().parent.parent
+if not (REPO / "jest.config.js").is_file():
+    raise SystemExit(
+        "ABORT: cannot derive a repository root above %s (no jest.config.js) -- "
+        "this driver must live inside a checkout of the repository it measures."
+        % Path(__file__).resolve()
+    )
+
 SUITE = REPO / "tests/web/r488-unauthenticated-questions-answers-leak.test.ts"
 OWNED = [
     REPO / "src/web/routes/questions.ts",

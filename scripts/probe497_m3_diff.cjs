@@ -33,7 +33,27 @@ const HOSTNAME = (() => {
 const SYSFILE_MARKERS = ['root:x:0:0', 'root:$1$', HOSTNAME].filter((m) => m.length > 0);
 const isSystemFile = (body) => SYSFILE_MARKERS.some((m) => body.includes(m));
 
-const REPO = '/root/.hermes/workspace/llm-benchmark';
+// R511 (2026-10-28): the tree is DERIVED from this probe's own location,
+// never transcribed from one author's checkout.
+//
+// REPO used to be the literal '/root/.hermes/workspace/llm-benchmark'.  A
+// path baked into a script is validated on exactly ONE host: MEASURED, a COPY
+// of a driver placed in a DIFFERENT checkout still resolved REPO to the
+// author's tree, so the copy's driver mutated, measured and restored the
+// AUTHOR'S source files while the copy's own tree was never touched -- and
+// the verdict it printed was about a tree the caller did not ask about.
+//
+// The derivation is ASSERTED against the repository's marker file, so a probe
+// copied away from a checkout fails LOUDLY instead of quietly running
+// against somebody else's tree.
+const REPO = path.resolve(__dirname, '..');
+if (!fs.existsSync(path.join(REPO, 'jest.config.js'))) {
+  console.error(
+    `ABORT: cannot derive a repository root above ${__filename} (no jest.config.js) -- ` +
+      'this probe must live inside a checkout of the repository it measures.'
+  );
+  process.exit(2);
+}
 const variant = process.argv[2] || 'fixed';
 
 function allocatePort() {

@@ -19,9 +19,38 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import tempfile
 
-REPO = pathlib.Path("/root/.hermes/workspace/llm-benchmark")
-SNAP = pathlib.Path("/root/.hermes/cache/scratch/r486_snap")
+# R511 (2026-10-28): the tree and the snapshot must be DERIVED, not
+# transcribed.
+#
+# REPO used to be the literal "/root/.hermes/workspace/llm-benchmark".  A
+# path baked into a script is validated on exactly ONE host: MEASURED, a COPY
+# of this driver placed in a DIFFERENT checkout still resolved REPO to the
+# author's tree, so the copy's driver mutated, measured and restored the
+# AUTHOR'S source files while the copy's own tree was never touched.  The
+# verdict the driver printed was about a tree the caller did not ask about.
+#
+# The repository is now derived from THIS FILE's own location, and the
+# derivation is ASSERTED against the repository's marker file -- so a driver
+# that has been copied away from a checkout fails LOUDLY instead of quietly
+# measuring somebody else's tree.
+REPO = pathlib.Path(__file__).resolve().parent.parent
+if not (REPO / "jest.config.js").is_file():
+    raise SystemExit(
+        "ABORT: cannot derive a repository root above %s (no jest.config.js) -- "
+        "this driver must live inside a checkout of the repository it measures."
+        % pathlib.Path(__file__).resolve()
+    )
+
+# R511 (2026-10-28): the snapshot used to live in the PRUNED SCRATCH
+# DIRECTORY ("/root/.hermes/cache/scratch/r486_snap").  MEASURED 2026-10-28:
+# that directory no longer contains it (scratch entries idle for 24h are
+# pruned), and a restore from a path that does not exist is a NO-OP -- the
+# exact failure class R507 fixed in the sibling driver.  The snapshot is now
+# created fresh, OUT OF TREE, by tempfile.mkdtemp(), which is the same
+# discipline r501_matrix.py already uses.
+SNAP = pathlib.Path(tempfile.mkdtemp(prefix="r486-matrix-"))
 SUITE = "tests/web/r486-duplicate-config-ids-are-evaluated-twice.test.ts"
 
 OWNED = {
@@ -93,6 +122,7 @@ def owned_clean() -> bool:
 def snapshot():
     if SNAP.exists():
         shutil.rmtree(SNAP)
+    SNAP.mkdir(parents=True, exist_ok=True)
     for rel in OWNED:
         dst = SNAP / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
