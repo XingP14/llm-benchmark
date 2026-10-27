@@ -57,13 +57,53 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+if not (REPO / "jest.config.js").is_file():
+    raise SystemExit(
+        "ABORT: cannot derive a repository root above %s (no jest.config.js) -- "
+        "this driver must live inside a checkout of the repository it measures."
+        % Path(__file__).resolve()
+    )
+
 SUITE = "tests/sweep-no-runtime-import.test.ts"
 OWNED = [REPO / "scripts" / "sweep-no-runtime-import.py"]
 EXPECTED_TOTAL = 53
 
 # The owned file carries no uncommitted change (the R507 change is in the
 # TEST file), so the pre-check is a plain BASELINE-HASH check.
-BASELINE_MD5 = "b2928799d6e4c50462ad8caaec2edfd3"
+#
+# R513 (2026-10-28): the baseline used to be a TRANSCRIBED hash literal
+# (BASELINE_MD5 = "b2928799d6e4c50462ad8caaec2edfd3"), pinned when this
+# driver was written.  One benign commit later -- a trailing comment on the
+# owned file -- the pin was STALE and the driver ABORTED on a perfectly
+# clean tree:
+#
+#     ABORT: owned files are not at the pinned baseline:
+#     sweep-no-runtime-import.py md5 2815efbc != pinned baseline b2928799
+#
+# MEASURED 2026-10-28: `python3 scripts/r507_matrix.py` at HEAD exits 2
+# with that message once a single benign commit lands on the owned file.
+#
+# A pinned hash is the SAME defect class as the hardcoded path: a constant
+# transcribed at one moment in time, validated on exactly one moment in
+# time.  R511 fixed exactly this in scripts/r497_matrix.py; the fix did not
+# reach its SIBLING, which is why this driver still carried the defect.
+#
+# The baseline is now DERIVED from the repository's own HEAD blob, which is
+# the same thing the guard MEANS: "has a sibling edited this file since the
+# last commit?"  A sibling edit makes the working tree differ from HEAD, so
+# the guard still fires; a legitimate new COMMIT changes both, so the guard
+# no longer misfires.  The guard's INTENT is preserved and its constant is
+# gone.
+def _head_blob_md5(rel: str) -> str:
+    """The md5 of `rel` as the repository's HEAD records it."""
+    out = subprocess.run(
+        ["git", "show", "HEAD:" + rel],
+        cwd=REPO, capture_output=True, check=True,
+    ).stdout
+    return hashlib.md5(out).hexdigest()
+
+
+BASELINE_MD5 = _head_blob_md5("scripts/sweep-no-runtime-import.py")
 
 ARM44 = "a regex literal holding a quote"
 ARM52 = "a MALFORMED quote"
