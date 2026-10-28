@@ -32,6 +32,19 @@ import sys
 def _resolve_tool(name):
     """Resolve a tool from the TREE this script stands in.
 
+    R517 (2026-10-29): the call below passes NO root override, and that
+    is load-bearing.  It used to pass `here` -- the directory THIS driver
+    lives in, <repo>/scripts -- and resolve_tool.py joins the root it is
+    given with `node_modules/.bin`, so it looked for
+    <repo>/scripts/node_modules/.bin/jest, which does not exist.  MEASURED:
+    SEVEN of the nine tracked drivers (r473, r486, r487, r488, r497, r501,
+    r507) died at exit 2 on a clean tree, one day after R514 shipped the
+    resolver.  The resolver already derives the correct root from its OWN
+    path (`repo_root(__file__)`), so passing a root OVERRODE a correct
+    derivation with a wrong one.  With no argument the resolver uses the
+    tree IT stands in -- which also keeps the copied-driver case correct
+    (R513 arm 3 copies a driver into another checkout).
+
     The import is LAZY, on purpose: a driver is sometimes COPIED into
     another checkout on its own (R513's arm 3 copies r507_matrix.py
     into a fake repo and resolves its baseline there).  A module-level
@@ -54,7 +67,7 @@ def _resolve_tool(name):
     spec = importlib.util.spec_from_file_location('_resolve_tool_mod', resolver)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.resolve_tool(name, here)
+    return mod.resolve_tool(name)
 import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
