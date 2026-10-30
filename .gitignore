@@ -34,6 +34,8 @@ __pycache__/
 # injection and the restore leaves its snapshot behind; it must never be
 # staged into a commit.
 scripts/.r459_snapshot.py
+scripts/.r5*_snapshot.*
+scripts/.r52*_snapshot.*
 
 # Local config files (may contain API keys)
 config.json
