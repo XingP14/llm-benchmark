@@ -36,6 +36,13 @@ __pycache__/
 scripts/.r459_snapshot.py
 scripts/.r5*_snapshot.*
 scripts/.r52*_snapshot.*
+# R524: the snapshot is a DIRECTORY (one slot per file, keyed by the path
+# relative to the repo root -- NOT by basename, which is the defect that
+# made the orphan driver restore the core evaluator over the web one).
+# A driver that dies between the injection and the restore leaves it behind;
+# the next run consumes it as its recovery source, so it must never be
+# staged.
+scripts/.r524_snapshot/
 
 # Local config files (may contain API keys)
 config.json
