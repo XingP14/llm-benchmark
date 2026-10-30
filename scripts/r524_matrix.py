@@ -60,6 +60,7 @@ Verdict PASS iff every arm landed on its expected side.
 Usage: python3 scripts/r524_matrix.py
 """
 import hashlib
+import os
 import re
 import shutil
 import subprocess
@@ -105,12 +106,43 @@ def expected_count() -> int:
     return len(re.findall(r"\bit\(", src))
 
 
-def resolve_tool(name: str) -> str:
-    """Resolve a tool from THIS tree's node_modules/.bin. Never npx."""
-    cand = ROOT / "node_modules" / ".bin" / name
-    if cand.exists():
-        return str(cand)
-    raise SystemExit(f"FATAL: {name} not found in this tree's node_modules/.bin")
+def _resolve_tool(name):
+    """Resolve a tool from the TREE this script stands in.
+
+    R517 (2026-10-29) made the shared resolver the CONTRACT for every
+    tracked Python driver: the driver must hand the resolver a tree the
+    resolver can use, and must not roll its own resolution path.
+
+    This driver previously defined its OWN `resolve_tool(name)`, which
+    happened to resolve the same path -- and that was the defect the R517
+    suite caught in CI on 2026-10-31 (arm 2: "no _resolve_tool function
+    found" for scripts/r524_matrix.py).  A gate that pins a CONTRACT and
+    then has a member of the family quietly leave the contract is a gate
+    that measures the family's MEMSHIP, not the family's behaviour: the
+    new driver passed every behavioural check while being the one driver
+    the suite reported as not participating.
+
+    The import is LAZY, on purpose: a driver is sometimes COPIED into
+    another checkout on its own (R513's arm 3 copies a driver into a fake
+    repo and resolves its baseline there).  A module-level
+    `from resolve_tool import resolve_tool` would make that copy fail to
+    import at all -- the driver would break in exactly the situation it
+    exists to be tested in.
+    """
+    import importlib.util
+
+    here = str(Path(__file__).resolve().parent)
+    resolver = os.path.join(here, 'resolve_tool.py')
+    if not os.path.exists(resolver):
+        raise SystemExit(
+            '%s does not exist -- this driver resolves its toolchain from\n'
+            'the tree it stands in, and the resolver must sit beside it.\n'
+            'Copy scripts/resolve_tool.py next to this driver.' % resolver
+        )
+    spec = importlib.util.spec_from_file_location('_resolve_tool_mod', resolver)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.resolve_tool(name)
 
 
 def run_suite(tool: str) -> tuple[int, str]:
@@ -218,7 +250,7 @@ def main() -> int:
         lines.append(note)
 
     n_expected = expected_count()
-    tool = resolve_tool("jest")
+    tool = _resolve_tool("jest")
 
     backups: dict[Path, Path] = {}
     pre_md5: dict[Path, str] = {}
