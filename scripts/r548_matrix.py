@@ -70,6 +70,32 @@ import subprocess
 import sys
 from datetime import datetime
 
+
+def _resolve_tool(name):
+    """Resolve a tool from the TREE this script stands in (never `npx`).
+
+    R514/R517: `npx` does not merely resolve the wrong tool -- it DOWNLOADS
+    one, so a driver can measure with a DIFFERENT MAJOR of its runner than
+    the repository pins.  The shared resolver fails LOUDLY when the tree has
+    no toolchain instead of silently measuring nothing.
+    """
+    import importlib.util
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    resolver = os.path.join(here, 'resolve_tool.py')
+    if not os.path.exists(resolver):
+        raise SystemExit(
+            '%s does not exist -- this driver resolves its toolchain from the '
+            'tree it stands in, and the resolver must sit beside it.' % resolver
+        )
+    spec = importlib.util.spec_from_file_location('_resolve_tool_mod', resolver)
+    if spec is None or spec.loader is None:
+        raise SystemExit('cannot load the resolver at %s' % resolver)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.resolve_tool(name)
+
+
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 SUITE = 'tests/r548-completion-metadata-plane.test.ts'
 ADAPTER = 'src/adapters/adapter.ts'
@@ -131,7 +157,7 @@ def run_suite():
     arms: {arm_name: 'RED'|'GREEN'|'ABSENT'}
     error: None, or a HARNESS reason string.
     """
-    jest = os.path.join(REPO, 'node_modules', '.bin', 'jest')
+    jest = _resolve_tool('jest')
     out_path = os.path.join(REPO, '_tmp', 'r548_matrix_result.json')
     if os.path.exists(out_path):
         os.remove(out_path)
